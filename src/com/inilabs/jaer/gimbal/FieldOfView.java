@@ -16,243 +16,140 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
-
 package com.inilabs.jaer.gimbal;
 
 import ch.qos.logback.classic.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Point;
+import com.inilabs.jaer.projects.gui.AgentDrawable;
 import java.awt.geom.AffineTransform;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 
-import com.inilabs.jaer.projects.space3d.AgentDrawable;
-
-public class FieldOfView extends AgentDrawable implements PropertyChangeListener {
+public class FieldOfView extends AgentDrawable {
 
     private static final Logger log = (Logger) LoggerFactory.getLogger(FieldOfView.class);
-    private static GimbalBase gimbalbase = GimbalBase.getInstance();
     private static FieldOfView instance = null;
-    private float focalLength = 100; // Focal length in mm
+
+    private float focalLength = 100f;
     private float chipWidthPixels = 640f;
     private float chipHeightPixels = 480f;
     private float chipFoveaX = chipWidthPixels / 2;
     private float chipFoveaY = chipHeightPixels / 2;
     private float chipAspectRatio = chipHeightPixels / chipWidthPixels;
-    private float chipPixelPitch = 9; // micron
-    private final float FOVX = 30.0f; // Field of view in degrees along X-axis
-    private final float FOVY = FOVX * chipAspectRatio; // Field of view in degrees along Y-axis
-    private float pan2Xdegs = FOVX;
-    private float pan2Ydegs = FOVY;
-    private float Xdegs2Pan = 1 / FOVX;
-    private float Ydegs3Tilt = 1 / FOVY;
-    private float pixelsPerXdeg = chipWidthPixels / FOVX;
-    private float pixelsPerYdeg = chipHeightPixels / FOVY;
 
-    private double azimuthScale = 1.0;
-    private double elevationScale = 1.0;
+    // Field of View in degrees for X and Y axes
+    private final float FOVX = 20.0f;
+    private final float FOVY = FOVX * chipAspectRatio;
 
-    // Axial rotations in degrees
     private float axialYaw = 0f;
     private float axialRoll = 0f;
-    private float axialPitch = -30f;
+    private float axialPitch = 0f;
 
-    
-    // Constructor now accepts yaw, pitch, and roll in degrees
-    private FieldOfView(float yawDegrees, float pitchDegrees, float rollDegrees) {
-        super("FieldOfView", 0, 0, Color.RED, 20); // Default size, color, and position
-        this.axialYaw = yawDegrees;
-        this.axialPitch = pitchDegrees;
-        this.axialRoll = rollDegrees;
+    // Singleton pattern
+    private FieldOfView() {
+        super("FieldOfView");
+        setColor(Color.RED);
+        setSize(FOVX);  // Set size using FOVX to initialize dimensions in degrees
     }
-
-    public static FieldOfView getInstance(float yawDegrees, float pitchDegrees, float rollDegrees) {
+    
+    public static FieldOfView getInstance() {
         if (instance == null) {
-            instance = new FieldOfView(yawDegrees, pitchDegrees, rollDegrees);
+            instance = new FieldOfView();
         }
         return instance;
     }
 
-    @Override
-    public void propertyChange(PropertyChangeEvent evt) {
-        float[] newValues = (float[]) evt.getNewValue();
-        switch (evt.getPropertyName()) {
-            case "FetchedGimbalPose":
-                this.axialYaw = newValues[0];
-                this.axialRoll = newValues[1];
-                this.axialPitch = newValues[2];
-                log.info("Received Gimbal Pose (Yaw, Roll, Pitch): " + axialYaw + ", " + axialRoll + ", " + axialPitch);
-                break;
-        }
+    // Method to set focal length
+    public void setFocalLength(float focalLength) {
+        this.focalLength = focalLength;
+        log.info("Focal length set to: " + focalLength);
     }
 
-    @Override
-    public void onScaleUpdate(double azimuthScale, double elevationScale) {
-        this.azimuthScale = azimuthScale;
-        this.elevationScale = elevationScale;
+    // Method to set chip dimensions and update related properties
+    public void setChipDimensions(float width, float height) {
+        this.chipWidthPixels = width;
+        this.chipHeightPixels = height;
+        this.chipFoveaX = width / 2;
+        this.chipFoveaY = height / 2;
+        this.chipAspectRatio = height / width;
+        log.info("Chip dimensions set to width: {}, height: {}", width, height);
     }
 
-    @Override
+    
+    // Override draw() to render Field of View box
+   @Override
     public void draw(Graphics g) {
         Graphics2D g2d = (Graphics2D) g;
-
-        int boxWidth = (int) (FOVX * azimuthScale * 10);
-        int boxHeight = (int) (FOVY * elevationScale * 10);
-
-        int centerX = (int) (axialYaw * azimuthScale);
-        int centerY = (int) (-axialPitch * elevationScale);
-
+        updateGraphicsLocation(g);
+      //  drawShapeAtLocation(g2d);  // debug
+      
+//        // Draw the FOV
+        int boxWidth = (int) (FOVX * azimuthScale);
+        int boxHeight = (int) (FOVY * elevationScale);
+        g2d.setColor(getColor());
+        
+        // Apply rotation and translate to calculated center
         AffineTransform originalTransform = g2d.getTransform();
-        AffineTransform transform = new AffineTransform();
-        transform.translate(centerX, centerY);
-        transform.rotate(Math.toRadians(axialRoll));
-
-        g2d.setTransform(transform);
-        g2d.setColor(Color.RED);
-        g2d.drawRect(-boxWidth / 2, -boxHeight / 2, boxWidth, boxHeight);
-
+       g2d.translate(centerX,  centerY);
+       g2d.rotate(Math.toRadians(axialRoll));
+       g2d.drawRect(-boxWidth/2 , -boxHeight/2, boxWidth, boxHeight);  //box g2d takes top left corner as starting point
+     // Reset the transform
         g2d.setTransform(originalTransform);
+  
+     log.info("Rendering FieldOfView at (centerX: {}, centerY: {}) with width: {} and height: {}", centerX, centerY, boxWidth, boxHeight);
     }
-
-    // FOV calculations
+    
+    // Field of View-specific getters for yaw and pitch based on pan/tilt
     public float getYawAtPan(float pan) {
-        return gimbalbase.getYaw() + fovea(pan) * pan2Xdegs;
+        return axialYaw + (pan - 0.5f) * FOVX;
     }
 
     public float getPitchAtTilt(float tilt) {
-        return gimbalbase.getPitch() + fovea(tilt) * pan2Ydegs;
+        return axialPitch + (tilt - 0.5f) * FOVY;
     }
 
-    public float getPanAtYaw(float yaw) {
-        float deltaYaw = gimbalbase.getYaw() - axialYaw;
-        float relative = deltaYaw / FOVY;
-        if (relative >= 0.5) {
-            log.warn("********relative pan = " + relative);
-            relative = 0.5f;
-        } else if (relative <= -0.5f) {
-            relative = -0.5f;
-        }
-        return (relative + 0.5f);
+    
+    //The yaw, pitch, roll convention for pose, is differnt to the azimuth and elevation of objects observed in polar space.
+   // We need to treat the gimbal case differnt than we treat its targets. 
+    // Setters and getters for orientation
+    public void setAxialYaw(float axialYaw) {
+        this.axialYaw = axialYaw;
+        setAzimuth(axialYaw);
+    }
+    
+    @Override
+    public void setAzimuth(float azimuth) {
+        this.azimuth = azimuth;
+        this.axialYaw = azimuth;
     }
 
-    public float getTiltAtPitch(float pitch) {
-        float deltaPitch = gimbalbase.getPitch() - axialPitch;
-        float relative = deltaPitch / FOVY;
-        if (relative >= 0.5) {
-            relative = 0.5f;
-        } else if (relative <= -0.5f) {
-            relative = -0.5f;
-        }
-        return (relative + 0.5f);
+    public void setAxialPitch(float axialPitch) {
+        this.axialPitch = axialPitch;
+        setElevation(axialPitch);
     }
 
-    public float getYawAtPixelX(int xpix) {
-        float pan = xpix / chipWidthPixels;
-        return getYawAtPan(pan);
+    @Override
+    public void setElevation(float elevation) {
+        this.elevation = elevation;
+        this.axialPitch = elevation;
     }
-
-    public float getPitchAtPixelY(int ypix) {
-        float tilt = ypix / chipHeightPixels;
-        return getPitchAtTilt(tilt);
-    }
-
-    public float getPixelsAtPan(float pan) {
-        return pan * chipWidthPixels;
-    }
-
-    public float getPixelsAtTilt(float tilt) {
-        return tilt * chipHeightPixels;
-    }
-
-    public float getPixelsAtYaw(float yaw) {
-        float pixelX = chipFoveaX + (yaw - axialYaw) * pixelsPerXdeg;
-        return Math.max(0, Math.min(pixelX, chipWidthPixels));
-    }
-
-    public float getPixelsAtPitch(float pitch) {
-        float pixelY = chipFoveaY + (pitch - axialPitch) * pixelsPerYdeg;
-        return Math.max(0, Math.min(pixelY, chipHeightPixels));
-    }
-
-    // Getters and setters
-    public float getWidthPixels() {
-        return chipWidthPixels;
-    }
-
-    public void setWidthPixels(int pix) {
-        chipWidthPixels = pix;
-    }
-
-    public float getHeightPixels() {
-        return chipHeightPixels;
-    }
-
-    public void setHeightPixels(int pix) {
-        chipHeightPixels = pix;
-    }
-
-    public float getFocalLength() {
-        return focalLength;
-    }
-
-    public void setFocalLength(float fl) {
-        focalLength = fl;
-    }
-
-    private float fovea(float displace) {
-        return displace - 0.5f;
+    
+    
+    public void setAxialRoll(float axialRoll) {
+        this.axialRoll = axialRoll;
     }
 
     public float getAxialYaw() {
         return axialYaw;
     }
 
-    public void setAxialYaw(float axialYaw) {
-        this.axialYaw = axialYaw;
-    }
-
-    public float getAxialRoll() {
-        return axialRoll;
-    }
-
-    public void setAxialRoll(float axialRoll) {
-        this.axialRoll = axialRoll;
-    }
-
     public float getAxialPitch() {
         return axialPitch;
     }
 
-    public void setAxialPitch(float axialPitch) {
-        this.axialPitch = axialPitch;
-    }
-
-    public float getYaw() {
-        return axialYaw;
-    }
-
-    public void setYaw(float yaw) {
-        this.axialYaw = yaw;
-    }
-
-    public float getRoll() {
+    public float getAxialRoll() {
         return axialRoll;
-    }
-
-    public void setRoll(float roll) {
-        this.axialRoll = roll;
-    }
-
-    public float getPitch() {
-        return axialPitch;
-    }
-
-    public void setPitch(float pitch) {
-        this.axialPitch = pitch;
     }
 }
 

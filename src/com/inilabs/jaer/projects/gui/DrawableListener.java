@@ -16,15 +16,12 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
-
 package com.inilabs.jaer.projects.gui;
 
 public interface DrawableListener {
-    void onAzimuthScaleChanged(double azimuthScale);
-    void onElevationScaleChanged(double elevationScale);
 
-    // Future potential signals could be added here, such as:
-    // void onRotationChanged(double rotationAngle);
-    // void onVisibilityChanged(boolean visible);
+    // Methods to update scaling factors with float parameters
+    void onAzimuthScaleChanged(float azimuthScale);
+
+    void onElevationScaleChanged(float elevationScale);
 }
-

@@ -21,7 +21,8 @@ package com.inilabs.jaer.projects.gui;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.concurrent.TimeUnit;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class DrawableTest {
 
@@ -33,49 +34,82 @@ public class DrawableTest {
 
             // Test 1: Adding a drawable at specified position
             AgentDrawable agent1 = new AgentDrawable("Agent1");
-            agent1.setAzimuth(10);   // 10 degrees azimuth
-            agent1.setElevation(-20); // -20 degrees elevation
-            agent1.setSize(5);       // Size in degrees
+            agent1.setAzimuth(10f);   // Set azimuth to 10 degrees
+            agent1.setElevation(-20f); // Set elevation to -20 degrees
+            agent1.setSize(5f);       // Set size in degrees
             agent1.setColor(Color.RED);
             display.addDrawable(agent1);
 
             // Test 2: Adding multiple drawables with different positions and sizes
             AgentDrawable agent2 = new AgentDrawable("Agent2");
-            agent2.setAzimuth(30);    // 30 degrees azimuth
-            agent2.setElevation(10);  // 10 degrees elevation
-            agent2.setSize(8);        // Larger size in degrees
+            agent2.setAzimuth(30f);    // Set azimuth to 30 degrees
+            agent2.setElevation(10f);  // Set elevation to 10 degrees
+            agent2.setSize(8f);        // Larger size in degrees
             agent2.setColor(Color.BLUE);
             display.addDrawable(agent2);
 
             AgentDrawable agent3 = new AgentDrawable("Agent3");
-            agent3.setAzimuth(-15);   // -15 degrees azimuth
-            agent3.setElevation(25);  // 25 degrees elevation
-            agent3.setSize(6);        // Size in degrees
+            agent3.setAzimuth(-15f);   // Set azimuth to -15 degrees
+            agent3.setElevation(25f);  // Set elevation to 25 degrees
+            agent3.setSize(6f);        // Set size in degrees
             agent3.setColor(Color.GREEN);
             display.addDrawable(agent3);
 
             // Test 3: Simulate autonomous removal of a drawable
-            new Timer(5000, e -> {
+            javax.swing.Timer removeTimer = new javax.swing.Timer(5000, e -> {
                 System.out.println("Removing Agent2 autonomously");
-                agent2.remove();  // Agent2 requests self-removal after 5 seconds
+                display.removeDrawable("Agent2");  // Agent2 requests self-removal after 5 seconds
                 display.repaint();
-            }).start();
+            });
+            removeTimer.setRepeats(false);
+            removeTimer.start();
 
             // Test 4: Update scaling and observe drawables adjust in real-time
-            new Timer(7000, e -> {
+            javax.swing.Timer scaleUpdateTimer = new javax.swing.Timer(7000, e -> {
                 System.out.println("Updating display ranges for scaling test");
-                display.setAzimuthRange(40);  // Narrower range to test scaling
-                display.setElevationRange(40);
+                display.setAzimuthRange(40f);  // Narrower range to test scaling
+                display.setElevationRange(40f);
                 display.repaint();
-            }).start();
+            });
+            scaleUpdateTimer.setRepeats(false);
+            scaleUpdateTimer.start();
 
             // Test 5: Restore range after additional delay
-            new Timer(10000, e -> {
+            javax.swing.Timer rangeRestoreTimer = new javax.swing.Timer(10000, e -> {
                 System.out.println("Restoring display ranges");
-                display.setAzimuthRange(90);  // Original range
-                display.setElevationRange(90);
+                display.setAzimuthRange(90f);  // Original range
+                display.setElevationRange(90f);
                 display.repaint();
-            }).start();
+            });
+            rangeRestoreTimer.setRepeats(false);
+            rangeRestoreTimer.start();
+
+            // Test 6: Moving a magenta drawable agent periodically to the four corners of a 20-degree square
+            AgentDrawable movingAgent = new AgentDrawable("MovingAgent");
+            movingAgent.setSize(4f);         // Set size of agent
+            movingAgent.setColor(Color.MAGENTA); // Magenta color
+            display.addDrawable(movingAgent);
+
+            // Use java.util.Timer for periodic movement
+            java.util.Timer moveTimer = new java.util.Timer();
+            float[][] positions = {
+                {10f, 10f},  // Top-right corner
+                {-10f, 10f}, // Top-left corner
+                {-10f, -10f},// Bottom-left corner
+                {10f, -10f}  // Bottom-right corner
+            };
+
+            moveTimer.scheduleAtFixedRate(new TimerTask() {
+                int index = 0;
+
+                @Override
+                public void run() {
+                    movingAgent.setAzimuth(positions[index][0]);
+                    movingAgent.setElevation(positions[index][1]);
+                    display.repaint();
+                    index = (index + 1) % positions.length;  // Cycle through positions
+                }
+            }, 0, 3000);  // Move every 3 seconds
         });
     }
 }

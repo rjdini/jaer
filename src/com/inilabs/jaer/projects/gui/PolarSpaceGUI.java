@@ -20,6 +20,8 @@ package com.inilabs.jaer.projects.gui;
 
 import javax.swing.*;
 import java.awt.*;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
 public class PolarSpaceGUI extends JFrame {
 
@@ -30,6 +32,8 @@ public class PolarSpaceGUI extends JFrame {
     private JTextField azimuthHeadingField;
     private JTextField elevationHeadingField;
     private JButton closeButton;
+    private JToggleButton linkSlidersButton;
+    private boolean slidersLinked = false;
 
     public PolarSpaceGUI() {
         setTitle("Polar Space GUI");
@@ -42,10 +46,10 @@ public class PolarSpaceGUI extends JFrame {
         polarDisplay.setPreferredSize(new Dimension(1600, 1000));
         add(polarDisplay, BorderLayout.CENTER);
 
-        // Create Control Panel with a more accessible layout
+        // Create Control Panel
         controlPanel = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 10, 5, 10);  // Padding for accessibility
+        gbc.insets = new Insets(5, 10, 5, 10);
 
         // Azimuth heading text field
         azimuthHeadingField = new JTextField("0", 5);
@@ -53,7 +57,7 @@ public class PolarSpaceGUI extends JFrame {
         gbc.gridy = 0;
         gbc.anchor = GridBagConstraints.EAST;
         controlPanel.add(new JLabel("Azimuth Heading:"), gbc);
-        
+
         gbc.gridx = 1;
         gbc.anchor = GridBagConstraints.WEST;
         controlPanel.add(azimuthHeadingField, gbc);
@@ -101,29 +105,39 @@ public class PolarSpaceGUI extends JFrame {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         controlPanel.add(elevationRangeSlider, gbc);
 
-        // Close button
-        closeButton = new JButton("Close");
-        closeButton.addActionListener(e -> dispose());
+        // Link sliders button
+        linkSlidersButton = new JToggleButton("Link Sliders");
         gbc.gridx = 0;
         gbc.gridy = 4;
         gbc.gridwidth = 2;
         gbc.anchor = GridBagConstraints.CENTER;
+        controlPanel.add(linkSlidersButton, gbc);
+
+        // Close button
+        closeButton = new JButton("Close");
+        closeButton.addActionListener(e -> dispose());
+        gbc.gridy = 5;
         controlPanel.add(closeButton, gbc);
 
-        // Add control panel to the south region with larger spacing
+        // Add control panel to the south region
         add(controlPanel, BorderLayout.SOUTH);
 
-        // Add listeners for slider and text field changes
-        azimuthRangeSlider.addChangeListener(e -> polarDisplay.setAzimuthRange(azimuthRangeSlider.getValue()));
-        elevationRangeSlider.addChangeListener(e -> polarDisplay.setElevationRange(elevationRangeSlider.getValue()));
-        azimuthHeadingField.addActionListener(e -> updateHeading());
-        elevationHeadingField.addActionListener(e -> updateHeading());
+        // Add listeners
+        azimuthRangeSlider.addChangeListener(new RangeSliderListener());
+        elevationRangeSlider.addChangeListener(new RangeSliderListener());
+        azimuthHeadingField.addActionListener(e -> updateHeadingFromField());
+        elevationHeadingField.addActionListener(e -> updateHeadingFromField());
+        linkSlidersButton.addActionListener(e -> slidersLinked = linkSlidersButton.isSelected());
 
         pack();
         setVisible(true);
     }
 
-    private void updateHeading() {
+     public PolarSpaceDisplay getPolarSpaceDisplay() {
+        return polarDisplay;
+    }
+    
+    private void updateHeadingFromField() {
         try {
             int azimuthHeading = Integer.parseInt(azimuthHeadingField.getText());
             int elevationHeading = Integer.parseInt(elevationHeadingField.getText());
@@ -133,12 +147,58 @@ public class PolarSpaceGUI extends JFrame {
         }
     }
 
-    // Getter for PolarSpaceDisplay to allow adding drawables
-    public PolarSpaceDisplay getPolarSpaceDisplay() {
-        return polarDisplay;
+    // Internal class to handle linked slider updates
+    private class RangeSliderListener implements ChangeListener {
+        @Override
+        public void stateChanged(ChangeEvent e) {
+            if (slidersLinked) {
+                if (e.getSource() == azimuthRangeSlider) {
+                    int value = azimuthRangeSlider.getValue();
+                    elevationRangeSlider.setValue(value);
+                    polarDisplay.setAzimuthRange(value);
+                    polarDisplay.setElevationRange(value);
+                } else if (e.getSource() == elevationRangeSlider) {
+                    int value = elevationRangeSlider.getValue();
+                    azimuthRangeSlider.setValue(value);
+                    polarDisplay.setAzimuthRange(value);
+                    polarDisplay.setElevationRange(value);
+                }
+            } else {
+                if (e.getSource() == azimuthRangeSlider) {
+                    polarDisplay.setAzimuthRange(azimuthRangeSlider.getValue());
+                } else if (e.getSource() == elevationRangeSlider) {
+                    polarDisplay.setElevationRange(elevationRangeSlider.getValue());
+                }
+            }
+        }
     }
 
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(PolarSpaceGUI::new);
+    // Update control values to match internal state
+    public void setAzimuthRange(int range) {
+        azimuthRangeSlider.setValue(range);
+        polarDisplay.setAzimuthRange(range);
+    }
+
+    public void setElevationRange(int range) {
+        elevationRangeSlider.setValue(range);
+        polarDisplay.setElevationRange(range);
+    }
+
+    public void setAzimuthHeading(int heading) {
+        azimuthHeadingField.setText(String.valueOf(heading));
+        polarDisplay.setHeading(heading, getElevationHeading());
+    }
+
+    public void setElevationHeading(int heading) {
+        elevationHeadingField.setText(String.valueOf(heading));
+        polarDisplay.setHeading(getAzimuthHeading(), heading);
+    }
+
+    public int getAzimuthHeading() {
+        return Integer.parseInt(azimuthHeadingField.getText());
+    }
+
+    public int getElevationHeading() {
+        return Integer.parseInt(elevationHeadingField.getText());
     }
 }

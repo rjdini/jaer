@@ -21,6 +21,7 @@
  *
  * @author rjd
  */
+
 package com.inilabs.jaer.projects.gui;
 
 import java.awt.Color;
@@ -28,7 +29,7 @@ import java.awt.Graphics;
 import java.util.function.Consumer;
 
 public interface Drawable extends DrawableListener {
-    
+
     // Method to draw the object, converting degrees to pixels as needed
     void draw(Graphics g);
 
@@ -36,15 +37,15 @@ public interface Drawable extends DrawableListener {
     String getKey();
 
     // Setters and getters for position in degrees
-    void setAzimuth(double azimuthDegrees);  // Set azimuth in degrees
-    double getAzimuth();                     // Get azimuth in degrees
+    void setAzimuth(float azimuthDegrees);  // Set azimuth in degrees
+    float getAzimuth();                     // Get azimuth in degrees
 
-    void setElevation(double elevationDegrees);  // Set elevation in degrees
-    double getElevation();                       // Get elevation in degrees
+    void setElevation(float elevationDegrees);  // Set elevation in degrees
+    float getElevation();                       // Get elevation in degrees
 
     // Setters and getters for size and color
-    void setSize(double sizeDegrees);  // Set size in degrees
-    double getSize();                  // Get size in degrees
+    void setSize(float sizeDegrees);  // Set size in degrees
+    float getSize();                  // Get size in degrees
 
     void setColor(Color color);  // Set color
     Color getColor();            // Get color

@@ -17,6 +17,7 @@
  * MA 02110-1301  USA
  PolarSpaceDisplay settings.
 */
+
 package com.inilabs.jaer.projects.gui;
 
 import javax.swing.*;
@@ -28,34 +29,44 @@ import java.util.Map;
 
 public class PolarSpaceDisplay extends JPanel implements MouseMotionListener {
 
-    private int azimuthRange = 30;
-    private int elevationRange = 30;
-    private int azimuthHeading = 0;
-    private int elevationHeading = 0;
+    private float azimuthRange = 30.0f;
+    private float elevationRange = 30.0f;
+    private float azimuthHeading = 0.0f;
+    private float elevationHeading = 0.0f;
     private int mouseX = -1;
     private int mouseY = -1;
 
-    // Map to store drawables by their unique key
     private final Map<String, Drawable> drawables = new HashMap<>();
 
     public PolarSpaceDisplay() {
         setBackground(Color.WHITE);
         addMouseMotionListener(this);
+        initializeScaling();
     }
 
-    public void setAzimuthRange(int range) {
+    private void initializeScaling() {
+        float azimuthScale = getWidth() / (2 * azimuthRange);
+        float elevationScale = getHeight() / (2 * elevationRange);
+
+        for (Drawable drawable : drawables.values()) {
+            drawable.onAzimuthScaleChanged(azimuthScale);
+            drawable.onElevationScaleChanged(elevationScale);
+        }
+    }
+
+    public void setAzimuthRange(float range) {
         this.azimuthRange = range;
         notifyScalingListeners();
         repaint();
     }
 
-    public void setElevationRange(int range) {
+    public void setElevationRange(float range) {
         this.elevationRange = range;
         notifyScalingListeners();
         repaint();
     }
 
-    public void setHeading(int azimuth, int elevation) {
+    public void setHeading(float azimuth, float elevation) {
         this.azimuthHeading = azimuth;
         this.elevationHeading = elevation;
         repaint();
@@ -64,13 +75,11 @@ public class PolarSpaceDisplay extends JPanel implements MouseMotionListener {
     public void addDrawable(Drawable drawable) {
         drawables.put(drawable.getKey(), drawable);
 
-        // Set up scaling for the new drawable
-        double azimuthScale = getWidth() / (double) (2 * azimuthRange);
-        double elevationScale = getHeight() / (double) (2 * elevationRange);
+        float azimuthScale = getWidth() / (2 * azimuthRange);
+        float elevationScale = getHeight() / (2 * elevationRange);
         drawable.onAzimuthScaleChanged(azimuthScale);
         drawable.onElevationScaleChanged(elevationScale);
 
-        // Provide callback for self-removal
         drawable.setRemoveCallback(this::removeDrawable);
         repaint();
     }
@@ -81,16 +90,14 @@ public class PolarSpaceDisplay extends JPanel implements MouseMotionListener {
     }
 
     private void notifyScalingListeners() {
-        double azimuthScale = getWidth() / (double) (2 * azimuthRange);
-        double elevationScale = getHeight() / (double) (2 * elevationRange);
+        float azimuthScale = getWidth() / (2 * azimuthRange);
+        float elevationScale = getHeight() / (2 * elevationRange);
 
         for (Drawable drawable : drawables.values()) {
             drawable.onAzimuthScaleChanged(azimuthScale);
             drawable.onElevationScaleChanged(elevationScale);
         }
     }
-
-    
 
     @Override
     protected void paintComponent(Graphics g) {
@@ -101,36 +108,26 @@ public class PolarSpaceDisplay extends JPanel implements MouseMotionListener {
         int centerX = width / 2;
         int centerY = height / 2;
 
-        // Draw the green horizontal line at 0 degrees elevation (horizon)
-        int horizonY = centerY - (0 * height / (2 * elevationRange));
+        int horizonY = centerY - (int) (0 * height / (2 * elevationRange));
         g.setColor(Color.GREEN);
         g.drawLine(0, horizonY, width, horizonY);
 
-        // Calculate and draw heading point
-        int headingX = centerX + (azimuthHeading * width / (2 * azimuthRange));
-        int headingY = centerY - (elevationHeading * height / (2 * elevationRange));
+        int headingX = centerX + (int) (azimuthHeading * width / (2 * azimuthRange));
+        int headingY = centerY - (int) (elevationHeading * height / (2 * elevationRange));
 
         g.setColor(Color.RED);
         g.fillOval(headingX - 5, headingY - 5, 10, 10);
 
-        // Draw horizontal and vertical lines for the heading
         g.setColor(Color.BLACK);
         g.drawLine(0, headingY, width, headingY);
         g.drawLine(headingX, 0, headingX, height);
 
-        // Draw axis labels
-        g.drawString("Azimuth (degrees)", width - 100, centerY - 10);
-        g.drawString("Elevation (degrees)", centerX + 10, 20);
-
-        // Draw ticks for azimuth and elevation
         drawTicks(g, headingX, headingY, width, height);
 
-        // Draw all registered drawables
         for (Drawable drawable : drawables.values()) {
-            drawable.draw(g);  // Instruct each drawable to render itself
+            drawable.draw(g);
         }
 
-        // Draw crosshair and display azimuth/elevation above it if mouse position is set
         if (mouseX != -1 && mouseY != -1) {
             drawCrosshair(g, centerX, centerY, width, height);
         }
@@ -142,21 +139,21 @@ public class PolarSpaceDisplay extends JPanel implements MouseMotionListener {
 
         g.setColor(Color.BLACK);
 
-        for (int i = -azimuthRange; i <= azimuthRange; i += 5) {
-            int xTick = headingX + i * (width / (2 * azimuthRange));
+        for (int i = (int) -azimuthRange; i <= azimuthRange; i += 5) {
+            int xTick = headingX + (int) (i * (width / (2 * azimuthRange)));
             int tickLength = (i % 10 == 0) ? tickLengthMajor : tickLengthMinor;
             g.drawLine(xTick, headingY - tickLength, xTick, headingY + tickLength);
             if (i % 10 == 0) {
-                g.drawString(Integer.toString(i + azimuthHeading), xTick - 10, headingY + 3 * tickLength);
+                g.drawString(Integer.toString(i + (int) azimuthHeading), xTick - 10, headingY + 3 * tickLength);
             }
         }
 
-        for (int i = -elevationRange; i <= elevationRange; i += 5) {
-            int yTick = headingY - i * (height / (2 * elevationRange));
+        for (int i = (int) -elevationRange; i <= elevationRange; i += 5) {
+            int yTick = headingY - (int) (i * (height / (2 * elevationRange)));
             int tickLength = (i % 10 == 0) ? tickLengthMajor : tickLengthMinor;
             g.drawLine(headingX - tickLength, yTick, headingX + tickLength, yTick);
             if (i % 10 == 0) {
-                g.drawString(Integer.toString(i + elevationHeading), headingX + 3 * tickLength, yTick + 5);
+                g.drawString(Integer.toString(i + (int) elevationHeading), headingX + 3 * tickLength, yTick + 5);
             }
         }
     }
@@ -166,8 +163,8 @@ public class PolarSpaceDisplay extends JPanel implements MouseMotionListener {
         g.drawLine(0, mouseY, width, mouseY);
         g.drawLine(mouseX, 0, mouseX, height);
 
-        int azimuth = azimuthHeading + (int) ((mouseX - centerX) * azimuthRange * 2.0 / width);
-        int elevation = elevationHeading - (int) ((mouseY - centerY) * elevationRange * 2.0 / height);
+        int azimuth = (int) (azimuthHeading + ((mouseX - centerX) * azimuthRange * 2.0f / width));
+        int elevation = (int) (elevationHeading - ((mouseY - centerY) * elevationRange * 2.0f / height));
 
         g.setColor(Color.BLACK);
         g.drawString("Azimuth: " + azimuth + "°, Elevation: " + elevation + "°", mouseX + 10, mouseY - 10);
@@ -185,4 +182,3 @@ public class PolarSpaceDisplay extends JPanel implements MouseMotionListener {
         // Not used but required by MouseMotionListener
     }
 }
-
