@@ -24,6 +24,7 @@ import java.util.logging.Logger;
 import net.sf.jaer.util.DrawGL;
 import net.sf.jaer.util.EngineeringFormat;
 import net.sf.jaer.util.filter.LowpassFilter;
+import org.slf4j.LoggerFactory;
 
 /**Tests pan-tilt by mimicking mouse movements. Also can serve as calibration
  * source (for fixed DVS+Laser-pointer) via PropertyChangeSupport.
@@ -37,12 +38,14 @@ import net.sf.jaer.util.filter.LowpassFilter;
  * @author tobi */
 public class GimbalAimerGUI extends javax.swing.JFrame implements PropertyChangeListener, ExceptionListener {
 
-    static  final Logger log = Logger.getLogger("net.sf.jaer");
+    // static  final Logger log = Logger.getLogger("net.sf.jaer");
+    private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(GimbalAimerGUI.class);
+    
     static  final float dash1[] = {10.0f};
     static  final BasicStroke dashed = new BasicStroke(1.0f, BasicStroke.CAP_BUTT,BasicStroke.JOIN_MITER,10.0f, dash1, 0.0f);
     private final PropertyChangeSupport supportPTAimerGUI = new PropertyChangeSupport(this);
     private final GimbalBase panTilt;
-    private final Trajectory trajectory = new Trajectory();
+    private final Trajectory commandTrajectory = new Trajectory();
     private final Trajectory panTiltTrajectory = new Trajectory();
     private final Trajectory targetTrajectory = new Trajectory();
     private final Trajectory jitterTargetTrajectory = new Trajectory();
@@ -162,8 +165,7 @@ public class GimbalAimerGUI extends javax.swing.JFrame implements PropertyChange
         panTilt.addPropertyChangeListener(this); //We want to know the current position of the panTilt as it changes
         initComponents();
         calibrationPanel.setPreferredSize(new Dimension(w, h));
-        calibrationPanel.requestFocusInWindow();
-        
+        calibrationPanel.requestFocusInWindow();      
         setSpeedTB.setText(String.format("%.2f", speed));
         pack();
     }
@@ -177,6 +179,7 @@ public class GimbalAimerGUI extends javax.swing.JFrame implements PropertyChange
                 this.SetTiltTB.setText(String.format("%.2f", NewV[1]));
                 this.panTiltTrajectory.add(NewV[0], NewV[1], (int)MouseN.getX(), (int)MouseN.getY());
                 if(showPosCB.isSelected()) repaint();
+                log.info("Received PanTiltValues (p,t) " + NewV[0] + ", " + NewV[1]);
                 break;
             case "Target":
                 this.targetTrajectory.add(NewV[0], NewV[1],(int)MouseN.getX(), (int)MouseN.getY());
@@ -186,6 +189,7 @@ public class GimbalAimerGUI extends javax.swing.JFrame implements PropertyChange
                 this.jitterTargetTrajectory.add(NewV[0], NewV[1],(int)MouseN.getX(), (int)MouseN.getY());
                 if(showTargetCB.isSelected()) repaint();
                 break;
+                
         }
     }
 
@@ -193,9 +197,11 @@ public class GimbalAimerGUI extends javax.swing.JFrame implements PropertyChange
         super.paint(g);
         
         paintLimitBox(calibrationPanel); //paints a dashed box indicating the user defined pan and tilt limits
-        trajectory.paintPath(Color.black,1000);
-        if(showPosCB.isSelected()) panTiltTrajectory.paintPath(Color.red,1000);
-        if(showTargetCB.isSelected()) targetTrajectory.paintCrossHair(Color.blue);
+        commandTrajectory.paintPath(Color.black,1000);
+        if(showPosCB.isSelected()) panTiltTrajectory.paintPath(Color.cyan,1000);
+        if(showPosCB.isSelected()) panTiltTrajectory.paintCrossHair(Color.cyan);
+        
+        if(showTargetCB.isSelected()) targetTrajectory.paintCrossHair(Color.red);
         if(showTargetCB.isSelected()) jitterTargetTrajectory.paintCrossHair(Color.green);
     }
 
@@ -215,7 +221,6 @@ public class GimbalAimerGUI extends javax.swing.JFrame implements PropertyChange
     private void initComponents() {
 
         calibrationPanel = new javax.swing.JPanel();
-        statusLabel = new javax.swing.JLabel();
         InfoLabel = new javax.swing.JLabel();
         recordCB = new javax.swing.JCheckBox();
         clearBut = new javax.swing.JButton();
@@ -231,11 +236,13 @@ public class GimbalAimerGUI extends javax.swing.JFrame implements PropertyChange
         jitterBut = new javax.swing.JButton();
         setSpeedTB = new javax.swing.JTextField();
         SpeedLabel = new javax.swing.JLabel();
+        statusLabel = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
-        setTitle("PanTiltAimer");
+        setTitle("GimbalAimerGUI");
         setCursor(new java.awt.Cursor(java.awt.Cursor.CROSSHAIR_CURSOR));
         setMinimumSize(new java.awt.Dimension(650, 700));
+        setPreferredSize(new java.awt.Dimension(800, 931));
         addWindowListener(new java.awt.event.WindowAdapter() {
             public void windowClosed(java.awt.event.WindowEvent evt) {
                 formWindowClosed(evt);
@@ -280,15 +287,12 @@ public class GimbalAimerGUI extends javax.swing.JFrame implements PropertyChange
         calibrationPanel.setLayout(calibrationPanelLayout);
         calibrationPanelLayout.setHorizontalGroup(
             calibrationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 1024, Short.MAX_VALUE)
+            .addGap(0, 924, Short.MAX_VALUE)
         );
         calibrationPanelLayout.setVerticalGroup(
             calibrationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 0, Short.MAX_VALUE)
+            .addGap(0, 739, Short.MAX_VALUE)
         );
-
-        statusLabel.setText("exception status");
-        statusLabel.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
 
         InfoLabel.setFont(InfoLabel.getFont().deriveFont((InfoLabel.getFont().getStyle() & ~java.awt.Font.ITALIC) & ~java.awt.Font.BOLD));
         InfoLabel.setText("<html>Drag or click the <b>mouse</b> or use the <b>arrow keys</b> to aim pan tilt. <br>Use <b>r</b> to toggle recording a trajectory and <b>esc</b> to delete recorded trjectory. <br>Dashed lines show limits of pantilt.</html>");
@@ -406,13 +410,17 @@ public class GimbalAimerGUI extends javax.swing.JFrame implements PropertyChange
 
         SpeedLabel.setText("Speed:");
 
+        statusLabel.setText("exception status");
+        statusLabel.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+            .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(statusLabel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(InfoLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 310, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
@@ -444,18 +452,16 @@ public class GimbalAimerGUI extends javax.swing.JFrame implements PropertyChange
                             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                                 .addComponent(PanLabel)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(SetPanTB, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                                .addComponent(SetPanTB, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addGap(190, 190, 190))
                     .addGroup(layout.createSequentialGroup()
-                        .addComponent(calibrationPanel, javax.swing.GroupLayout.PREFERRED_SIZE, 1028, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(0, 0, Short.MAX_VALUE)))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(statusLabel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addContainerGap())
+                        .addComponent(calibrationPanel, javax.swing.GroupLayout.PREFERRED_SIZE, 928, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(0, 0, Short.MAX_VALUE))))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
                         .addGap(3, 3, 3)
@@ -490,20 +496,16 @@ public class GimbalAimerGUI extends javax.swing.JFrame implements PropertyChange
                                     .addComponent(recordCB)
                                     .addComponent(jitterBut, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))))
                     .addComponent(InfoLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 130, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(layout.createSequentialGroup()
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 728, Short.MAX_VALUE)
-                        .addComponent(statusLabel)
-                        .addGap(10, 10, 10))
-                    .addGroup(layout.createSequentialGroup()
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(calibrationPanel, javax.swing.GroupLayout.DEFAULT_SIZE, 766, Short.MAX_VALUE))))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(calibrationPanel, javax.swing.GroupLayout.PREFERRED_SIZE, 743, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(statusLabel))
         );
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private float getPan(MouseEvent evt) {
+    private float getMousePan(MouseEvent evt) {
         int x = evt.getX();
         float pan = (float) x / w;
         return pan;
@@ -579,17 +581,17 @@ public class GimbalAimerGUI extends javax.swing.JFrame implements PropertyChange
     }//GEN-LAST:event_calibrationPanelComponentResized
 
     private void calibrationPanelMouseDragged(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_calibrationPanelMouseDragged
-        float pan  = getPan(evt);
+        float pan  = getMousePan(evt);
         float tilt = getTilt(evt);
         panTilt.setTarget(pan, tilt);
         if (isRecordingEnabled()) {
-            trajectory.add(pan, tilt, evt.getX(), evt.getY());
+            commandTrajectory.add(pan, tilt, evt.getX(), h-evt.getY()); // flip y axis
             repaint();
         }
     }//GEN-LAST:event_calibrationPanelMouseDragged
 
     private void calibrationPanelMousePressed(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_calibrationPanelMousePressed
-        float pan  = getPan(evt);
+        float pan  = getMousePan(evt);
         float tilt = getTilt(evt);
         panTilt.setTarget(pan, tilt);
     }//GEN-LAST:event_calibrationPanelMousePressed
@@ -605,7 +607,7 @@ public class GimbalAimerGUI extends javax.swing.JFrame implements PropertyChange
                 break;
             case KeyEvent.VK_ESCAPE:
                 supportPTAimerGUI.firePropertyChange(Message.AbortRecording.name(), null, null);
-                trajectory.clear();
+                commandTrajectory.clear();
                 setRecordingEnabled(false);
                 break;
             case KeyEvent.VK_DOWN:
@@ -637,7 +639,7 @@ public class GimbalAimerGUI extends javax.swing.JFrame implements PropertyChange
     }//GEN-LAST:event_calibrationPanelKeyPressed
 
     private void calibrationPanelMouseReleased(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_calibrationPanelMouseReleased
-        float pan  = getPan(evt);
+        float pan  = getMousePan(evt);
         float tilt = getTilt(evt);
         panTilt.setTarget(pan, tilt);
     }//GEN-LAST:event_calibrationPanelMouseReleased
@@ -658,7 +660,7 @@ public class GimbalAimerGUI extends javax.swing.JFrame implements PropertyChange
 
     private void clearButActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_clearButActionPerformed
         supportPTAimerGUI.firePropertyChange(Message.ClearRecording.name(), null, null);
-        trajectory.clear();
+        commandTrajectory.clear();
         repaint();
     }//GEN-LAST:event_clearButActionPerformed
 
@@ -667,7 +669,7 @@ public class GimbalAimerGUI extends javax.swing.JFrame implements PropertyChange
     }//GEN-LAST:event_recordCBActionPerformed
 
     private void loopButActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_loopButActionPerformed
-        trajectory.setPlaybackEnabled(loopBut.isSelected());
+        commandTrajectory.setPlaybackEnabled(loopBut.isSelected());
     }//GEN-LAST:event_loopButActionPerformed
 
     private void centerButActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_centerButActionPerformed
@@ -680,7 +682,7 @@ public class GimbalAimerGUI extends javax.swing.JFrame implements PropertyChange
                 panTilt.setJitterEnabled(false);
                 panTilt.stopFollow();
             } catch (Exception ex) {
-                log.warning(ex.toString());
+                log.warn(ex.toString());
             }
         }
     }//GEN-LAST:event_relaxButActionPerformed

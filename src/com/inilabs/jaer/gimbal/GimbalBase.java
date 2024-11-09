@@ -90,8 +90,8 @@ public class GimbalBase implements GimbalInterface, LaserOnOffControl {
 
     private boolean jitterEnabled = false;
     private boolean linearSpeedEnabled = false;
-    private final Trajectory panTiltTrajectory = new Trajectory();
-    private final Trajectory panTiltTargetTrajectory = new Trajectory();
+    private final Trajectory panTiltTrajectory = new Trajectory("panTiltTrajectory");
+    private final Trajectory panTiltTargetTrajectory = new Trajectory("panTiltTargetTrajectory");
 
     // RS4 GimbalBase
     private float defaultYaw = 0.0f;
@@ -100,6 +100,10 @@ public class GimbalBase implements GimbalInterface, LaserOnOffControl {
     private float yaw = 0.0f; // deg, in gimal polar space
     private float roll = 0.0f;
     private float pitch = 0.0f;
+    
+    float sendYaw = 0f;
+    float sendRoll = 0f;
+    float sendPitch = 0f;
 
     private float chipXFOV = 30; // degrees
     private float chipYFOV = 30;
@@ -108,7 +112,7 @@ public class GimbalBase implements GimbalInterface, LaserOnOffControl {
     float MinMovePerUpdate = 0.1f; //Min amount of gimbal per update 
     int MoveUpdateFreqHz = 100; //in Hz how often does the targeted pantilt move
 
-    private final float deltaThreshold = 0.1f;  // gimbal xmission threshold (deg) 
+    private final float deltaThreshold = 0.0f;  // gimbal xmission threshold (deg) 
 
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4);
 
@@ -123,8 +127,8 @@ public class GimbalBase implements GimbalInterface, LaserOnOffControl {
     
     public static RS4ControllerGUISwingV1 rs4controllerGUI = null;
     
-    private int poseSendInterval = 200 ; // ms
-    private int poseFetchInterval = 200 ; // ms
+    private int poseSendInterval = 100 ; // ms
+    private int poseFetchInterval = 100 ; // ms
       
     private float panSum = 0.0f;
     private float tiltSum = 0.0f;
@@ -134,7 +138,7 @@ public class GimbalBase implements GimbalInterface, LaserOnOffControl {
     private boolean enableGimbal = false ; // debugging
 
     private final float chipFOV = 30.0f; // degrees
- 
+    private FieldOfView fov = null;
     
     public GimbalBase() {
         super();
@@ -171,6 +175,8 @@ rs4controllerGUI = new RS4ControllerGUISwingV1();
 
 
     private void init() {
+      fov = FieldOfView.getInstance(-10, 0, -20); 
+      this.pcs.addPropertyChangeListener(fov);
        sendDefaultGimbalPose();  
 } 
     
@@ -186,7 +192,7 @@ rs4controllerGUI = new RS4ControllerGUISwingV1();
         // Schedule the 100ms timer thread
         try {
         scheduler.scheduleAtFixedRate(this::applyAveragePose, poseSendInterval, poseSendInterval, TimeUnit.MILLISECONDS);    
-        scheduler.scheduleAtFixedRate(this::fetchGimbalData, poseFetchInterval, poseFetchInterval, TimeUnit.MILLISECONDS);
+        scheduler.scheduleAtFixedRate(this::fetchGimbalPose, poseFetchInterval, poseFetchInterval, TimeUnit.MILLISECONDS);
         log.info("Scheduled tasks started....");
         } catch(Exception e ) { 
             log.error("Error starting scheduled tasks : {}", e.getMessage(), e);
@@ -229,56 +235,18 @@ rs4controllerGUI = new RS4ControllerGUISwingV1();
         this.pcs.removePropertyChangeListener(listener);
     }
 
-    public class Trajectory extends ArrayList<TrajectoryPoint> {
+    
+    
 
-        long lastTime;
-
-        void start() {
-            start(System.nanoTime());
-        }
-
-        void start(long startTime) {
-            if (!isEmpty()) {
-                super.clear();
-            }
-            lastTime = startTime;
-        }
-
-        void add(float pan, float tilt) {
-            if (isEmpty()) {
-                start();
-            }
-
-            long now = System.nanoTime(); //We want this in nanotime, as the panTilt values do change very fast and millis is often not accurate enough.
-            add(new TrajectoryPoint(now - lastTime, pan, tilt));
-            lastTime = now;
-        }
+    
+    public FieldOfView getFOV() {
+        return fov;
     }
-
-    public class TrajectoryPoint {
-
-        private final long timeNanos;
-        private final float pan, tilt;
-
-        public TrajectoryPoint(long timeNanos, float pan, float tilt) {
-            this.timeNanos = timeNanos;
-            this.pan = pan;
-            this.tilt = tilt;
-        }
-
-        public long getTime() {
-            return timeNanos;
-        }
-
-        public float getPan() {
-            return pan;
-        }
-
-        public float getTilt() {
-            return tilt;
-        }
-    }
-
+    
+   
+    
+    
+    
     public RS4ControllerV2 getGimbal() {
         return rs4controller;
     }
@@ -523,11 +491,15 @@ rs4controllerGUI = new RS4ControllerGUISwingV1();
             newTilt = 1 - newTilt;
         }
 
-        // Use RS4Controller's setPosControl method
+     
         this.updateGimbalPose(newPan, newTilt);
         log.info("Updated pan/tilt values to " + newPan + " / " + newTilt);
 
         //setLaserOn(true);
+        
+       //**********   this is wrong -- the local updates are being used as surrogates for the actual remote RS4Controller data.
+       // ' effence copy' --- we need to update on real current pose 
+       
         float[] PreviousValues = {previousPan, previousTilt};
         float[] NewValues = {this.pan, this.tilt};
         panTiltTrajectory.add(this.pan, this.tilt);
@@ -576,10 +548,11 @@ rs4controllerGUI = new RS4ControllerGUISwingV1();
         }
         newPan = clipPan(newPan);
         newTilt = clipTilt(newTilt);
-        updateGimbalPose(newPan, newTilt);
-        log.info("updatePanTilt: pan/tilt values to " + newPan + " / " + newTilt);
+       updateGimbalPose(newPan, newTilt);
+     //   log.info("updatePanTilt: pan/tilt values to " + newPan + " / " + newTilt);
     }
 
+    
     /**
      * The gimbal is an independent device whose absolute pose may be set by
      * various agents. Therefore we add only our required deltas to its current
@@ -632,15 +605,18 @@ rs4controllerGUI = new RS4ControllerGUISwingV1();
         float deltaPitch = (tilt - 0.5f) * chipFOV;
        
         // Only send significant updates of pose
-        if ((Math.abs(deltaYaw) > deltaThreshold || Math.abs(deltaPitch) > deltaThreshold ) && isTargetEnabled() && enableGimbal) {
-           float sendYaw = getYaw() + deltaYaw;
-           float sendPitch = getPitch() + deltaPitch;
-            rs4controller.setPose(sendYaw, 0.0f, sendPitch); // PanTilt does not consider Roll 
-            log.info("Sent gimbal pose deltas: deltaYaw=" + deltaYaw + " deg, deltaPitch=" + deltaPitch + " deg");
+      //  if ((Math.abs(deltaYaw) > deltaThreshold || Math.abs(deltaPitch) > deltaThreshold ) && isTargetEnabled() && enableGimbal) {
+          if (Math.abs(deltaYaw) > deltaThreshold || Math.abs(deltaPitch) > deltaThreshold ) {    
+           sendYaw = getYaw() + deltaYaw;
+           sendRoll = getRoll();
+           sendPitch = getPitch() + deltaPitch;
+         
+           rs4controller.setPose(sendYaw, sendRoll, sendPitch); // PanTilt does not consider Roll 
+            log.info("Sent gimbal pose (y,r,p) " + sendYaw + ",  " + sendRoll + ", " + sendPitch );
          } else 
         {  
             // go to home pose
-            rs4controller.setPose(0.0f, 0.0f, -30.0f); 
+          rs4controller.setPose(0.0f, 0.0f, -30.0f); 
         }      
     }
 
@@ -663,15 +639,48 @@ rs4controllerGUI = new RS4ControllerGUISwingV1();
     // regardless of whether data has changed.
     // This ensures GimbalBase consistently reflects the latest data from RS4ControllerV2, 
     // minimizing any discrepancies between the controller’s actual and reported poses.  
-    private void fetchGimbalData() {
-        //  synchronized (gimbalLock) {
+    private void fetchGimbalPose() {
+          // store the current values
+          float previousYaw = this.getYaw();
+          float previousRoll = this.getRoll();
+          float previousPitch = this.getPitch();
+          float [] previousReceivedPose = {previousYaw, previousRoll, previousPitch};
+          
+          // update thecurrent  values 
            this. yaw = rs4controller.getYaw();  // (deg, in gimbal polar space)
-            this.roll = rs4controller.getRoll();
+           this.roll = rs4controller.getRoll();
            this. pitch = rs4controller.getPitch();
-          log.info("Fetched current RS4Controller pose (deg): yaw:  " + yaw + "  roll:  " + roll + " pitch: "  + pitch );
+          float [] newReceivedPose = {this.getYaw(), this.getRoll(), this.getPitch()};
+          
+          // notify the listeners of polar cordinate updates
+           this.pcs.firePropertyChange("FetchedGimbalPose", previousReceivedPose, newReceivedPose);    
+           log.info("Fetched RS4Controller pose (y,r,p)  " + yaw + ",  " + roll + ", "  + pitch );
+    //      updateGimbalPoseAsPanTilt();
       // }
     }
 
+      // convert the newly updated yaw and pitch in RS4Controller polar space,
+        // to pan an tilt [0-1] on the retina
+    private void updateGimbalPoseAsPanTilt() {  
+        // store current values
+        float previousPan = this.pan;
+        float previousTilt = this.tilt;
+        float[] previousValues = {previousPan, previousTilt};
+        
+        // update current vales
+        this.pan = fov.getPanAtYaw(this.getYaw());
+        this.tilt = fov.getTiltAtPitch(this.getPitch());
+         this.pan = fov.getPanAtYaw(sendYaw);
+        this.tilt = fov.getTiltAtPitch(sendPitch);
+        float[] newValues = {this.pan, this.tilt};
+        
+        // notify listeners of [0-1] range pan tilt
+        this.pcs.firePropertyChange("PanTiltValues", previousValues, newValues);
+        log.info("Convert fetched pose to (p,t) [0-1] " + pan+ ", " + tilt );
+    }
+    
+    
+    
     // return  local values, to prevent gmbal overload
     public float[] getGimbalPose() {
         return new float[]{yaw, roll, pitch};
@@ -712,20 +721,22 @@ rs4controllerGUI = new RS4ControllerGUISwingV1();
         return r;
     }
 
-    public void setTarget(float PanTarget, float TiltTarget) {
+    public void setTarget(float panTarget, float tiltTarget) {
         float[] oldTarget = {this.panTarget, this.tiltTarget};
 
-        this.panTarget = PanTarget;
-        this.tiltTarget = TiltTarget;
+        this.panTarget = panTarget;
+        this.tiltTarget = tiltTarget;
         //If the Jitter is not enabled, we need to set the Jittertarget 
         // directly, because in the end the PanTilt follows the JitterTarget, 
         // not the real Target
         if (!isJitterEnabled()) {
-            setJitterTarget(PanTarget, TiltTarget);
+            setJitterTarget(panTarget, tiltTarget);
         }
-        panTiltTargetTrajectory.add(PanTarget, TiltTarget);
-        this.pcs.firePropertyChange("Target", oldTarget, new float[]{PanTarget, TiltTarget});
+        panTiltTargetTrajectory.add(panTarget, tiltTarget);
+        this.pcs.firePropertyChange("Target", oldTarget, new float[]{panTarget, tiltTarget});
     }
+    
+    
 
     public void setTargetChange(float panTargetChange, float tiltTargetChange) {
         float[] oldTarget = {this.panTarget, this.tiltTarget};
