@@ -18,41 +18,40 @@
  */
 package com.inilabs.jaer.gimbal;
 
-import ch.qos.logback.classic.Logger;
-import org.slf4j.LoggerFactory;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import com.inilabs.jaer.projects.gui.AgentDrawable;
 import java.awt.geom.AffineTransform;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeSupport;
 
-public class FieldOfView extends AgentDrawable {
+import com.inilabs.jaer.projects.gui.BasicDrawable;
 
-    private static final Logger log = (Logger) LoggerFactory.getLogger(FieldOfView.class);
+public class FieldOfView extends BasicDrawable implements PropertyChangeListener {
+
     private static FieldOfView instance = null;
+    private final PropertyChangeSupport pcs = new PropertyChangeSupport(this);
 
+    // Default FOV dimensions and chip parameters
     private float focalLength = 100f;
     private float chipWidthPixels = 640f;
     private float chipHeightPixels = 480f;
-    private float chipFoveaX = chipWidthPixels / 2;
-    private float chipFoveaY = chipHeightPixels / 2;
-    private float chipAspectRatio = chipHeightPixels / chipWidthPixels;
-
-    // Field of View in degrees for X and Y axes
     private final float FOVX = 20.0f;
-    private final float FOVY = FOVX * chipAspectRatio;
+    private final float FOVY = FOVX * (chipHeightPixels / chipWidthPixels);
 
+    // Orientation (yaw, pitch, roll) in degrees
     private float axialYaw = 0f;
-    private float axialRoll = 0f;
     private float axialPitch = 0f;
+    private float axialRoll = 0f;
 
-    // Singleton pattern
+    // Singleton pattern for FieldOfView instance
     private FieldOfView() {
-        super("FieldOfView");
+        super();
         setColor(Color.RED);
-        setSize(FOVX);  // Set size using FOVX to initialize dimensions in degrees
+        setSize(FOVX);
     }
-    
+
     public static FieldOfView getInstance() {
         if (instance == null) {
             instance = new FieldOfView();
@@ -60,68 +59,58 @@ public class FieldOfView extends AgentDrawable {
         return instance;
     }
 
-    // Method to set focal length
-    public void setFocalLength(float focalLength) {
-        this.focalLength = focalLength;
-        log.info("Focal length set to: " + focalLength);
+    // Property Change Listener Implementation
+    @Override
+    public void propertyChange(PropertyChangeEvent evt) {
+        if ("FetchedGimbalPose".equals(evt.getPropertyName())) {
+            float[] newOrientation = (float[]) evt.getNewValue();
+            setAxialYaw(newOrientation[0]);
+            setAxialRoll(newOrientation[1]);
+            setAxialPitch(newOrientation[2]);
+        }
     }
 
-    // Method to set chip dimensions and update related properties
-    public void setChipDimensions(float width, float height) {
-        this.chipWidthPixels = width;
-        this.chipHeightPixels = height;
-        this.chipFoveaX = width / 2;
-        this.chipFoveaY = height / 2;
-        this.chipAspectRatio = height / width;
-        log.info("Chip dimensions set to width: {}, height: {}", width, height);
-    }
-
-    
-    // Override draw() to render Field of View box
-   @Override
+      // Method to draw the Field of View, positioning based on azimuth and elevation
+    @Override
     public void draw(Graphics g) {
         Graphics2D g2d = (Graphics2D) g;
-        updateGraphicsLocation(g);
-      //  drawShapeAtLocation(g2d);  // debug
-      
-//        // Draw the FOV
-        int boxWidth = (int) (FOVX * azimuthScale);
-        int boxHeight = (int) (FOVY * elevationScale);
-        g2d.setColor(getColor());
-        
-        // Apply rotation and translate to calculated center
+
+        // Calculate position based on azimuth and elevation scales
+        int centerX = g.getClipBounds().width / 2;
+        int centerY = g.getClipBounds().height / 2;
+        int x = centerX + (int) (getAzimuth() * getAzimuthScale());
+        int y = centerY - (int) (getElevation() * getElevationScale());
+
+        // Calculate box dimensions based on FOV and scales
+        int boxWidth = (int) (FOVX * getAzimuthScale());
+        int boxHeight = (int) (FOVY * getElevationScale());
+
+        // Apply roll rotation and draw the FOV box
         AffineTransform originalTransform = g2d.getTransform();
-       g2d.translate(centerX,  centerY);
-       g2d.rotate(Math.toRadians(axialRoll));
-       g2d.drawRect(-boxWidth/2 , -boxHeight/2, boxWidth, boxHeight);  //box g2d takes top left corner as starting point
-     // Reset the transform
+        g2d.translate(x, y);
+        g2d.rotate(Math.toRadians(axialRoll));
+        g2d.setColor(getColor());
+        g2d.drawRect(-boxWidth / 2, -boxHeight / 2, boxWidth, boxHeight);
         g2d.setTransform(originalTransform);
-  
-     log.info("Rendering FieldOfView at (centerX: {}, centerY: {}) with width: {} and height: {}", centerX, centerY, boxWidth, boxHeight);
-    }
-    
-    // Field of View-specific getters for yaw and pitch based on pan/tilt
-    public float getYawAtPan(float pan) {
-        return axialYaw + (pan - 0.5f) * FOVX;
+
+        // Draw path if enabled
+        if (isPathVisible()) {
+            drawPath(g2d);
+        }
+       
     }
 
-    public float getPitchAtTilt(float tilt) {
-        return axialPitch + (tilt - 0.5f) * FOVY;
-    }
-
-    
-    //The yaw, pitch, roll convention for pose, is differnt to the azimuth and elevation of objects observed in polar space.
-   // We need to treat the gimbal case differnt than we treat its targets. 
-    // Setters and getters for orientation
+    // Methods for adjusting and retrieving orientation
     public void setAxialYaw(float axialYaw) {
         this.axialYaw = axialYaw;
         setAzimuth(axialYaw);
     }
-    
+
     @Override
     public void setAzimuth(float azimuth) {
-        this.azimuth = azimuth;
+        super.setAzimuth(azimuth);
         this.axialYaw = azimuth;
+        addCurrentPositionToPath();
     }
 
     public void setAxialPitch(float axialPitch) {
@@ -131,11 +120,11 @@ public class FieldOfView extends AgentDrawable {
 
     @Override
     public void setElevation(float elevation) {
-        this.elevation = elevation;
+        super.setElevation(elevation);
         this.axialPitch = elevation;
+        addCurrentPositionToPath();
     }
-    
-    
+
     public void setAxialRoll(float axialRoll) {
         this.axialRoll = axialRoll;
     }
@@ -150,6 +139,50 @@ public class FieldOfView extends AgentDrawable {
 
     public float getAxialRoll() {
         return axialRoll;
+    }
+
+    // Field of View-specific calculations
+    public float getYawAtPan(float pan) {
+        return axialYaw + (pan - 0.5f) * FOVX;
+    }
+
+    public float getPitchAtTilt(float tilt) {
+        return axialPitch + (tilt - 0.5f) * FOVY;
+    }
+
+    public float getPixelsAtYaw(float yaw) {
+        return chipWidthPixels / FOVX * (yaw - axialYaw) + chipWidthPixels / 2;
+    }
+
+    public float getPixelsAtPitch(float pitch) {
+        return chipHeightPixels / FOVY * (pitch - axialPitch) + chipHeightPixels / 2;
+    }
+
+    public float getPixelsAtPan(float pan) {
+        return getPixelsAtYaw(getYawAtPan(pan));
+    }
+
+    public float getPixelsAtTilt(float tilt) {
+        return getPixelsAtPitch(getPitchAtTilt(tilt));
+    }
+
+    public float getPanAtYaw(float yaw) {
+        return 0.5f + (yaw - axialYaw) / FOVX;
+    }
+
+    public float getTiltAtPitch(float pitch) {
+        return 0.5f + (pitch - axialPitch) / FOVY;
+    }
+
+    // Set chip dimensions and update dependent parameters
+    public void setChipDimensions(float width, float height) {
+        this.chipWidthPixels = width;
+        this.chipHeightPixels = height;
+    }
+
+    // Set focal length
+    public void setFocalLength(float focalLength) {
+        this.focalLength = focalLength;
     }
 }
 

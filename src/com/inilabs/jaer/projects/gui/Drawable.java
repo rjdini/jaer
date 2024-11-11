@@ -26,16 +26,25 @@ package com.inilabs.jaer.projects.gui;
 
 import java.awt.Color;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import com.inilabs.jaer.projects.gui.ActionType;
 
 public interface Drawable extends DrawableListener {
 
-    // Method to draw the object, converting degrees to pixels as needed
-    void draw(Graphics g);
-
     // Unique key for the drawable
     String getKey();
-
+  
+    int getId();
+    
+    // Method to draw the object, converting degrees to pixels as needed
+    void draw(Graphics g);
+    
+    void showPath(boolean yes) ;
+    
+    //void updateScale(float azimuthScale, float elevationScale);
+  
     // Setters and getters for position in degrees
     void setAzimuth(float azimuthDegrees);  // Set azimuth in degrees
     float getAzimuth();                     // Get azimuth in degrees
@@ -50,6 +59,7 @@ public interface Drawable extends DrawableListener {
     void setColor(Color color);  // Set color
     Color getColor();            // Get color
 
-    // Set a callback for self-removal
-    void setRemoveCallback(Consumer<String> removeCallback);
+    // Set a callback 
+    void setParentCallback(BiConsumer<ActionType, String> parentCallback) ;
+ 
 }

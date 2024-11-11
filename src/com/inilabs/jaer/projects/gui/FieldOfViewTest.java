@@ -16,68 +16,132 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
-package com.inilabs.jaer.projects.gui;
+
+package com.inilabs.jaer.gimbal;
+
+import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.Timer;
-import java.util.TimerTask;
-import com.inilabs.jaer.gimbal.FieldOfView;
+import java.awt.event.ActionEvent;
 
 public class FieldOfViewTest {
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            // Initialize the PolarSpace GUI and display
-            PolarSpaceGUI gui = new PolarSpaceGUI();
-            PolarSpaceDisplay display = gui.getPolarSpaceDisplay();
+        SwingUtilities.invokeLater(FieldOfViewTest::createAndShowGUI);
+    }
 
-            // Create a FieldOfView instance and add it to the display
-            FieldOfView fov = FieldOfView.getInstance();
-            fov.setColor(Color.MAGENTA);  // Set FOV color for visibility
-            display.addDrawable(fov);
+    private static void createAndShowGUI() {
+        // Main JFrame
+        JFrame frame = new JFrame("FieldOfView Test");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(1000, 800);
 
-            // Set initial azimuth, elevation, and roll
-            fov.setAzimuth(0f);
-            fov.setElevation(0f);
-            fov.setAxialRoll(0f);
+        // Create a PolarSpaceDisplay to render
+        PolarSpaceDisplay display = new PolarSpaceDisplay();
+        frame.add(display, BorderLayout.CENTER);
+
+        // Create and configure FieldOfView instance
+        FieldOfView fov = FieldOfView.getInstance();
+        fov.setSize(10); // Set initial size for visibility
+        fov.setColor(Color.RED);
+        fov.showPath(true); // Enable path display for tracking movement
+
+        // Explicitly add FieldOfView to display and repaint
+        display.addDrawable(fov);
+        display.repaint();
+
+        // Debugging output to check if FieldOfView is in drawable list
+        System.out.println("Attempting to add FieldOfView. Current drawables:");
+        display.getDrawableNames().forEach(System.out::println);
+        if (display.getDrawableNames().contains(fov.getKey())) {
+            System.out.println("FieldOfView successfully added to display.");
+        } else {
+            System.out.println("FieldOfView not found in display drawable list.");
+        }
+
+        // Control Panel for FOV adjustments
+        JPanel controlPanel = new JPanel(new GridLayout(2, 3));
+
+        // Movement buttons
+        JButton moveButton = new JButton("Move FOV");
+        JButton rotateRollButton = new JButton("Rotate Roll");
+        JButton increaseAzimuthRange = new JButton("Increase Azimuth Range");
+        JButton decreaseAzimuthRange = new JButton("Decrease Azimuth Range");
+        JButton togglePathButton = new JButton("Toggle Path");
+
+        // Movement and adjustment listeners
+        moveButton.addActionListener(e -> simulateMovement(fov, display));
+        rotateRollButton.addActionListener(e -> simulateRollRotation(fov, display));
+        increaseAzimuthRange.addActionListener(e -> adjustAzimuthRange(display, 10));
+        decreaseAzimuthRange.addActionListener(e -> adjustAzimuthRange(display, -10));
+        togglePathButton.addActionListener(e -> {
+            fov.showPath(!fov.isPathVisible());
             display.repaint();
-
-            // Test 1: Cycle through azimuth values
-            javax.swing.Timer azimuthTimer = new javax.swing.Timer(2000, e -> {
-                float newAzimuth = fov.getAzimuth() + 10f;
-                if (newAzimuth > 40f) newAzimuth = -40f;  // Wrap around within +/-40 degrees
-                System.out.println("Setting Azimuth to: " + newAzimuth);
-                fov.setAzimuth(newAzimuth);
-                display.repaint();
-            });
-            azimuthTimer.start();
-
-            // Test 2: Cycle through elevation values
-            javax.swing.Timer elevationTimer = new javax.swing.Timer(3000, e -> {
-                float newElevation = fov.getElevation() + 10f;
-                if (newElevation > 30f) newElevation = -30f;  // Wrap around within +/-30 degrees
-                System.out.println("Setting Elevation to: " + newElevation);
-                fov.setElevation(newElevation);
-                display.repaint();
-            });
-            elevationTimer.start();
-
-            // Test 3: Cycle through roll values
-            Timer rollTimer = new Timer();
-            rollTimer.scheduleAtFixedRate(new TimerTask() {
-                float currentRoll = 0f;
-
-                @Override
-                public void run() {
-                    currentRoll += 15f;
-                    if (currentRoll >= 360f) currentRoll -= 360f;  // Keep roll within 0-360 degrees
-                    System.out.println("Setting Roll to: " + currentRoll);
-                    fov.setAxialRoll(currentRoll);
-                    display.repaint();
-                }
-            }, 0, 4000);  // Update roll every 4 seconds
         });
+
+        // Add buttons to control panel
+        controlPanel.add(moveButton);
+        controlPanel.add(rotateRollButton);
+        controlPanel.add(increaseAzimuthRange);
+        controlPanel.add(decreaseAzimuthRange);
+        controlPanel.add(togglePathButton);
+
+        // Add control panel to frame
+        frame.add(controlPanel, BorderLayout.SOUTH);
+        frame.setVisible(true);
+    }
+
+    // Method to simulate movement of FieldOfView across different azimuth and elevation values
+    private static void simulateMovement(FieldOfView fov, PolarSpaceDisplay display) {
+        Timer timer = new Timer(500, new AbstractAction() {
+            private int step = 0;
+
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                switch (step % 4) {
+                    case 0 -> {
+                        fov.setAzimuth(10); // Move to 10° azimuth
+                        fov.setElevation(-10); // Move to -10° elevation
+                    }
+                    case 1 -> {
+                        fov.setAzimuth(-10); // Move to -10° azimuth
+                        fov.setElevation(10); // Move to 10° elevation
+                    }
+                    case 2 -> {
+                        fov.setAzimuth(20); // Move to 20° azimuth
+                        fov.setElevation(5);  // Move to 5° elevation
+                    }
+                    case 3 -> {
+                        fov.setAzimuth(-20); // Move to -20° azimuth
+                        fov.setElevation(-5); // Move to -5° elevation
+                    }
+                }
+                step++;
+                display.repaint();
+            }
+        });
+        timer.start();
+    }
+
+    // Method to simulate roll rotation for FieldOfView
+    private static void simulateRollRotation(FieldOfView fov, PolarSpaceDisplay display) {
+        Timer timer = new Timer(500, new AbstractAction() {
+            private float roll = 0f;
+
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                roll += 10f; // Rotate by 10 degrees each step
+                fov.setAxialRoll(roll);
+                display.repaint();
+            }
+        });
+        timer.start();
+    }
+
+    // Method to adjust azimuth range in PolarSpaceDisplay
+    private static void adjustAzimuthRange(PolarSpaceDisplay display, int delta) {
+        float newAzimuthRange = display.getAzimuthRange() + delta;
+        display.setAzimuthRange(newAzimuthRange);
     }
 }
-

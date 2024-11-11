@@ -4,7 +4,6 @@
  */
 package com.inilabs.jaer.projects.tracker;
 
-import com.inilabs.jaer.projects.space3d.PolarSpaceGUI;
 import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GLAutoDrawable;
 import java.awt.Graphics2D;
@@ -40,6 +39,9 @@ import java.util.Iterator;
 import java.util.List;
 import net.sf.jaer.eventprocessing.tracking.RectangularClusterTracker.Cluster;
 import org.slf4j.LoggerFactory;
+import com.inilabs.jaer.projects.gui.PolarSpaceGUI;
+import com.inilabs.jaer.gimbal.FieldOfView;
+
 
 
 /**
@@ -97,10 +99,10 @@ public class TargetManager extends EventFilter2DMouseAdaptor implements FrameAnn
     /**
      * @return the gui
      */
-    public PolarSpaceGUI getGui() {
+    public PolarSpaceGUI getPolarSpaceGui() {
         if (gui == null) {
             gui = new PolarSpaceGUI();
-        //    gui.getSupport().addPropertyChangeListener(this);
+             gui.getPolarSpaceDisplay().addDrawable(FieldOfView.getInstance());
         }
         return gui;
     }
@@ -166,8 +168,8 @@ public class TargetManager extends EventFilter2DMouseAdaptor implements FrameAnn
      * Values are stored persistently as preferences. 
      * Built automatically into filter parameter panel as an action.
      */
-    public void doPolarGUI() {
-        getGui().setVisible(true);
+    public void doPolarSpaceGUI() {
+        getPolarSpaceGui().setVisible(true);
     }
     // </editor-fold>
     
@@ -197,7 +199,7 @@ public class TargetManager extends EventFilter2DMouseAdaptor implements FrameAnn
             }
             if (bestCluster.getAvgEventRateHzPerPx() >= eventThreshold && bestCluster.getRadius() < sizeThreshold) {
                 targetCluster = bestCluster;
-                targetCluster.setColor(Color.red);
+                targetCluster.setColor(Color.red);    
             } else {
                 // there is no suitable cluster
                 targetCluster = null;

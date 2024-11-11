@@ -16,14 +16,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
-package com.inilabs.jaer.projects.space3d;
 
-/**
- *
- * @author rjd
- */
+package com.inilabs.jaer.projects.gui;
 
-public interface DrawableListener {
-    // Method to handle scale updates
-    void onScaleUpdate(double azimuthScale, double elevationScale);
+public enum ActionType {
+    REMOVE,
+    REPAINT
+    // Add other actions as needed
 }

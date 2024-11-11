@@ -16,27 +16,32 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
-package com.inilabs.jaer.projects.space3d;
+package com.inilabs.jaer.projects.agent;
+
 /**
  *
- * @author rjd
+ * @author rjd chatgtp
  */
 
-import java.awt.Graphics;
-
-public interface Drawable extends DrawableListener {
+public interface RTAgentable extends AgentEventListener { 
+     int getID();
+    String getName();
+    // Check if the agent is active
+    boolean isActive();
+    // Starts the real-time agent
     
-    // Method to draw the object, converting degrees to pixels as needed
-    void draw(Graphics g);
+    void start();
 
-    // Unique key for the drawable
-    String getKey();
+    // Stops the real-time agent
+    void stop();
+    
+    // runs the agent
+    void run(); 
 
-    // Setters and getters for position in degrees
-    void setAzimuth(double azimuthDegrees);  // Set azimuth in degrees
-    double getAzimuth();                     // Get azimuth in degrees
+    // Add an event listener
+    void addEventListener(AgentEventListener listener);
 
-    void setElevation(double elevationDegrees);  // Set elevation in degrees
-    double getElevation();                       // Get elevation in degrees
+    // Remove an event listener
+    void removeEventListener(AgentEventListener listener);
+    
 }
-

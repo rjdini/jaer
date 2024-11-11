@@ -33,7 +33,7 @@ public class DrawableTest {
             PolarSpaceDisplay display = gui.getPolarSpaceDisplay();
 
             // Test 1: Adding a drawable at specified position
-            AgentDrawable agent1 = new AgentDrawable("Agent1");
+            BasicDrawable agent1 = new BasicDrawable();
             agent1.setAzimuth(10f);   // Set azimuth to 10 degrees
             agent1.setElevation(-20f); // Set elevation to -20 degrees
             agent1.setSize(5f);       // Set size in degrees
@@ -41,14 +41,14 @@ public class DrawableTest {
             display.addDrawable(agent1);
 
             // Test 2: Adding multiple drawables with different positions and sizes
-            AgentDrawable agent2 = new AgentDrawable("Agent2");
+            BasicDrawable agent2 = new BasicDrawable();
             agent2.setAzimuth(30f);    // Set azimuth to 30 degrees
             agent2.setElevation(10f);  // Set elevation to 10 degrees
             agent2.setSize(8f);        // Larger size in degrees
             agent2.setColor(Color.BLUE);
             display.addDrawable(agent2);
 
-            AgentDrawable agent3 = new AgentDrawable("Agent3");
+            BasicDrawable agent3 = new BasicDrawable();
             agent3.setAzimuth(-15f);   // Set azimuth to -15 degrees
             agent3.setElevation(25f);  // Set elevation to 25 degrees
             agent3.setSize(6f);        // Set size in degrees
@@ -85,7 +85,7 @@ public class DrawableTest {
             rangeRestoreTimer.start();
 
             // Test 6: Moving a magenta drawable agent periodically to the four corners of a 20-degree square
-            AgentDrawable movingAgent = new AgentDrawable("MovingAgent");
+            BasicDrawable movingAgent = new BasicDrawable();
             movingAgent.setSize(4f);         // Set size of agent
             movingAgent.setColor(Color.MAGENTA); // Magenta color
             display.addDrawable(movingAgent);

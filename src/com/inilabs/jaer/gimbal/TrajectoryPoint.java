@@ -40,8 +40,8 @@ package com.inilabs.jaer.gimbal;
 
         private final long timeNanos;
         private final float pan, tilt;
-        private FieldOfView fov = FieldOfView.getInstance(0,0,0);
-
+        private FieldOfView fov = FieldOfView.getInstance();
+        
         public TrajectoryPoint(long timeNanos, float pan, float tilt) {
             this.timeNanos = timeNanos;
             this.pan = pan;
