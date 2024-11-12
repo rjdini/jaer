@@ -218,7 +218,9 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
             EVENT_PAUSED = "paused",
             EVENT_TIMESTAMPS_RESET = "timestampsReset",
             EVENT_CHECK_NONMONOTONIC_TIMESTAMPS = "checkNonMonotonicTimestamps",
-            EVENT_ACCUMULATE_ENABLED = "accumulateEnabled";
+            EVENT_ACCUMULATE_ENABLED = "accumulateEnabled",
+            EVENT_LOGGING_STARTED = "loggingStarted",
+            EVENT_LOGGING_STOPPED = "loggingStopped";
     private PropertyChangeSupport support = new PropertyChangeSupport(this);
 
     // note filenames cannot have spaces in them for browser to work easily, some problem with space encoding; %20 doesn't work as advertized.
@@ -284,6 +286,7 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
     private FrameRater frameRater = new FrameRater();
     ChipCanvas chipCanvas;
     volatile boolean loggingEnabled = false;
+    /** The file that AE data is currently being logged to. Note it can change when the user finally selects the file to save the data to.*/
     private File loggingFile;
     AEFileOutputStream loggingOutputStream;
     private boolean activeRenderingEnabled = prefs.getBoolean("AEViewer.activeRenderingEnabled", true);
@@ -4612,6 +4615,8 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
                 loggingStartTime = System.currentTimeMillis();
             }
             log.info("starting logging to " + loggingFile.getAbsolutePath());
+            getSupport().firePropertyChange(EVENT_LOGGING_STARTED, null, loggingFile);
+
             //            aemon.resetTimestamps();
 
         } catch (FileNotFoundException e) {
@@ -4630,6 +4635,7 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
      * Starts logging data to a default data logging file.
      *
      * @return the file that is logged to.
+     * @see #getLoggingFile() 
      */
     synchronized public File startLogging() {
         //        if(playMode!=PlayMode.LIVE) return null;
@@ -4843,6 +4849,7 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
 
             }
             loggingEnabled = false;
+            getSupport().firePropertyChange(EVENT_LOGGING_STOPPED, null, loggingFile);
         }
 
         fixLoggingControls();
@@ -6130,6 +6137,14 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
     public void setLoggingButton(javax.swing.JToggleButton b) {
         loggingButton = b;
     }
+    
+    /** Returns the current AE data logging file. Note that this file can change if the user selects a different final file destination or name than the original default one.
+     * 
+     * @return the loggingFile
+     */
+    public File getLoggingFile() {
+        return loggingFile;
+    }
 
     public JCheckBoxMenuItem getSyncEnabledCheckBoxMenuItem() {
         return syncEnabledCheckBoxMenuItem;
@@ -6503,4 +6518,6 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
     private javax.swing.JMenuItem zoomInMenuItem;
     private javax.swing.JMenuItem zoomOutMenuItem;
     // End of variables declaration//GEN-END:variables
+
+
 }
