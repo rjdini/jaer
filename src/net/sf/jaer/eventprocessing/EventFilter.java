@@ -22,17 +22,22 @@ import javax.swing.SwingUtilities;
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GLException;
+import java.beans.BeanInfo;
+import java.beans.IntrospectionException;
+import java.beans.Introspector;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.beans.PropertyDescriptor;
 import java.io.File;
 import java.io.Serializable;
+import java.util.logging.Level;
 import java.util.prefs.BackingStoreException;
 
 import net.sf.jaer.Description;
-import net.sf.jaer.Preferred;
 import net.sf.jaer.chip.AEChip;
 import net.sf.jaer.eventio.AEFileInputStreamInterface;
 import net.sf.jaer.eventio.AEInputStream;
+import net.sf.jaer.eventprocessing.filter.AbstractNoiseFilter;
 import net.sf.jaer.graphics.AEViewer;
 import net.sf.jaer.graphics.AbstractAEPlayer;
 import net.sf.jaer.graphics.FrameAnnotater;
@@ -665,8 +670,6 @@ public abstract class EventFilter extends Observable implements HasPropertyToolt
         return getClass().getSimpleName();
     }
 
-    
-
     /**
      * The development status of an EventFilter. An EventFilter can implement
      * the static method getDevelopmentStatus which returns the filter's
@@ -769,7 +772,7 @@ public abstract class EventFilter extends Observable implements HasPropertyToolt
                 Class enclClass = Class.forName(enclClassName);
                 if (EventFilter.class.isAssignableFrom(enclClass)) {
                     prefs = getPrefsForEnclosedFilter(prefs, enclClassName);
-                    log.finer("This filter " + this.getClass() + " is enclosed in " + enclClass + " and has new Preferences node=" + prefs);
+                    //log.info("This filter " + this.getClass() + " is enclosed in " + enclClass + " and has new Preferences node=" + prefs);
                 }
             }
         } catch (ClassNotFoundException e) {
@@ -783,11 +786,9 @@ public abstract class EventFilter extends Observable implements HasPropertyToolt
      * enclosing filter class node
      */
     private Preferences getPrefsForEnclosedFilter(Preferences prefs, String enclClassName) {
-        final String prefsNodeName = prefs.absolutePath() + "/" + enclClassName.replace(".", "/");
         //        int clNaInd=enclClassName.lastIndexOf(".");
         //        enclClassName=enclClassName.substring(clNaInd,enclClassName.length());
-        prefs = Preferences.userRoot().node(prefsNodeName);
-        log.finer(String.format("For enclosed class %s Got prefs node %s; prefs=%s",enclClassName,prefsNodeName,prefs.toString()));
+        prefs = Preferences.userRoot().node(prefs.absolutePath() + "/" + enclClassName.replace(".", "/"));
         return prefs;
     }
 
@@ -1222,7 +1223,7 @@ public abstract class EventFilter extends Observable implements HasPropertyToolt
      */
     final public void setPropertyTooltipBold(String groupName, String propertyName, String tooltip) {
         tooltipSupport.setPropertyTooltip(groupName, propertyName, tooltip);
-        tooltipSupport.markPropertyAsPreferred(propertyName);
+        tooltipSupport.markPropertyAsBold(propertyName);
     }
 
     /**
@@ -1230,8 +1231,8 @@ public abstract class EventFilter extends Observable implements HasPropertyToolt
      *
      * @param propertyName
      */
-    final public void markPropertyAsPreferred(String propertyName) {
-        tooltipSupport.markPropertyAsPreferred(propertyName);
+    final public void markPropertyAsBold(String propertyName) {
+        tooltipSupport.markPropertyAsBold(propertyName);
     }
 
     /**
@@ -1243,14 +1244,13 @@ public abstract class EventFilter extends Observable implements HasPropertyToolt
     }
 
     /**
-     * Returns true if property is marked bold (preferred)
+     * Returns true if property is marked bold
      *
      * @param propertyName
      * @return true if should be rendered bold
-     * @see net.sf.jaer.Preferred
      */
-    public boolean isPropertyPreferred(String propertyName) {
-        return tooltipSupport.isPropertyPreferred(propertyName);
+    public boolean isPropertyBold(String propertyName) {
+        return tooltipSupport.isPropertyBold(propertyName);
     }
 
     /**

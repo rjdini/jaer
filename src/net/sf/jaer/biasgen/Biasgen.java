@@ -288,7 +288,6 @@ public class Biasgen implements BiasgenPreferences, Observer, BiasgenHardwareInt
      * configuration information should call storePreferences explicitly for
      * additional configuration.
      */
-    @Override
     public void storePreferences() {
         log.info("storing preferences to preferences tree");
         if (potArray != null) {

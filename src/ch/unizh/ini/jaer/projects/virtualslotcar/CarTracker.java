@@ -100,6 +100,9 @@ public class CarTracker extends RectangularClusterTracker implements FrameAnnota
         if (!isPreferenceStored("useNearestCluster")) {
             setUseNearestCluster(true);
         }
+        if (!isPreferenceStored("pathsEnabled")) {
+            setPathsEnabled(true);
+        }
         if (!isPreferenceStored("pathLength")) {
             setPathLength(100);
         }
