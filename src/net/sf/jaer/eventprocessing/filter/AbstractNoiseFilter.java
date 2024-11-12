@@ -23,13 +23,11 @@ import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.util.awt.TextRenderer;
 import com.jogamp.opengl.util.gl2.GLUT;
 import java.awt.Font;
-import java.beans.BeanDescriptor;
 import java.beans.PropertyChangeEvent;
-import java.beans.PropertyDescriptor;
-import java.beans.SimpleBeanInfo;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import net.sf.jaer.Preferred;
 import net.sf.jaer.chip.AEChip;
 import net.sf.jaer.event.BasicEvent;
 import net.sf.jaer.event.EventPacket;
@@ -51,7 +49,7 @@ import net.sf.jaer.util.TobiLogger;
  */
 public abstract class AbstractNoiseFilter extends EventFilter2D implements FrameAnnotater, RemoteControlled {
 
-    protected boolean showFilteringStatistics = getBoolean("showFilteringStatistics", true);
+    @Preferred protected boolean showFilteringStatistics = getBoolean("showFilteringStatistics", true);
     private int showFilteringStatisticsFontSize=getInt("showFilteringStatisticsFontSize",24);
     protected int totalEventCount = 0;
     protected int filteredOutEventCount = 0;
@@ -68,7 +66,7 @@ public abstract class AbstractNoiseFilter extends EventFilter2D implements Frame
     /**
      * Used by some filters that implement this option
      */
-    protected boolean filterHotPixels = getBoolean("filterHotPixels", true);
+    @Preferred protected boolean filterHotPixels = getBoolean("filterHotPixels", true);
     protected boolean recordFilteredOutEvents = false;
     /**
      * Map from noise filters to drawing positions of noise filtering statistics
@@ -82,12 +80,12 @@ public abstract class AbstractNoiseFilter extends EventFilter2D implements Frame
     /**
      * Correlation time in seconds
      */
-    protected float correlationTimeS = getFloat("correlationTimeS", 25e-3f);
+    @Preferred protected float correlationTimeS = getFloat("correlationTimeS", 25e-3f);
 
     /**
      * Neighborhood radius in pixels
      */
-    protected int sigmaDistPixels = getInt("sigmaDistPixels", 1);
+    @Preferred protected int sigmaDistPixels = getInt("sigmaDistPixels", 1);
 
     /**
      * the amount to subsample x and y event location by in bit shifts when
@@ -95,13 +93,13 @@ public abstract class AbstractNoiseFilter extends EventFilter2D implements Frame
      * support. E.g. setting subSamplingShift to 1 quadruples range because both
      * x and y are shifted right by one bit
      */
-    protected int subsampleBy = getInt("subsampleBy", 0);
+    @Preferred protected int subsampleBy = getInt("subsampleBy", 0);
 
     /**
      * the time in timestamp ticks (1us at present) that a spike needs to be
      * supported by a prior event in the neighborhood by to pass through
      */
-    protected boolean letFirstEventThrough = getBoolean("letFirstEventThrough", true);
+    @Preferred protected boolean letFirstEventThrough = getBoolean("letFirstEventThrough", true);
 
     protected boolean antiCasualEnabled = getBoolean("antiCasualEnabled", false);
 

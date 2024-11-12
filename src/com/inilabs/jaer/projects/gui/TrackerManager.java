@@ -196,7 +196,7 @@ public class TrackerManager extends EventFilter2DMouseAdaptor implements FrameAn
             // check is there is a better custer than the first one
             while (clusterIterator.hasNext()) {
                 Cluster c = clusterIterator.next();
-                if (c.getAvgEventRateHzPerPx() >= eventThreshold && c.getRadius() < sizeThreshold && c.getAvgEventRateHzPerPx() > bestCluster.getMeasuredAverageEventRate()) {
+                if (c.getAvgEventRateHz()>= eventThreshold && c.getRadius() < sizeThreshold && c.getAvgEventRateHz() > bestCluster.getMeasuredAverageEventRate()) {
                     bestCluster = c;
                 }
             }
