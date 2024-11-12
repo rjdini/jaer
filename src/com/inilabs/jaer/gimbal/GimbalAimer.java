@@ -286,102 +286,103 @@ public class GimbalAimer extends EventFilter2DMouseAdaptor implements FrameAnnot
         return supportPanTilt;
     }
 
+    
     @Override
-    synchronized public void annotate(GLAutoDrawable drawable) {
-        if (!this.isFilterEnabled()) {
-            return;
-        }
-        fmt.setPrecision(1); // digits after decimel point
-        GL2 gl = drawable.getGL().getGL2(); // when we getString this we are already set up with updateShape 1=1 pixel,
-        // at LL corner
-        if (gl == null) {
-            log.warn("null GL in RectangularClusterTracker.annotate");
-            return;
-        }
-
-        drawGimbalPoseCrossHair(gl);
-
-        // current gimbal target
-        try {
-            gl.glPushMatrix();
-            {
-               drawTargetLocation(gl);
-            }
-        } catch (java.util.ConcurrentModificationException e) {
-            // this is in case cluster list is modified by real time filter during rendering of clusters
-            log.warn("concurrent modification of target list while drawing ");
-        } finally {
-            gl.glPopMatrix();
-        }
+synchronized public void annotate(GLAutoDrawable drawable) {
+    if (!this.isFilterEnabled()) {
+        return;
+    }
+    fmt.setPrecision(1); // digits after decimal point
+    GL2 gl = drawable.getGL().getGL2();
+    if (gl == null) {
+        log.warn("null GL in RectangularClusterTracker.annotate");
+        return;
     }
 
-    private GL2 drawGimbalPoseCrossHair(GL2 gl) {
-        int sx2 = chip.getSizeX() / 8, sy2 = chip.getSizeY() / 8;
-        int midX = chip.getSizeX() / 2, midY = chip.getSizeY() / 2;
+    drawGimbalPoseCrossHair(gl); // This method includes its own push/pop matrix calls
+
+    try {
         gl.glPushMatrix();
+        gl.glPushAttrib(GL2.GL_CURRENT_BIT | GL2.GL_LINE_BIT | GL2.GL_ENABLE_BIT);
+        drawTargetLocation(gl);  // Target location with matrix and state managed inside
+    } catch (java.util.ConcurrentModificationException e) {
+        log.warn("Concurrent modification of target list while drawing");
+    } finally {
+        gl.glPopAttrib();
+        gl.glPopMatrix();
+    }
+}
+
+private GL2 drawGimbalPoseCrossHair(GL2 gl) {
+    int sx2 = chip.getSizeX() / 8, sy2 = chip.getSizeY() / 8;
+    int midX = chip.getSizeX() / 2, midY = chip.getSizeY() / 2;
+    
+    gl.glPushMatrix();
+    try {
         gl.glTranslatef(midX, midY, 0);
         gl.glLineWidth(2f);
         gl.glColor3f(0, 1, 1);
+
         gl.glBegin(GL.GL_LINES);
         gl.glVertex2f(-sx2, 0);
         gl.glVertex2f(sx2, 0);
         gl.glVertex2f(0, -sy2);
         gl.glVertex2f(0, sy2);
         gl.glEnd();
-        gl.glPopMatrix();
-
-        // text annoation at top right of crosshair
+        
+        
+          // Render POSE output text above the crosshair
         GLUT cGLUT = chip.getCanvas().getGlut();
         final int font = GLUT.BITMAP_TIMES_ROMAN_24;
-        gl.glRasterPos3f(midX, midY + sy2, 0);
+
+        // Move the raster position just above the crosshair
+        gl.glRasterPos3f(0, sy2 + 10, 0); // Offset by 10 pixels above crosshair
         cGLUT.glutBitmapString(font, String.format("FOV(y,p) %.1f, %.1f deg ",
                 getGimbalBase().getYaw(),
-              //  getGimbalBase().getRoll(),
                 getGimbalBase().getPitch()));
-
-        //  DEBUGGING rjd
-//              gl.glRasterPos3f(midX, midY + 2*sy2-10f, 0);
-//              cGLUT.glutBitmapString(font, String.format("TARGET(width, mixingF)=%.1f, %.3f", tracker.getTargetWidth(), tracker.getMinMixingFactor()));
-        return gl;
+   
+    } finally {
+        gl.glPopMatrix();
     }
 
-    /**
-     * Shows the transform on top of the rendered events.
-     *
-     * @param gl the OpenGL context.
-     */
-    private GL2 drawTargetLocation(GL2 gl) {
-        float sx = chip.getSizeX() / 32;
-        // draw gimbal pose cross-hair 
-        gl.glPushMatrix();
-    //    gl.glPushAttrib(GL2.GL_CURRENT_BIT);
-     
-        float[] target = getGimbalBase().getTarget();
-        log.info("GimbalPose (y,p) " + target[0] + ", " + target[1]); 
-        float pixelX = getGimbalBase().getFOV().getPixelsAtPan(target[0]);
-        float pixelY = getGimbalBase().getFOV().getPixelsAtTilt(target[1]);
-        log.info("Target pixels received from FOV (p,t) " + pixelX + ", " + pixelY); 
-        gl.glTranslatef( pixelX,   pixelY, 0); 
+    return gl;
+}
+
+private GL2 drawTargetLocation(GL2 gl) {
+    float sx = chip.getSizeX() / 32;
+    float[] target = getGimbalBase().getTarget();
+    log.info("GimbalPose (y,p) " + target[0] + ", " + target[1]);
+    
+    float pixelX = getGimbalBase().getFOV().getPixelsAtPan(target[0]);
+    float pixelY = getGimbalBase().getFOV().getPixelsAtTilt(target[1]);
+    log.info("Target pixels received from FOV (p,t) " + pixelX + ", " + pixelY);
+    
+    gl.glPushMatrix();
+    gl.glPushAttrib(GL2.GL_CURRENT_BIT | GL2.GL_ENABLE_BIT);
+    try {
+        gl.glTranslatef(pixelX, pixelY, 0);
         gl.glColor3f(0, 1, 1);
         DrawGL.drawCircle(gl, 0f, 0f, sx, 10);
 
-        // text annoations on clusters, setup
+        // Text annotation on clusters
         GLUT cGLUT = chip.getCanvas().getGlut();
         final int font = GLUT.BITMAP_TIMES_ROMAN_24;
         gl.glRasterPos3f(0, sx, 0);
-      
         cGLUT.glutBitmapString(font, String.format("FOV TARG(y,p) %.1f, %.1f deg ",
                 getGimbalBase().getFOV().getYawAtPan(target[0]),
-                getGimbalBase().getFOV().getPitchAtTilt(target[1]) ) );
-       
-        gl.glRasterPos3f(0, -sx, 0);
-        //            cGLUT.glutBitmapString(font, String.format("Cluster # " + 
-        //                   targetCluster.getClusterNumber()) );
-
+                getGimbalBase().getFOV().getPitchAtTilt(target[1]) ));
+    } finally {
+        gl.glPopAttrib();
         gl.glPopMatrix();
-        return gl;
     }
+    return gl;
+}
 
+    
+    
+    
+    
+    
     // <editor-fold defaultstate="collapsed" desc="getter/setter for --PanTiltHardware--">
     public GimbalBase getGimbalBase() {
         if (gimbalbase == null) {

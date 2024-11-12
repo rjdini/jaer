@@ -27,7 +27,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.List;
 import java.util.ArrayList;
-import com.inilabs.jaer.projects.tracker.TargetManager;
+import com.inilabs.jaer.projects.tracker.TrackerManager;
 
 public class PolarSpaceGUI extends JFrame {
 
@@ -50,12 +50,12 @@ public class PolarSpaceGUI extends JFrame {
     private JList<String> drawableList;
 
     
-    private final TargetManager targetManager;
+    private final TrackerManager targetManager;
 
     // Default constructor
     public PolarSpaceGUI() {
         //super("Polar Space GUI");
-        this.targetManager = null; // No TargetManager assigned
+        this.targetManager = null; // No TrackerManager assigned
         initializeGUI();
     }
     
@@ -96,7 +96,8 @@ public class PolarSpaceGUI extends JFrame {
         });
         updateTimer.start();
 
-     
+        SwingUtilities.invokeLater(() -> polarDisplay.repaint());
+
         setVisible(true);
     }
 

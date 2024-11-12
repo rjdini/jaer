@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.swing.SwingUtilities;
 
 public class PolarSpaceDisplay extends JPanel {
 
@@ -40,6 +41,7 @@ public class PolarSpaceDisplay extends JPanel {
 
     public PolarSpaceDisplay() {
         setBackground(Color.WHITE);
+         SwingUtilities.invokeLater(() -> repaint());
     }
 
     public void setHeading(float azimuth, float elevation) {
@@ -127,6 +129,7 @@ public float getElevationRange() {
     }
     
 
+    
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);

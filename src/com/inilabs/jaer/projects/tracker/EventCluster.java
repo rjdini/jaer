@@ -30,26 +30,26 @@ import com.inilabs.jaer.projects.gui.BasicDrawable;
         
 public class EventCluster extends BasicDrawable {
     private final Cluster cluster;          // Reference to the Cluster instance
-    private TargetAgentDrawable enclosingAgent;  // Reference to the enclosing agent
+    private TrackerAgentDrawable enclosingAgent;  // Reference to the enclosing agent
     private Color color = Color.BLACK;                    // Color of the cluster for drawing
     private float size = 2.0f;
    private static FieldOfView fov = FieldOfView.getInstance();
     private BiConsumer<ActionType, String> parentCallback ;
     
-    public EventCluster(Cluster cluster, TargetAgentDrawable agent) {
+    public EventCluster(Cluster cluster, TrackerAgentDrawable agent) {
         this.cluster = cluster;
         this.enclosingAgent = agent;
         this.color = agent.getColor();      // Use the enclosing agent’s color
     }
 
-    public EventCluster(TargetAgentDrawable agent) {
+    public EventCluster(TrackerAgentDrawable agent) {
         this.cluster = null;  // for testing
         this.enclosingAgent = agent;
         this.color = agent.getColor();      // Use the enclosing agent’s color
     }
     
     // Set the enclosing agent and update color to match agent
-    public void setEnclosingAgent(TargetAgentDrawable agent) {
+    public void setEnclosingAgent(TrackerAgentDrawable agent) {
         this.enclosingAgent = agent;
         this.color = agent.getColor();
     }

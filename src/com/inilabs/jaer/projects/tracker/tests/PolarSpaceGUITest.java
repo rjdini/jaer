@@ -16,13 +16,15 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
+
+
 package com.inilabs.jaer.projects.tracker.tests;
 
 import javax.swing.*;
 import java.awt.*;
 import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
 import com.inilabs.jaer.projects.gui.PolarSpaceGUI;
-import com.inilabs.jaer.projects.tracker.TargetManager;
+import com.inilabs.jaer.projects.tracker.TrackerManager;
 
 import javax.swing.*;
 import java.awt.*;
@@ -30,16 +32,18 @@ import java.awt.*;
 public class PolarSpaceGUITest {
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            // Create the main PolarSpaceDisplay and TargetManager
-            PolarSpaceDisplay display = new PolarSpaceDisplay();
-            TargetManager targetManager = new TargetManager(display);
+            // Create the main PolarSpaceDisplay and TrackerManager
+         //   PolarSpaceDisplay display = new PolarSpaceDisplay();
+          //  TrackerManager targetManager = new TrackerManager(display);
 
             // Initialize PolarSpaceGUI as its own window
             PolarSpaceGUI gui = new PolarSpaceGUI();
-            gui.setVisible(false);  // Show PolarSpaceGUI window
+           gui.setVisible(false);  // Show PolarSpaceGUI window
+            
+             TrackerManager targetManager = new TrackerManager(gui.getPolarSpaceDisplay());
 
-            // Create the test panel for additional controls with TargetManager
-            TestPanel testPanel = new TestPanel(targetManager);
+            // Create the test panel for additional controls with TrackerManager
+           TestPanel testPanel = new TestPanel(gui.getPolarSpaceDisplay());
 
             // Set up the main testing frame for additional controls on the EAST
             JFrame testFrame = new JFrame("Polar Space GUI Test");

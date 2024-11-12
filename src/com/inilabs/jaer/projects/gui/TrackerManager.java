@@ -59,10 +59,10 @@ import com.inilabs.jaer.projects.gui.AgentDrawable;
  * @author tobi, rjd
  */
 @DevelopmentStatus(DevelopmentStatus.Status.Experimental)
-@Description("Rev 27Oct24:  Displays RS4 gimbal pose,  Pans to mouse-clicked FOV location.")
-public class TargetManagerV1 extends EventFilter2DMouseAdaptor implements FrameAnnotater {
+@Description("Rev 12Nov24:  Steers RS4 gimbal pose,  FOV and tracked target on PolarSpaceGUI")
+public class TrackerManager extends EventFilter2DMouseAdaptor implements FrameAnnotater {
 
-    private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(TargetManagerV1.class);
+    private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(TrackerManager.class);
 
     RectangularClusterTracker tracker;
     GimbalAimer panTilt = null;
@@ -80,7 +80,7 @@ public class TargetManagerV1 extends EventFilter2DMouseAdaptor implements FrameA
     private PolarSpaceGUI polarSpaceGUI = null;
     private AgentDrawable agentDrawable = null;
 
-    public TargetManagerV1(AEChip chip) {
+    public TrackerManager(AEChip chip) {
         super(chip);
         targetLocation = new Point2D.Float(100, 100);
 
@@ -295,73 +295,89 @@ public class TargetManagerV1 extends EventFilter2DMouseAdaptor implements FrameA
     }
 
     @Override
-    public void annotate(GLAutoDrawable drawable) {
-        if (!isFilterEnabled()) {
-            return;
-        }
-        //         fmt.setPrecision(1); // digits after decimel point
-        GL2 gl = drawable.getGL().getGL2(); // when we getString this we are already set up with updateShape 1=1 pixel,
-        // at LL corner
-        if (gl == null) {
-             log.warn("null GL in TargetManager.annotate");
-            return;
-        }
-
-        //             super.annotate(drawable);
-        //    tracker.annotate(drawable);
-        if (targetCluster != null) {
-            try {
-                gl.glPushMatrix();
-                {
-                    drawTargetLocation(gl);
-                }
-            } catch (java.util.ConcurrentModificationException e) {
-                // this is in case cluster list is modified by real time filter during rendering of clusters
-                //    log.warn("concurrent modification of target list while drawing ");
-            } finally {
-                gl.glPopMatrix();
-            }
-        }
+public void annotate(GLAutoDrawable drawable) {
+    if (!isFilterEnabled()) {
+        return;
+    }
+    GL2 gl = drawable.getGL().getGL2();
+    if (gl == null) {
+        log.warn("null GL in TargetManager.annotate");
+        return;
     }
 
-    /**
-     * Shows the transform on top of the rendered events.
-     *
-     * @param gl the OpenGL context.
-     */
-    private void drawTargetLocation(GL2 gl) {
-        float sx = chip.getSizeX() / 32;
-        // draw gimbal pose cross-hair 
-        gl.glPushMatrix();
-        gl.glPushAttrib(GL2.GL_CURRENT_BIT);
+    if (targetCluster != null) {
+        try {
+            gl.glPushMatrix();
+            gl.glPushAttrib(GL2.GL_CURRENT_BIT | GL2.GL_ENABLE_BIT); // Ensure color and enable states are preserved
+            drawTargetLocation(gl);
+        } catch (java.util.ConcurrentModificationException e) {
+            log.warn("Concurrent modification of target list while drawing");
+        } finally {
+            gl.glPopAttrib();
+            gl.glPopMatrix();
+        }
+    }
+}
+
+/**
+ * Draws the target location with text annotations.
+ *
+ * @param gl the OpenGL context.
+ */
+private void drawTargetLocation(GL2 gl) {
+    float sx = chip.getSizeX() / 32;
+
+    // Draw target location
+    gl.glPushMatrix();
+    gl.glPushAttrib(GL2.GL_CURRENT_BIT | GL2.GL_ENABLE_BIT);
+    try {
         gl.glTranslatef(targetLocation.x, targetLocation.y, 0);
         gl.glColor3f(1, 0, 0);
-        // text annoations on clusters, setup
+
+        // Set up GLUT for text annotations
         GLUT cGLUT = chip.getCanvas().getGlut();
         final int font = GLUT.BITMAP_TIMES_ROMAN_24;
-        gl.glRasterPos3f(0, sx, 0);
-        if (agentDrawable != null ) {
-        cGLUT.glutBitmapString(font, String.format("%S (y,p) %.1f, %.1f deg", agentDrawable.getKey(), agentDrawable.getAzimuth(), agentDrawable.getElevation()));
+
+        // Draw agent annotation or "No Target" above the target location
+        gl.glRasterPos3f(0, sx, 0); // Adjust to position text just above the target
+        if (agentDrawable != null) {
+            cGLUT.glutBitmapString(font, String.format("%s (y,p) %.1f, %.1f deg",
+                    agentDrawable.getKey(), agentDrawable.getAzimuth(), agentDrawable.getElevation()));
         } else {
-              cGLUT.glutBitmapString(font, String.format("No Target"));
-        }   
+            cGLUT.glutBitmapString(font, "No Target");
+        }
+
+        // Draw cluster number annotation below the target
         gl.glRasterPos3f(0, -sx, 0);
-        cGLUT.glutBitmapString(font, String.format("Cluster # "
-                + targetCluster.getClusterNumber()));
+        cGLUT.glutBitmapString(font, String.format("Cluster # %d", targetCluster.getClusterNumber()));
+
+        // Draw a red circle at the target location
         drawCircle(gl, 0.0f, 0.0f, sx, 10);
 
+    } finally {
+        gl.glPopAttrib();
         gl.glPopMatrix();
     }
+}
 
-    private void drawCircle(GL2 gl, float cx, float cy, float radius, int segments) {
-        gl.glBegin(GL2.GL_LINE_LOOP); // Use GL_LINE_LOOP to draw the outline of the circle
-        for (int i = 0; i < segments; i++) {
-            double theta = 2.0 * Math.PI * i / segments; // Calculate the angle for each segment
-            float x = (float) (radius * Math.cos(theta));
-            float y = (float) (radius * Math.sin(theta));
-            gl.glVertex2f(x + cx, y + cy); // Set vertex positions relative to the center
-        }
-        gl.glEnd();
+/**
+ * Draws a circle with specified radius and segments.
+ *
+ * @param gl       the OpenGL context.
+ * @param cx       the x-coordinate of the center.
+ * @param cy       the y-coordinate of the center.
+ * @param radius   the radius of the circle.
+ * @param segments the number of segments to approximate the circle.
+ */
+private void drawCircle(GL2 gl, float cx, float cy, float radius, int segments) {
+    gl.glBegin(GL2.GL_LINE_LOOP);
+    for (int i = 0; i < segments; i++) {
+        double theta = 2.0 * Math.PI * i / segments;
+        float x = (float) (radius * Math.cos(theta));
+        float y = (float) (radius * Math.sin(theta));
+        gl.glVertex2f(x + cx, y + cy);
     }
+    gl.glEnd();
+}
 
 }

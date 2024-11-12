@@ -27,8 +27,8 @@ package com.inilabs.jaer.projects.gui;
 import javax.swing.*;
 import javax.swing.event.ChangeListener;
 import java.awt.*;
-import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
 public class PolarSpaceControlPanel extends JPanel {
 
@@ -39,15 +39,16 @@ public class PolarSpaceControlPanel extends JPanel {
     private final JToggleButton linkSlidersButton;
     private final JToggleButton pathToggleButton;
     private final JButton closeButton;
+    private final JButton startLoggingButton;
+    private final JButton stopLoggingButton;
     private final PolarSpaceDisplay polarDisplay;
     private boolean slidersLinked = true;
 
     public PolarSpaceControlPanel(PolarSpaceDisplay polarDisplay, ActionListener closeAction) {
         this.polarDisplay = polarDisplay;
+        setLayout(new BorderLayout(10, 10)); // Use BorderLayout for WEST and EAST sections
 
-        setLayout(new BorderLayout(10, 10)); // Use BorderLayout for top and bottom sections
-
-        // Main settings panel with a 2-column grid
+        // Settings panel for sliders and heading fields
         JPanel settingsPanel = new JPanel(new GridLayout(0, 2, 10, 5));
 
         // Azimuth heading
@@ -72,17 +73,17 @@ public class PolarSpaceControlPanel extends JPanel {
         elevationRangeSlider = createSlider(0, 90, 30, e -> updateElevationRange());
         settingsPanel.add(elevationRangeSlider);
 
-        add(settingsPanel, BorderLayout.CENTER);
+        // Place settings panel on the WEST side
+        add(settingsPanel, BorderLayout.WEST);
 
-        // Button panel with smaller buttons in FlowLayout
+        // Button panel with smaller buttons
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
 
         // Link sliders button
         linkSlidersButton = createToggleButton("Link Sliders", 120, 25);
         linkSlidersButton.addActionListener(e -> slidersLinked = linkSlidersButton.isSelected());
         buttonPanel.add(linkSlidersButton);
-        
-        
+
         // Path toggle button
         pathToggleButton = createToggleButton("Show Paths", 120, 25);
         pathToggleButton.addActionListener(new PathToggleListener());
@@ -95,6 +96,19 @@ public class PolarSpaceControlPanel extends JPanel {
         buttonPanel.add(closeButton);
 
         add(buttonPanel, BorderLayout.SOUTH);
+
+        // Logging control panel on the EAST side
+        JPanel loggingPanel = new JPanel(new GridLayout(2, 1, 5, 5));
+
+        startLoggingButton = new JButton("Start Logging");
+        startLoggingButton.addActionListener(e -> startLogging());
+        loggingPanel.add(startLoggingButton);
+
+        stopLoggingButton = new JButton("Stop Logging");
+        stopLoggingButton.addActionListener(e -> stopLogging());
+        loggingPanel.add(stopLoggingButton);
+
+        add(loggingPanel, BorderLayout.EAST);
 
         // Synchronize sliders if linked
         azimuthRangeSlider.addChangeListener(e -> {
@@ -111,7 +125,6 @@ public class PolarSpaceControlPanel extends JPanel {
         });
     }
 
-    // Helper method to create sliders
     private JSlider createSlider(int min, int max, int initial, ChangeListener listener) {
         JSlider slider = new JSlider(min, max, initial);
         slider.setPaintLabels(true);
@@ -122,25 +135,22 @@ public class PolarSpaceControlPanel extends JPanel {
         return slider;
     }
 
-    // Helper method to create smaller toggle buttons
     private JToggleButton createToggleButton(String text, int width, int height) {
         JToggleButton button = new JToggleButton(text);
         button.setPreferredSize(new Dimension(width, height));
         return button;
     }
 
-    
     private void updateHeadingFromField() {
-    try {
-        float azimuth = Float.parseFloat(azimuthHeadingField.getText());
-        float elevation = Float.parseFloat(elevationHeadingField.getText());
-        polarDisplay.setHeading(azimuth, elevation);  // Update display with new heading
-    } catch (NumberFormatException ex) {
-        JOptionPane.showMessageDialog(this, "Please enter valid numbers for azimuth and elevation.",
-                                      "Invalid Input", JOptionPane.ERROR_MESSAGE);
+        try {
+            float azimuth = Float.parseFloat(azimuthHeadingField.getText());
+            float elevation = Float.parseFloat(elevationHeadingField.getText());
+            polarDisplay.setHeading(azimuth, elevation);  // Update display with new heading
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Please enter valid numbers for azimuth and elevation.",
+                    "Invalid Input", JOptionPane.ERROR_MESSAGE);
+        }
     }
-}
-    
 
     protected void updateAzimuthRange() {
         polarDisplay.setAzimuthRange(azimuthRangeSlider.getValue());
@@ -150,25 +160,20 @@ public class PolarSpaceControlPanel extends JPanel {
         polarDisplay.setElevationRange(elevationRangeSlider.getValue());
     }
 
-    private void updateAzimuthScale() {
-        // Code to update azimuth scale if needed
-    }
-
-    private void updateElevationScale() {
-        // Code to update elevation scale if needed
-    }
-
-     /**
-     * External method to set the heading, updating both fields and display.
-     * @param azimuth The azimuth heading.
-     * @param elevation The elevation heading.
-     */
     public void setHeading(float azimuth, float elevation) {
         azimuthHeadingField.setText(String.valueOf(azimuth));
         elevationHeadingField.setText(String.valueOf(elevation));
         polarDisplay.setHeading(azimuth, elevation);
     }
-    
+
+    private void startLogging() {
+        // Implement logging start logic
+    }
+
+    private void stopLogging() {
+        // Implement logging stop logic
+    }
+
     private class PathToggleListener implements ActionListener {
         @Override
         public void actionPerformed(ActionEvent e) {
