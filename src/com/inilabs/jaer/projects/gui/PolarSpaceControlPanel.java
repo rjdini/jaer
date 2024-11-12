@@ -115,13 +115,13 @@ public class PolarSpaceControlPanel extends JPanel {
             if (slidersLinked) {
                 elevationRangeSlider.setValue(azimuthRangeSlider.getValue());
             }
-            updateAzimuthScale();
+     //      updateAzimuthScale();
         });
         elevationRangeSlider.addChangeListener(e -> {
             if (slidersLinked) {
                 azimuthRangeSlider.setValue(elevationRangeSlider.getValue());
             }
-            updateElevationScale();
+      //      updateElevationScale();
         });
     }
 
