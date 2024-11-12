@@ -43,21 +43,29 @@ import java.util.concurrent.TimeUnit;
  *  By using an interface, you can later create different types of real-time agents that might process different kinds of data or handle events in different ways, while still adhering to a consistent structure.
  *
  * @since October 2024
- * @author rjd chatgtp
+ * @author rjd 
  */
 
-public class RealTimeAgent implements RealTimeAgentInterface, Runnable {
-
-    private volatile boolean active; // Agent status
+public class RTAgent implements RTAgentable, Runnable {
+     private volatile boolean active; // Agent status
     private final ExecutorService executor; // Thread pool for real-time tasks
     private final List<AgentEventListener> eventListeners; // List of event listeners
-
-    public RealTimeAgent() {
+    private String name = "";
+   private int ID = 0;
+    
+    public RTAgent() {
+        ID = ID+1;
         this.active = true;
         this.executor = Executors.newSingleThreadExecutor(); // Single thread for the agent
         this.eventListeners = new ArrayList<>(); // List to store event listeners
     }
 
+    public int getID(){
+        return ID;
+    }
+    
+    
+    
     @Override
     public void run() {
         while (active) {
@@ -125,7 +133,7 @@ public class RealTimeAgent implements RealTimeAgentInterface, Runnable {
     }
 
     public static void main(String[] args) {
-        RealTimeAgent agent = new RealTimeAgent();
+        RTAgent agent = new RTAgent();
         
         // Adding a sample event listener
         agent.addEventListener(new AgentEventListener() {
@@ -148,6 +156,25 @@ public class RealTimeAgent implements RealTimeAgentInterface, Runnable {
         
         agent.stop(); // Stop the agent
         System.out.println("Agent stopped.");
+    }
+
+    @Override
+    public void onEvent(String eventType, Object eventData) {
+        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+    }
+
+    /**
+     * @return the name
+     */
+    public String getName() {
+        return name;
+    }
+
+    /**
+     * @param name the name to set
+     */
+    public void setName(String name) {
+        this.name = name;
     }
 }
 

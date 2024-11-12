@@ -16,27 +16,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
-package com.inilabs.jaer.projects.agent;
 
-/**
- *
- * @author rjd chatgtp
- */
+package com.inilabs.jaer.projects.gui;
 
-public interface RealTimeAgentInterface {
-
-    // Starts the real-time agent
-    void start();
-
-    // Stops the real-time agent
-    void stop();
-
-    // Add an event listener
-    void addEventListener(AgentEventListener listener);
-
-    // Remove an event listener
-    void removeEventListener(AgentEventListener listener);
-    
-    // Check if the agent is active
-    boolean isActive();
+public enum ActionType {
+    REMOVE,
+    REPAINT
+    // Add other actions as needed
 }

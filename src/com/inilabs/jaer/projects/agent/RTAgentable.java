@@ -16,12 +16,32 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
-package com.inilabs.jaer.projects.tracker;
+package com.inilabs.jaer.projects.agent;
 
 /**
  *
- * @author rjd
+ * @author rjd chatgtp
  */
-public class GimbalGaze {
+
+public interface RTAgentable extends AgentEventListener { 
+     int getID();
+    String getName();
+    // Check if the agent is active
+    boolean isActive();
+    // Starts the real-time agent
+    
+    void start();
+
+    // Stops the real-time agent
+    void stop();
+    
+    // runs the agent
+    void run(); 
+
+    // Add an event listener
+    void addEventListener(AgentEventListener listener);
+
+    // Remove an event listener
+    void removeEventListener(AgentEventListener listener);
     
 }

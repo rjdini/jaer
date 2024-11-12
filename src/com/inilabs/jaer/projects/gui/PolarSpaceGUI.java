@@ -20,12 +20,27 @@ package com.inilabs.jaer.projects.gui;
 
 import javax.swing.*;
 import java.awt.*;
+<<<<<<< HEAD
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+=======
+import javax.swing.Timer;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.List;
+import java.util.ArrayList;
+import com.inilabs.jaer.projects.tracker.TrackerManager;
+>>>>>>> working
 
 public class PolarSpaceGUI extends JFrame {
 
     private JPanel controlPanel;
+<<<<<<< HEAD
+=======
+    
+>>>>>>> working
     private PolarSpaceDisplay polarDisplay;
     private JSlider azimuthRangeSlider;
     private JSlider elevationRangeSlider;
@@ -35,6 +50,7 @@ public class PolarSpaceGUI extends JFrame {
     private JToggleButton linkSlidersButton;
     private boolean slidersLinked = false;
 
+<<<<<<< HEAD
     public PolarSpaceGUI() {
         setTitle("Polar Space GUI");
         setSize(1600, 1200);
@@ -133,6 +149,68 @@ public class PolarSpaceGUI extends JFrame {
         setVisible(true);
     }
 
+=======
+    private Timer updateTimer;
+    
+    
+  //  private final PolarSpaceDisplay polarDisplay;
+    private DefaultListModel<String> drawableListModel;
+    private JList<String> drawableList;
+
+    
+    private final TrackerManager targetManager;
+
+    // Default constructor
+    public PolarSpaceGUI() {
+        //super("Polar Space GUI");
+        this.targetManager = null; // No TrackerManager assigned
+        initializeGUI();
+    }
+    
+    private void initializeGUI() {
+     
+         // Frame settings
+       // setDefaultCloseOperation(JPanel );
+        setSize(1000, 1000);
+        setLayout(new BorderLayout());
+        
+        // Initialize display panel for drawables
+        polarDisplay = new PolarSpaceDisplay();
+        add(polarDisplay, BorderLayout.CENTER);
+
+        // Side panel setup to show drawable names
+        drawableListModel = new DefaultListModel<>();
+        drawableList = new JList<>(drawableListModel);
+        JScrollPane scrollPane = new JScrollPane(drawableList);
+        scrollPane.setPreferredSize(new Dimension(200, 0));
+        
+        JPanel sidePanel = new JPanel(new BorderLayout());
+        sidePanel.add(new JLabel("Drawable Objects"), BorderLayout.NORTH);
+        sidePanel.add(scrollPane, BorderLayout.CENTER);
+        add(sidePanel, BorderLayout.WEST);
+
+        // Control panel setup (omitted for brevity)
+        PolarSpaceControlPanel controlPanel = new PolarSpaceControlPanel(polarDisplay, e -> dispose());
+        controlPanel.setPreferredSize(new Dimension(1000, 200));
+        add(controlPanel, BorderLayout.SOUTH);
+        controlPanel.updateAzimuthRange();
+        controlPanel.updateElevationRange();
+        
+        // Set up the timer to refresh the display at regular intervals
+        int refreshRate = 30; // Refresh every 30 ms (~33 FPS)
+        updateTimer = new Timer(refreshRate, e -> {
+            polarDisplay.repaint(); // Repaint display at each timer tick
+            updateDrawableList(); // Update the side panel with drawable names
+        });
+        updateTimer.start();
+
+        SwingUtilities.invokeLater(() -> polarDisplay.repaint());
+
+        setVisible(true);
+    }
+
+
+>>>>>>> working
      public PolarSpaceDisplay getPolarSpaceDisplay() {
         return polarDisplay;
     }
@@ -201,4 +279,25 @@ public class PolarSpaceGUI extends JFrame {
     public int getElevationHeading() {
         return Integer.parseInt(elevationHeadingField.getText());
     }
+<<<<<<< HEAD
+=======
+    
+    
+     // Method to stop the timer if needed
+    public void stopScheduler() {
+        if (updateTimer != null) {
+            updateTimer.stop();
+        }
+    }
+    
+     // Method to update the list of drawable names in the side panel
+    private void updateDrawableList() {
+        List<String> currentDrawableNames = polarDisplay.getDrawableNames();
+        drawableListModel.clear();
+        for (String name : currentDrawableNames) {
+            drawableListModel.addElement(name);
+        }
+    }
+    
+>>>>>>> working
 }

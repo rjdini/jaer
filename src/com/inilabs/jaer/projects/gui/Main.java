@@ -17,7 +17,10 @@
  * MA 02110-1301  USA
  */
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> working
 /**
  *
  * @author rjd
@@ -32,6 +35,7 @@ public class Main {
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
+<<<<<<< HEAD
             // Create the main frame
             JFrame frame = new JFrame("Drawable Agent Test");
             frame.setSize(800, 600);
@@ -60,6 +64,44 @@ public class Main {
             frame.add(display, BorderLayout.CENTER);
 
             frame.setVisible(true);
+=======
+            // Initialize the main PolarSpace GUI window
+            PolarSpaceGUI polarSpaceGUI = new PolarSpaceGUI();
+
+            // Get the display after GUI construction
+            PolarSpaceDisplay display = polarSpaceGUI.getPolarSpaceDisplay();
+
+            // Add test drawables to the PolarSpaceDisplay
+            AgentDrawable drawable1 = new AgentDrawable();
+            drawable1.setAzimuth(15);
+            drawable1.setElevation(-10);
+            drawable1.setSize(5);
+            drawable1.setColor(Color.RED);
+
+            AgentDrawable drawable2 = new AgentDrawable();
+            drawable2.setAzimuth(-20);
+            drawable2.setElevation(5);
+            drawable2.setSize(8);
+            drawable2.setColor(Color.BLUE);
+
+            AgentDrawable drawable3 = new AgentDrawable();
+            drawable3.setAzimuth(30);
+            drawable3.setElevation(15);
+            drawable3.setSize(6);
+            drawable3.setColor(Color.GREEN);
+
+            // Add the drawables to the display
+            display.addDrawable(drawable1);
+            display.addDrawable(drawable2);
+            display.addDrawable(drawable3);
+
+            // Optionally set up initial control panel settings if needed
+            PolarSpaceControlPanel controlPanel = new PolarSpaceControlPanel(display, e -> polarSpaceGUI.dispose());
+            polarSpaceGUI.add(controlPanel, BorderLayout.SOUTH);
+            controlPanel.setHeading(10, -5);     
+     //       controlPanel.setAzimuthRange(40);
+      //      controlPanel.setElevationRange(30);
+>>>>>>> working
         });
     }
 }
