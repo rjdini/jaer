@@ -101,11 +101,6 @@ public class GimbalBase implements GimbalInterface, LaserOnOffControl {
     private float roll = 0.0f;
     private float pitch = 0.0f;
     
-<<<<<<< HEAD
-    float sendYaw = 0f;
-    float sendRoll = 0f;
-    float sendPitch = 0f;
-=======
     float previousSendYaw = 0f;
     float previousSendRoll = 0f;
     float previousSendPitch = 0f;
@@ -113,7 +108,6 @@ public class GimbalBase implements GimbalInterface, LaserOnOffControl {
     float currentSendYaw = 0f;
     float currentSendRoll = 0f;
     float currentSendPitch = 0f;
->>>>>>> working
 
     private float chipXFOV = 30; // degrees
     private float chipYFOV = 30;
@@ -148,11 +142,7 @@ public class GimbalBase implements GimbalInterface, LaserOnOffControl {
     private boolean enableGimbal = false ; // debugging
 
     private final float chipFOV = 30.0f; // degrees
-<<<<<<< HEAD
-    private FieldOfView fov = null;
-=======
     private FieldOfView fov = FieldOfView.getInstance();
->>>>>>> working
     
     public GimbalBase() {
         super();
@@ -189,17 +179,11 @@ rs4controllerGUI = new RS4ControllerGUISwingV1();
 
 
     private void init() {
-<<<<<<< HEAD
-      fov = FieldOfView.getInstance(-10, 0, -20); 
-      this.pcs.addPropertyChangeListener(fov);
-       sendDefaultGimbalPose();  
-=======
       fov.setAxialYaw(defaultYaw);
       fov.setAxialRoll(defaultRoll);
       fov.setAxialPitch(defaultPitch);
       this.pcs.addPropertyChangeListener(fov);
       sendDefaultGimbalPose();  
->>>>>>> working
 } 
     
     
@@ -258,20 +242,6 @@ rs4controllerGUI = new RS4ControllerGUISwingV1();
     public void removePropertyChangeListener(PropertyChangeListener listener) {
         this.pcs.removePropertyChangeListener(listener);
     }
-<<<<<<< HEAD
-
-    
-    
-
-    
-    public FieldOfView getFOV() {
-        return fov;
-    }
-    
-   
-    
-=======
->>>>>>> working
     
     
     public RS4ControllerV2 getGimbal() {
@@ -636,14 +606,6 @@ rs4controllerGUI = new RS4ControllerGUISwingV1();
         // Only send significant updates of pose
       //  if ((Math.abs(deltaYaw) > deltaThreshold || Math.abs(deltaPitch) > deltaThreshold ) && isTargetEnabled() && enableGimbal) {
           if (Math.abs(deltaYaw) > deltaThreshold || Math.abs(deltaPitch) > deltaThreshold ) {    
-<<<<<<< HEAD
-           sendYaw = getYaw() + deltaYaw;
-           sendRoll = getRoll();
-           sendPitch = getPitch() + deltaPitch;
-         
-           rs4controller.setPose(sendYaw, sendRoll, sendPitch); // PanTilt does not consider Roll 
-            log.info("Sent gimbal pose (y,r,p) " + sendYaw + ",  " + sendRoll + ", " + sendPitch );
-=======
            currentSendYaw = getYaw() + deltaYaw;
            currentSendRoll = getRoll();
            currentSendPitch = getPitch() + deltaPitch;
@@ -658,7 +620,6 @@ rs4controllerGUI = new RS4ControllerGUISwingV1();
            
             this.pcs.firePropertyChange("SendGimbalPose", previousSendPose, newSendPose);    
             log.info("SendGimbalPose (y,r,p) " + currentSendYaw + ",  " + currentSendRoll + ", " + currentSendPitch );
->>>>>>> working
          } else 
         {  
             // go to home pose
@@ -716,13 +677,8 @@ rs4controllerGUI = new RS4ControllerGUISwingV1();
         // update current vales
         this.pan = fov.getPanAtYaw(this.getYaw());
         this.tilt = fov.getTiltAtPitch(this.getPitch());
-<<<<<<< HEAD
-         this.pan = fov.getPanAtYaw(sendYaw);
-        this.tilt = fov.getTiltAtPitch(sendPitch);
-=======
         this.pan = fov.getPanAtYaw(currentSendYaw);
         this.tilt = fov.getTiltAtPitch(currentSendPitch);
->>>>>>> working
         float[] newValues = {this.pan, this.tilt};
         
         // notify listeners of [0-1] range pan tilt

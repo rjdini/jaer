@@ -47,13 +47,8 @@ public class GimbalAimerGUI extends javax.swing.JFrame implements PropertyChange
     static  final float dash1[] = {10.0f};
     static  final BasicStroke dashed = new BasicStroke(1.0f, BasicStroke.CAP_BUTT,BasicStroke.JOIN_MITER,10.0f, dash1, 0.0f);
     private final PropertyChangeSupport supportPTAimerGUI = new PropertyChangeSupport(this);
-<<<<<<< HEAD
-    private final Gimbal panTilt;
-    private final Trajectory trajectory = new Trajectory();
-=======
     private final GimbalBase panTilt;
     private final Trajectory commandTrajectory = new Trajectory();
->>>>>>> working
     private final Trajectory panTiltTrajectory = new Trajectory();
     private final Trajectory targetTrajectory = new Trajectory();
     private final Trajectory jitterTargetTrajectory = new Trajectory();
@@ -219,10 +214,6 @@ public class GimbalAimerGUI extends javax.swing.JFrame implements PropertyChange
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-<<<<<<< HEAD
-        statusLabel = new javax.swing.JLabel();
-=======
->>>>>>> working
         calibrationPanel = new javax.swing.JPanel();
         InfoLabel = new javax.swing.JLabel();
         recordCB = new javax.swing.JCheckBox();
@@ -239,11 +230,7 @@ public class GimbalAimerGUI extends javax.swing.JFrame implements PropertyChange
         jitterBut = new javax.swing.JButton();
         setSpeedTB = new javax.swing.JTextField();
         SpeedLabel = new javax.swing.JLabel();
-<<<<<<< HEAD
-        jToggleButton1 = new javax.swing.JToggleButton();
-=======
         statusLabel = new javax.swing.JLabel();
->>>>>>> working
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setTitle("GimbalAimerGUI");
@@ -296,19 +283,11 @@ public class GimbalAimerGUI extends javax.swing.JFrame implements PropertyChange
         calibrationPanel.setLayout(calibrationPanelLayout);
         calibrationPanelLayout.setHorizontalGroup(
             calibrationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-<<<<<<< HEAD
-            .addGap(0, 0, Short.MAX_VALUE)
-        );
-        calibrationPanelLayout.setVerticalGroup(
-            calibrationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 764, Short.MAX_VALUE)
-=======
             .addGap(0, 924, Short.MAX_VALUE)
         );
         calibrationPanelLayout.setVerticalGroup(
             calibrationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGap(0, 739, Short.MAX_VALUE)
->>>>>>> working
         );
 
         InfoLabel.setFont(InfoLabel.getFont().deriveFont((InfoLabel.getFont().getStyle() & ~java.awt.Font.ITALIC) & ~java.awt.Font.BOLD));
@@ -427,12 +406,8 @@ public class GimbalAimerGUI extends javax.swing.JFrame implements PropertyChange
 
         SpeedLabel.setText("Speed:");
 
-<<<<<<< HEAD
-        jToggleButton1.setText("jToggleButton1");
-=======
         statusLabel.setText("exception status");
         statusLabel.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
->>>>>>> working
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -447,7 +422,6 @@ public class GimbalAimerGUI extends javax.swing.JFrame implements PropertyChange
 =======
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(statusLabel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
->>>>>>> working
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(InfoLabel, javax.swing.GroupLayout.DEFAULT_SIZE, 218, Short.MAX_VALUE)
                         .addGap(18, 52, Short.MAX_VALUE)
@@ -477,29 +451,15 @@ public class GimbalAimerGUI extends javax.swing.JFrame implements PropertyChange
                             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                                 .addComponent(PanLabel)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-<<<<<<< HEAD
-                                .addComponent(SetPanTB, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))))
-                .addContainerGap())
-            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                .addGroup(layout.createSequentialGroup()
-                    .addGap(0, 0, Short.MAX_VALUE)
-                    .addComponent(jToggleButton1)
-                    .addGap(0, 0, Short.MAX_VALUE)))
-=======
                                 .addComponent(SetPanTB, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
                         .addGap(190, 190, 190))
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(calibrationPanel, javax.swing.GroupLayout.PREFERRED_SIZE, 928, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(0, 0, Short.MAX_VALUE))))
->>>>>>> working
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
-<<<<<<< HEAD
-                .addContainerGap()
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-=======
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
@@ -557,7 +517,6 @@ public class GimbalAimerGUI extends javax.swing.JFrame implements PropertyChange
                 .addComponent(calibrationPanel, javax.swing.GroupLayout.PREFERRED_SIZE, 743, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(statusLabel))
->>>>>>> working
         );
 
         pack();
