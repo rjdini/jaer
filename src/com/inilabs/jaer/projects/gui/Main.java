@@ -38,19 +38,19 @@ public class Main {
             PolarSpaceDisplay display = polarSpaceGUI.getPolarSpaceDisplay();
 
             // Add test drawables to the PolarSpaceDisplay
-            AgentDrawable drawable1 = new AgentDrawable("Drawable1");
+            AgentDrawable drawable1 = new AgentDrawable();
             drawable1.setAzimuth(15);
             drawable1.setElevation(-10);
             drawable1.setSize(5);
             drawable1.setColor(Color.RED);
 
-            AgentDrawable drawable2 = new AgentDrawable("Drawable2");
+            AgentDrawable drawable2 = new AgentDrawable();
             drawable2.setAzimuth(-20);
             drawable2.setElevation(5);
             drawable2.setSize(8);
             drawable2.setColor(Color.BLUE);
 
-            AgentDrawable drawable3 = new AgentDrawable("Drawable3");
+            AgentDrawable drawable3 = new AgentDrawable();
             drawable3.setAzimuth(30);
             drawable3.setElevation(15);
             drawable3.setSize(6);
@@ -64,10 +64,9 @@ public class Main {
             // Optionally set up initial control panel settings if needed
             PolarSpaceControlPanel controlPanel = new PolarSpaceControlPanel(display, e -> polarSpaceGUI.dispose());
             polarSpaceGUI.add(controlPanel, BorderLayout.SOUTH);
-            controlPanel.setAzimuthHeading(10);
-            controlPanel.setElevationHeading(-5);
-            controlPanel.setAzimuthRange(40);
-            controlPanel.setElevationRange(30);
+            controlPanel.setHeading(10, -5);     
+     //       controlPanel.setAzimuthRange(40);
+      //      controlPanel.setElevationRange(30);
         });
     }
 }

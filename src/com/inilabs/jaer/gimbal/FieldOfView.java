@@ -69,17 +69,27 @@ public class FieldOfView extends BasicDrawable implements PropertyChangeListener
             setAxialPitch(newOrientation[2]);
         }
     }
+    
+    
+    @Override
+    public void onTransformChanged(float azimuthScale, float elevationScale, float azimuthHeading, float elevationHeading, int centerX, int centerY) {
+        this.azimuthScale = azimuthScale;
+        this.elevationScale = elevationScale;
+        this.azimuthHeading = azimuthHeading;
+        this.elevationHeading = elevationHeading;
+        this.centerX = centerX;
+        this.centerY = centerY;
+    }
 
       // Method to draw the Field of View, positioning based on azimuth and elevation
     @Override
     public void draw(Graphics g) {
         Graphics2D g2d = (Graphics2D) g;
 
-        // Calculate position based on azimuth and elevation scales
-        int centerX = g.getClipBounds().width / 2;
-        int centerY = g.getClipBounds().height / 2;
-        int x = centerX + (int) (getAzimuth() * getAzimuthScale());
-        int y = centerY - (int) (getElevation() * getElevationScale());
+   
+        // Calculate screen coordinates based on polar coordinates and the transform broadcast
+        int x = getCenterX() + (int) ((getAzimuth() - getAzimuthHeading()) * getAzimuthScale());
+        int y = getCenterY() - (int) ((getElevation() - getElevationHeading()) * getElevationScale());
 
         // Calculate box dimensions based on FOV and scales
         int boxWidth = (int) (FOVX * getAzimuthScale());
@@ -173,7 +183,36 @@ public class FieldOfView extends BasicDrawable implements PropertyChangeListener
     public float getTiltAtPitch(float pitch) {
         return 0.5f + (pitch - axialPitch) / FOVY;
     }
+    
+    /**
+     * Converts a given x-coordinate (pixel) into the corresponding yaw (azimuth) angle
+     * relative to the center point (heading) of the display.
+     * @param pixelX The x-coordinate on the display.
+     * @return The yaw (azimuth) in degrees at the specified pixel.
+     */
+    public float getYawAtPixel(float pixelX) {
+        // Calculate pixel offset from the center of the display
+        float pixelOffsetX = pixelX - getCenterX();
 
+        // Convert pixel offset to yaw angle using the azimuth scale
+        return pixelOffsetX * getAzimuthScale();
+    }
+
+    /**
+     * Converts a given y-coordinate (pixel) into the corresponding pitch (elevation) angle
+     * relative to the center point (heading) of the display.
+     * @param pixelY The y-coordinate on the display.
+     * @return The pitch (elevation) in degrees at the specified pixel.
+     */
+    public float getPitchAtPixel(float pixelY) {
+        // Calculate pixel offset from the center of the display
+        float pixelOffsetY = getCenterY() - pixelY; // Note: Y-axis is typically inverted
+
+        // Convert pixel offset to pitch angle using the elevation scale
+        return pixelOffsetY * getElevationScale();
+    }
+    
+  
     // Set chip dimensions and update dependent parameters
     public void setChipDimensions(float width, float height) {
         this.chipWidthPixels = width;

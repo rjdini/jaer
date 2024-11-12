@@ -20,8 +20,8 @@ package com.inilabs.jaer.projects.gui;
 
 public interface DrawableListener {
 
-    // Methods to update scaling factors with float parameters
-    void onAzimuthScaleChanged(float azimuthScale);
-
-    void onElevationScaleChanged(float elevationScale);
+      // Methods to update transforms parameters
+    void onTransformChanged(float azimuthScale, float elevationScale, float azimuthHeading, float elevationHeading, int centerX, int centerY);
+    void showPath(boolean show);  // Added method to control path visibility
+    
 }

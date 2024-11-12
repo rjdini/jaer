@@ -40,7 +40,7 @@ public class PolarSpaceControlPanel extends JPanel {
     private final JToggleButton pathToggleButton;
     private final JButton closeButton;
     private final PolarSpaceDisplay polarDisplay;
-    private boolean slidersLinked = false;
+    private boolean slidersLinked = true;
 
     public PolarSpaceControlPanel(PolarSpaceDisplay polarDisplay, ActionListener closeAction) {
         this.polarDisplay = polarDisplay;
@@ -81,7 +81,8 @@ public class PolarSpaceControlPanel extends JPanel {
         linkSlidersButton = createToggleButton("Link Sliders", 120, 25);
         linkSlidersButton.addActionListener(e -> slidersLinked = linkSlidersButton.isSelected());
         buttonPanel.add(linkSlidersButton);
-            
+        
+        
         // Path toggle button
         pathToggleButton = createToggleButton("Show Paths", 120, 25);
         pathToggleButton.addActionListener(new PathToggleListener());
@@ -157,6 +158,17 @@ public class PolarSpaceControlPanel extends JPanel {
         // Code to update elevation scale if needed
     }
 
+     /**
+     * External method to set the heading, updating both fields and display.
+     * @param azimuth The azimuth heading.
+     * @param elevation The elevation heading.
+     */
+    public void setHeading(float azimuth, float elevation) {
+        azimuthHeadingField.setText(String.valueOf(azimuth));
+        elevationHeadingField.setText(String.valueOf(elevation));
+        polarDisplay.setHeading(azimuth, elevation);
+    }
+    
     private class PathToggleListener implements ActionListener {
         @Override
         public void actionPerformed(ActionEvent e) {

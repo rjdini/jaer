@@ -30,18 +30,23 @@ public class BasicDrawable implements Drawable, DrawableListener {
     private static int idCounter = 0; // Auto-incrementing ID counter for instances
     private final String key;
     private final int id; // Unique ID for this instance
-    private float azimuth = 0.0f;
-    private float elevation = 0.0f;
-    private float size = 5.0f;
-    private Color color = Color.RED;
-    private float azimuthScale = 1.0f;
-    private float elevationScale = 1.0f;
-    private boolean showPath = false;
     private BiConsumer<ActionType, String> parentCallback;
 
     // Path buffer for recent positions
-    private final LinkedList<float[]> pathBuffer = new LinkedList<>();
-    private final int maxPathLength = 20;
+    protected final LinkedList<float[]> pathBuffer = new LinkedList<>();
+    protected final int maxPathLength = 20;
+    protected Color color = Color.RED;
+    protected boolean showPath = false;
+    protected float size = 5.0f;
+    protected float azimuth = 0.0f;
+    protected float elevation = 0.0f;
+    protected int centerX = 0;
+    protected int centerY = 0;
+    protected float azimuthScale = 1.0f;
+    protected float elevationScale = 1.0f;
+    protected float azimuthHeading = 0f;
+    protected float elevationHeading = 0f;
+    
 
     // Default constructor, places object at (0,0) and auto-generates key
     public BasicDrawable() {
@@ -66,35 +71,39 @@ public class BasicDrawable implements Drawable, DrawableListener {
         Graphics2D g2d = (Graphics2D) g;
 
         // Calculate position based on azimuth and elevation scales
-        int centerX = g.getClipBounds().width / 2;
-        int centerY = g.getClipBounds().height / 2;
-        int x = centerX + (int) (azimuth * azimuthScale);
-        int y = centerY - (int) (elevation * elevationScale);
+        centerX = g.getClipBounds().width / 2;
+        centerY = g.getClipBounds().height / 2;
+   //     int x = centerX + (int) (azimuth * azimuthScale);
+    //    int y = centerY - (int) (elevation * elevationScale);
+        // Calculate screen coordinates based on polar coordinates and the transform broadcast
+        int x = getCenterX() + (int) ((getAzimuth() - getAzimuthHeading()) * getAzimuthScale());
+        int y = getCenterY() - (int) ((getElevation() - getElevationHeading()) * getElevationScale());
 
         // Draw the drawable as a circle
         g2d.setColor(color);
-        int pixelSize = (int) (size * azimuthScale);
-        g2d.drawOval(x - pixelSize / 2, y - pixelSize / 2, pixelSize, pixelSize);
+        int pixelSizeX = (int) (size * getAzimuthScale());
+        int pixelSizeY = (int) (size * getElevationScale());
+        g2d.drawOval(x - pixelSizeX / 2, y - pixelSizeY / 2, pixelSizeX, pixelSizeY);
 
         // Draw the path if enabled
         if (showPath) {
-            drawPath(g2d, centerX, centerY);
+            drawPath(g2d, getCenterX(), getCenterY());
         }
 
         // Update path buffer with the current position
     //   addCurrentPositionToPath();  updated only through update azimuth / elevation
     }
 
-    private void drawPath(Graphics2D g2d, int centerX, int centerY) {
+    protected void drawPath(Graphics2D g2d, int centerX, int centerY) {
         g2d.setColor(Color.GRAY);
         float[] previousPosition = null;
 
         for (float[] position : pathBuffer) {
             if (previousPosition != null) {
-                int previousX = centerX + (int) (previousPosition[0] * azimuthScale);
-                int previousY = centerY - (int) (previousPosition[1] * elevationScale);
-                int currentX = centerX + (int) (position[0] * azimuthScale);
-                int currentY = centerY - (int) (position[1] * elevationScale);
+                int previousX = centerX + (int) (previousPosition[0] * getAzimuthScale());
+                int previousY = centerY - (int) (previousPosition[1] * getElevationScale());
+                int currentX = centerX + (int) (position[0] * getAzimuthScale());
+                int currentY = centerY - (int) (position[1] * getElevationScale());
                 g2d.drawLine(previousX, previousY, currentX, currentY);
             }
             previousPosition = position;
@@ -105,18 +114,18 @@ public class BasicDrawable implements Drawable, DrawableListener {
         if (pathBuffer.size() >= maxPathLength) {
             pathBuffer.removeFirst();
         }
-        pathBuffer.addLast(new float[]{azimuth, elevation});
+        pathBuffer.addLast(new float[]{getAzimuth(), getElevation()});
     }
 
-    // Implementation of DrawableListener methods for scale updates
+    
     @Override
-    public void onAzimuthScaleChanged(float azimuthScale) {
+    public void onTransformChanged(float azimuthScale, float elevationScale, float azimuthHeading, float elevationHeading, int centerX, int centerY) {
         this.azimuthScale = azimuthScale;
-    }
-
-    @Override
-    public void onElevationScaleChanged(float elevationScale) {
         this.elevationScale = elevationScale;
+        this.azimuthHeading = azimuthHeading;
+        this.elevationHeading = elevationHeading;
+        this.centerX = centerX;
+        this.centerY = centerY;
     }
 
     // Drawable interface methods for setting properties
@@ -178,11 +187,11 @@ public class BasicDrawable implements Drawable, DrawableListener {
     }
 
     // Protected getters for subclasses
-    protected float getAzimuthScale() {
+    public float getAzimuthScale() {
         return azimuthScale;
     }
 
-    protected float getElevationScale() {
+    public float getElevationScale() {
         return elevationScale;
     }
 
@@ -194,4 +203,51 @@ public class BasicDrawable implements Drawable, DrawableListener {
     protected void drawPath(Graphics2D g2d) {
         drawPath(g2d, g2d.getClipBounds().width / 2, g2d.getClipBounds().height / 2);
     }
+    
+    
+     public void close() {
+        // Clear the path buffer
+        pathBuffer.clear();
+        
+        // Reset position and properties to default values (optional)
+        azimuth = 0.0f;
+        elevation = 0.0f;
+        size = 5.0f;
+        color = Color.RED;
+        showPath = false;
+
+        // Notify parent or manager, if a callback is set
+        if (parentCallback != null) {
+            parentCallback.accept(ActionType.REMOVE, key);
+        }
+    }
+
+    /**
+     * @return the centerX
+     */
+    public int getCenterX() {
+        return centerX;
+    }
+
+    /**
+     * @return the centerY
+     */
+    public int getCenterY() {
+        return centerY;
+    }
+
+    /**
+     * @return the azimuthHeading
+     */
+    public float getAzimuthHeading() {
+        return azimuthHeading;
+    }
+
+    /**
+     * @return the elevationHeading
+     */
+    public float getElevationHeading() {
+        return elevationHeading;
+    }
+    
 }

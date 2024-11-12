@@ -17,9 +17,11 @@
  * MA 02110-1301  USA
  */
 
-package com.inilabs.jaer.gimbal;
+package com.inilabs.jaer.projects.gui.tests;
 
 import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
+import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
+import com.inilabs.jaer.gimbal.FieldOfView;
 
 import javax.swing.*;
 import java.awt.*;

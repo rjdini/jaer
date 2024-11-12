@@ -61,5 +61,7 @@ public interface Drawable extends DrawableListener {
 
     // Set a callback 
     void setParentCallback(BiConsumer<ActionType, String> parentCallback) ;
+    
+    void close();
  
 }

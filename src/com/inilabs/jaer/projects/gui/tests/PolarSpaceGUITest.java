@@ -16,13 +16,16 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
+package com.inilabs.jaer.projects.gui.tests;
 
-package com.inilabs.jaer.projects.gui;
-
+import com.inilabs.jaer.projects.gui.BasicDrawable;
+import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class PolarSpaceGUITest {
     private JFrame frame;
@@ -31,6 +34,7 @@ public class PolarSpaceGUITest {
     private JSlider elevationRangeSlider;
     private JTextField azimuthHeadingField;
     private JTextField elevationHeadingField;
+    private BasicDrawable movingDrawable;
 
     public PolarSpaceGUITest() {
         // Initialize the GUI components
@@ -42,27 +46,23 @@ public class PolarSpaceGUITest {
         polarSpaceDisplay = new PolarSpaceDisplay();
         polarSpaceDisplay.setPreferredSize(new Dimension(600, 400));
 
-        // Set initial heading to 0,0 (center of viewport)
+        // Set initial heading and range
         polarSpaceDisplay.setHeading(0, 0);
+        polarSpaceDisplay.setAzimuthRange(30);
+        polarSpaceDisplay.setElevationRange(30);
 
         // Set up azimuth and elevation range sliders
-        azimuthRangeSlider = new JSlider(10, 90, 30); // Range from 10 to 90 degrees, starting at 30
+        azimuthRangeSlider = new JSlider(10, 90, 30);
         azimuthRangeSlider.setMajorTickSpacing(20);
         azimuthRangeSlider.setPaintTicks(true);
         azimuthRangeSlider.setPaintLabels(true);
-        azimuthRangeSlider.addChangeListener(e -> {
-            int range = azimuthRangeSlider.getValue();
-            polarSpaceDisplay.setAzimuthRange(range);
-        });
+        azimuthRangeSlider.addChangeListener(e -> polarSpaceDisplay.setAzimuthRange(azimuthRangeSlider.getValue()));
 
-        elevationRangeSlider = new JSlider(10, 90, 30); // Range from 10 to 90 degrees, starting at 30
+        elevationRangeSlider = new JSlider(10, 90, 30);
         elevationRangeSlider.setMajorTickSpacing(20);
         elevationRangeSlider.setPaintTicks(true);
         elevationRangeSlider.setPaintLabels(true);
-        elevationRangeSlider.addChangeListener(e -> {
-            int range = elevationRangeSlider.getValue();
-            polarSpaceDisplay.setElevationRange(range);
-        });
+        elevationRangeSlider.addChangeListener(e -> polarSpaceDisplay.setElevationRange(elevationRangeSlider.getValue()));
 
         // Set up heading controls for azimuth and elevation
         azimuthHeadingField = new JTextField("0", 5);
@@ -84,9 +84,7 @@ public class PolarSpaceGUITest {
         });
 
         // Organize controls into a control panel
-        JPanel controlPanel = new JPanel();
-        controlPanel.setLayout(new GridLayout(3, 2));
-
+        JPanel controlPanel = new JPanel(new GridLayout(3, 2));
         controlPanel.add(new JLabel("Azimuth Range (degrees):"));
         controlPanel.add(azimuthRangeSlider);
         controlPanel.add(new JLabel("Elevation Range (degrees):"));
@@ -101,13 +99,55 @@ public class PolarSpaceGUITest {
         frame.add(polarSpaceDisplay, BorderLayout.CENTER);
         frame.add(controlPanel, BorderLayout.SOUTH);
 
+        // Load drawables
+        addDrawables();
+
         // Pack and display the frame
         frame.pack();
         frame.setVisible(true);
+
+        // Start moving one of the drawables in a box pattern
+        startBoxPatternAnimation();
+    }
+
+    /**
+     * Adds two BasicDrawables to the PolarSpaceDisplay, each with a unique color.
+     */
+    private void addDrawables() {
+        // Create drawables at initial positions and add them to the display
+        BasicDrawable drawable1 = new BasicDrawable("Drawable1", 10, 0);
+        drawable1.setColor(Color.RED);
+
+        movingDrawable = new BasicDrawable("Drawable2", -10, -10);
+        movingDrawable.setColor(Color.GREEN);
+
+        polarSpaceDisplay.addDrawable(drawable1);
+        polarSpaceDisplay.addDrawable(movingDrawable);
+    }
+
+    /**
+     * Animates the moving drawable in a box pattern around the heading.
+     */
+    private void startBoxPatternAnimation() {
+        Timer timer = new Timer();
+        int delay = 1000; // Delay between moves in milliseconds
+        int[] boxPattern = {0, 20, 20, 0, 0, -20, -20, 0}; // Pattern of azimuth and elevation moves
+
+        timer.scheduleAtFixedRate(new TimerTask() {
+            int index = 0;
+
+            @Override
+            public void run() {
+                // Update azimuth and elevation in box pattern
+                movingDrawable.setAzimuth(boxPattern[index % 8]);
+                movingDrawable.setElevation(boxPattern[(index + 1) % 8]);
+                polarSpaceDisplay.repaint();
+                index = (index + 2) % 8;
+            }
+        }, delay, delay);
     }
 
     public static void main(String[] args) {
-        // Run the test case on the Swing Event Dispatch Thread
         SwingUtilities.invokeLater(() -> new PolarSpaceGUITest());
     }
 }

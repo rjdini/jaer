@@ -17,8 +17,11 @@
  * MA 02110-1301  USA
  */
 
-package com.inilabs.jaer.projects.gui;
+package com.inilabs.jaer.projects.gui.tests;
 
+import com.inilabs.jaer.projects.gui.BasicDrawable;
+import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
+import com.inilabs.jaer.projects.gui.PolarSpaceGUI;
 import javax.swing.*;
 import java.awt.*;
 import java.util.Timer;

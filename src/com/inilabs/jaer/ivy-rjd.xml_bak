@@ -34,8 +34,6 @@ MA 02110-1301  USA
          <dependency org="org.openjfx" name="javafx-fxml" rev="21.0.5" conf="javafx->default" />
           <dependency org="org.openjfx" name="javafx-swing" rev="21.0.5" conf="javafx->default" />
              <dependency org="org.openjfx" name="javafx-base" rev="21.0.5" conf="javafx->default" />
-          
-          
           <!-- https://mvnrepository.com/artifact/tel.schich/javacan-core -->
            <dependency org="tel.schich" name="javacan-core" rev="3.5.0"/>
            <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-api -->
