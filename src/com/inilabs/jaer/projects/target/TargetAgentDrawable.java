@@ -22,16 +22,26 @@ package com.inilabs.jaer.projects.target;
 import com.inilabs.jaer.projects.gui.AgentDrawable;
 import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
 import com.inilabs.jaer.projects.tracker.EventCluster;
-import org.slf4j.Logger;
+//import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.Graphics;
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+
+import com.inilabs.jaer.projects.target.AgentCallback;
+import com.inilabs.jaer.projects.target.ActionType;
+import java.util.stream.Collectors;
 
 public class TargetAgentDrawable extends AgentDrawable implements Runnable {
-    private static final Logger logger = LoggerFactory.getLogger(TargetAgentDrawable.class);
-
+    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(TargetAgentDrawable.class);
+    private static final org.apache.logging.log4j.Logger datalog = LogManager.getLogger(TargetAgentDrawable.class);
+   
+    private final String key;
+    private AgentCallback callback;  // Add the callback
     private final List<EventCluster> clusters = new ArrayList<>();
     private boolean isLogging = false;
     private static final float DEFAULT_LIFETIME = 100.0f;
@@ -40,10 +50,10 @@ public class TargetAgentDrawable extends AgentDrawable implements Runnable {
     private final long startTime;
     private long lastTime;
     private float maxLifeTime;
-
     private float velocityAzimuth;
     private float velocityElevation;
     private PolarSpaceDisplay display;
+    private final long creationTime;
 
     public TargetAgentDrawable() {
         super();
@@ -52,6 +62,13 @@ public class TargetAgentDrawable extends AgentDrawable implements Runnable {
         this.maxLifeTime = DEFAULT_LIFETIME;
         this.velocityAzimuth = DEFAULT_VELOCITY;
         this.velocityElevation = DEFAULT_VELOCITY;
+        this.creationTime = System.currentTimeMillis();
+        // Log agent creation
+        datalog.info(createLog("creation"));
+    }
+
+    public void setCallback(AgentCallback callback) {
+        this.callback = callback;
     }
 
     public static long getTimestamp() {
@@ -69,6 +86,7 @@ public class TargetAgentDrawable extends AgentDrawable implements Runnable {
 
     @Override
     public void run() {
+        datalog.info(createLog("run"));
         move();
 
         if (isLogging) {
@@ -103,7 +121,13 @@ public class TargetAgentDrawable extends AgentDrawable implements Runnable {
         lastTime = getTimestamp();
         clusters.clear();
         logger.info("Agent {} closed at lastTime: {}", getKey(), lastTime);
+        datalog.info(createLog("close"));
         removeFromDisplay();
+
+        // Notify the callback (manager) to remove this agent
+        if (callback != null) {
+            callback.onAgentAction(ActionType.REMOVE, getKey());
+        }
     }
 
     private void removeFromDisplay() {
@@ -121,4 +145,18 @@ public class TargetAgentDrawable extends AgentDrawable implements Runnable {
         }
         logger.trace("Agent {} draw operation completed.", getKey());
     }
+    
+    
+     private String createLog(String eventType) {
+        // Capture timestamp and essential data for logging
+        long timestamp = System.currentTimeMillis();
+        String clustersList = clusters.stream().map(EventCluster::getKey).collect(Collectors.joining(", "));
+        
+        return String.format(
+            "{\"time\": \"%d\", \"ev_type\": \"%s\", \"key\": \"%s\", \"az\": %.2f, \"el\": %.2f, \"clust\": [%s]}",
+            timestamp, eventType, getKey(), getAzimuth(), getElevation(), clustersList
+        );
+    }
+    
 }
+

@@ -41,17 +41,21 @@ public class EventCluster extends BasicDrawable {
         this.enclosingAgent = agent;
         this.color = agent.getColor();      // Use the enclosing agent’s color
     }
-
+    
     public EventCluster(TrackerAgentDrawable agent) {
         this.cluster = null;  // for testing
         this.enclosingAgent = agent;
         this.color = agent.getColor();      // Use the enclosing agent’s color
     }
     
+    public EventCluster() {
+        this.cluster = null;  // for testing
+    }
+    
     // Set the enclosing agent and update color to match agent
     public void setEnclosingAgent(TrackerAgentDrawable agent) {
         this.enclosingAgent = agent;
-        this.color = agent.getColor();
+      //  this.color = agent.getColor();
     }
         
     public float getSupportQuality() {
@@ -72,9 +76,13 @@ public class EventCluster extends BasicDrawable {
         // Calculate the position for drawing based on the cluster’s azimuth and elevation
         int x = centerX + (int) ((getAzimuth() - enclosingAgent.getAzimuth()) * azimuthScale);
         int y = centerY - (int) ((getElevation() - enclosingAgent.getElevation()) * elevationScale);
+         
+          // Draw the drawable as a circle
+          g2d.setColor(Color.BLACK);
+        int pixelSizeX = (int) (size * azimuthScale);
+        int pixelSizeY = (int) (size * elevationScale);
+        g2d.drawOval(x - pixelSizeX / 2, y - pixelSizeY / 2, pixelSizeX, pixelSizeY);
 
-        // Draw the cluster as a small circle
-        g2d.fillOval(x - 3, y - 3, 6, 6);
 
         // Draw a line connecting the cluster to its enclosing agent
         int agentX = centerX;

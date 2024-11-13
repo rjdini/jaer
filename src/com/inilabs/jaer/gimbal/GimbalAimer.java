@@ -1,5 +1,13 @@
 package com.inilabs.jaer.gimbal;
 
+import com.jogamp.opengl.GL;
+import com.jogamp.opengl.GL2;
+import com.jogamp.opengl.GLAutoDrawable;
+import com.jogamp.opengl.awt.GLCanvas;
+import com.jogamp.opengl.util.gl2.GLUT;
+import java.awt.Graphics2D;
+import java.awt.geom.Point2D;
+
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
@@ -10,12 +18,12 @@ import net.sf.jaer.DevelopmentStatus;
 import net.sf.jaer.chip.AEChip;
 import net.sf.jaer.event.BasicEvent;
 import net.sf.jaer.event.EventPacket;
+import static net.sf.jaer.eventprocessing.EventFilter.log;
 import net.sf.jaer.eventprocessing.EventFilter2DMouseAdaptor;
+import net.sf.jaer.eventprocessing.FilterChain;
+import net.sf.jaer.eventprocessing.tracking.RectangularClusterTracker;
+import net.sf.jaer.graphics.FrameAnnotater;
 import net.sf.jaer.hardwareinterface.HardwareInterfaceException;
-<<<<<<< HEAD
-
-/** This filter enables aiming the pan-tilt using a GUI and allows controlling
-=======
 import net.sf.jaer.util.DrawGL;
 import net.sf.jaer.util.EngineeringFormat;
 import org.slf4j.LoggerFactory;
@@ -154,7 +162,6 @@ public class GimbalAimer extends EventFilter2DMouseAdaptor implements FrameAnnot
     @Override
     public void resetFilter() {
         gimbalbase.close();
->>>>>>> working
     }
 
     @Override
@@ -192,9 +199,9 @@ public class GimbalAimer extends EventFilter2DMouseAdaptor implements FrameAnnot
 
     // <editor-fold defaultstate="collapsed" desc="GUI button --Center--">
     public void doCenter() {
-        if (panTiltHardware != null) {
-//            if(!panTiltHardware.isFollowEnabled()) panTiltHardware.setFollowEnabled(true);
-            panTiltHardware.setTarget(0.5f, 0.5f);
+        if (gimbalbase != null) {
+//            if(!gimbalbase.isFollowEnabled()) gimbalbase.setFollowEnabled(true);
+            gimbalbase.setTarget(0.5f, 0.5f);
             System.out.println("**** doCenter");
         }
     }
@@ -234,19 +241,19 @@ public class GimbalAimer extends EventFilter2DMouseAdaptor implements FrameAnnot
     public synchronized void setFilterEnabled(boolean yes) {
         super.setFilterEnabled(yes);
         if (yes) {
-            panTiltHardware.setJitterAmplitude(jitterAmplitude);
-            panTiltHardware.setJitterFreqHz(jitterFreqHz);
-            panTiltHardware.setJitterEnabled(jitterEnabled);
-            panTiltHardware.setPanInverted(invertPan);
-            panTiltHardware.setTiltInverted(invertTilt);
-            panTiltHardware.setLimitOfPan(limitOfPan);
-            panTiltHardware.setLimitOfTilt(limitOfTilt);
+            gimbalbase.setJitterAmplitude(jitterAmplitude);
+            gimbalbase.setJitterFreqHz(jitterFreqHz);
+            gimbalbase.setJitterEnabled(jitterEnabled);
+            gimbalbase.setPanInverted(invertPan);
+            gimbalbase.setTiltInverted(invertTilt);
+            gimbalbase.setLimitOfPan(limitOfPan);
+            gimbalbase.setLimitOfTilt(limitOfTilt);
         } else {
             try {
-                panTiltHardware.stopJitter();
-                panTiltHardware.close();
+                gimbalbase.stopJitter();
+                gimbalbase.close();
             } catch (Exception ex) {
-                log.warning(ex.toString());
+                log.warn(ex.toString());
             }
         }
     }
@@ -266,7 +273,6 @@ public class GimbalAimer extends EventFilter2DMouseAdaptor implements FrameAnnot
     public GimbalAimerGUI getGui() {
         if (gui == null) {
             gui = new GimbalAimerGUI(gimbalbase);
->>>>>>> working
             gui.getSupport().addPropertyChangeListener(this);
         }
         return gui;
@@ -382,13 +388,12 @@ private GL2 drawTargetLocation(GL2 gl) {
         if (gimbalbase == null) {
             log.warn("No Pan-Tilt Hardware found. Initialising new PanTilt");
             gimbalbase = GimbalBase.getInstance();
->>>>>>> working
         }
-        return panTiltHardware;
+        return gimbalbase;
     }
 
-    public void setPanTiltHardware(Gimbal panTilt) {
-        this.panTiltHardware = panTilt;
+    public void setPanTiltHardware(GimbalBase panTilt) {
+        this.gimbalbase = panTilt;
     }
     // </editor-fold>
 
@@ -399,7 +404,7 @@ private GL2 drawTargetLocation(GL2 gl) {
      * @return the jitterEnabled
      */
     public boolean isJitterEnabled() {
-        return getPanTiltHardware().isJitterEnabled();
+        return getGimbalBase().isJitterEnabled();
     }
 
     /**
@@ -426,7 +431,7 @@ private GL2 drawTargetLocation(GL2 gl) {
      */
     @Override
     public float getJitterAmplitude() {
-        return getPanTiltHardware().getJitterAmplitude();
+        return getGimbalBase().getJitterAmplitude();
     }
 
     /**
@@ -454,7 +459,7 @@ private GL2 drawTargetLocation(GL2 gl) {
      */
     @Override
     public float getJitterFreqHz() {
-        return getPanTiltHardware().getJitterFreqHz();
+        return getGimbalBase().getJitterFreqHz();
     }
 
     /**
@@ -475,7 +480,7 @@ private GL2 drawTargetLocation(GL2 gl) {
 
     // <editor-fold defaultstate="collapsed" desc="getter/setter for --MinMovePerUpdate--">
     public float getMinMovePerUpdate() {
-        return getPanTiltHardware().getMinMovePerUpdate();
+        return getGimbalBase().getMinMovePerUpdate();
     }
 
     public void setMinMovePerUpdate(float MinMove) {
@@ -489,7 +494,7 @@ private GL2 drawTargetLocation(GL2 gl) {
 
     // <editor-fold defaultstate="collapsed" desc="getter/setter for --MaxMovePerUpdate--">
     public float getMaxMovePerUpdate() {
-        return getPanTiltHardware().getMaxMovePerUpdate();
+        return getGimbalBase().getMaxMovePerUpdate();
     }
 
     public void setMaxMovePerUpdate(float MaxMove) {
@@ -503,7 +508,7 @@ private GL2 drawTargetLocation(GL2 gl) {
 
     // <editor-fold defaultstate="collapsed" desc="getter/setter for --MoveUpdateFreqHz--">
     public int getMoveUpdateFreqHz() {
-        return getPanTiltHardware().getMoveUpdateFreqHz();
+        return getGimbalBase().getMoveUpdateFreqHz();
     }
 
     public void setMoveUpdateFreqHz(int UpdateFreq) {
@@ -682,13 +687,13 @@ private GL2 drawTargetLocation(GL2 gl) {
 
     // <editor-fold defaultstate="collapsed" desc="getter/setter for --linearMotion--">
     public boolean isLinearMotion() {
-        return getPanTiltHardware().isLinearSpeedEnabled();
+        return getGimbalBase().isLinearSpeedEnabled();
     }
 
     public void setLinearMotion(boolean linearMotion) {
         putBoolean("linearMotion", linearMotion);
         boolean OldValue = isLinearMotion();
-        getPanTiltHardware().setLinearSpeedEnabled(linearMotion);
+        getGimbalBase().setLinearSpeedEnabled(linearMotion);
         this.linearMotion = linearMotion;
         getSupport().firePropertyChange("linearMotion", OldValue, linearMotion);
     }

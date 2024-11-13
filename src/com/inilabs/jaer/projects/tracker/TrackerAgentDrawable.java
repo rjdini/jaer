@@ -65,14 +65,14 @@ public class TrackerAgentDrawable extends AgentDrawable implements Runnable {
     @Override
     public void run() {
         updatePosition();
-        clusters.removeIf(cluster -> cluster.getSupportQuality() < QUALITY_THRESHOLD);
+   //     clusters.removeIf(cluster -> cluster.getSupportQuality() < QUALITY_THRESHOLD);
 
         if (isLogging) {
             logData();
         }
 
         if (clusters.isEmpty()) {
-            close();
+  //          close();
         }
     }
 

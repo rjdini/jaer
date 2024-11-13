@@ -5,7 +5,7 @@
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- *
+ 
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
@@ -18,24 +18,37 @@
  */
 package com.inilabs.jaer.projects.tracker;
 
+import com.inilabs.jaer.projects.gui.ActionType;
+import com.inilabs.jaer.projects.gui.Drawable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 //import net.sf.jaer.eventprocessing.tracking.RectangularClusterTracker;
 import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
 import java.awt.Color;
+import java.util.HashMap;
+import java.util.Map;
+import com.inilabs.jaer.projects.tracker.TrackerAgentDrawable;
 
 public class TrackerManager {
-    private final List<TrackerAgentDrawable> agents = new ArrayList<>();
-    private  PolarSpaceDisplay display = null;  
+ 
+    private final Map<String, TrackerAgentDrawable> agents = new HashMap<>(); // Map of drawables managed by key
+    private  final PolarSpaceDisplay display;  
     
+   
      public TrackerManager(PolarSpaceDisplay display) {
-        this.display = display;
+        this.display = display;  // Ensure only this instance is used
+     //    javax.swing.Timer updateTimer = new javax.swing.Timer(100, e -> updateAgents());
+     //   updateTimer.start();
     }
-  
+     
+    
+       
     public void processClusters(List<EventCluster> clusters) {
         // Sort clusters and assign to agents or create new ones
         for (EventCluster cluster : clusters) {
+            cluster.setSize(2.0f);
+            display.addDrawable(cluster);
             TrackerAgentDrawable nearestAgent = findNearestAgent(cluster);
             if (nearestAgent != null) {
                 nearestAgent.addCluster(cluster);
@@ -45,14 +58,13 @@ public class TrackerManager {
         }
     }
 
-     private void deloyTrackerAgent( EventCluster cluster ) {  // Assign cluster to an agent or create new agent if necessary
+     private void deployTrackerAgent( EventCluster cluster ) {  // Assign cluster to an agent or create new agent if necessary
             TrackerAgentDrawable agent = findOrCreateAgent(cluster);
             agent.addCluster(cluster);
         //    display.addDrawable(cluster);
-            if (!agents.contains(agent)) {
-                agents.add(agent);
-                display.addDrawable(agent); // Add agent to the GUI for visualization
-                display.repaint();
+       if (!agents.containsKey(agent.getKey())) {
+                addAgent(agent);
+                display.addDrawable(agent); // Add agent to the GUI for visualizatio
             }
      }
      
@@ -60,7 +72,7 @@ public class TrackerManager {
         // Simple implementation to find the nearest agent or create a new one
         TrackerAgentDrawable nearestAgent = null;
         float minDistance = Float.MAX_VALUE;
-        for (TrackerAgentDrawable agent : agents) {
+         for (TrackerAgentDrawable agent : agents.values()) {
             float distance = calculateDistance(agent, cluster);
             if (distance < minDistance && distance < 10) { // 10-degree threshold
                 minDistance = distance;
@@ -78,7 +90,7 @@ public class TrackerManager {
     private TrackerAgentDrawable findNearestAgent(EventCluster cluster) {
         TrackerAgentDrawable nearestAgent = null;
         float minDistance = Float.MAX_VALUE;
-        for (TrackerAgentDrawable agent : agents) {
+          for (TrackerAgentDrawable agent : agents.values()) {
             float distance = calculateDistance(agent, cluster);
             if (distance < minDistance && distance < 10) { // 10-degree threshold
                 minDistance = distance;
@@ -96,18 +108,21 @@ public class TrackerManager {
 
     private void createNewAgent(EventCluster cluster) {
         TrackerAgentDrawable newAgent = new TrackerAgentDrawable();
+        newAgent.setSize(5.0f);
+        newAgent.setColor(Color.green);
         newAgent.addCluster(cluster);
-        agents.add(newAgent);
+        addAgent(newAgent);
     }
 
     public void startLoggingAllAgents() {
-        for (TrackerAgentDrawable agent : agents) {
+        for (TrackerAgentDrawable agent : agents.values()) {
             agent.setLogging(true);
         }
     }
 
+    
     public void stopLoggingAllAgents() {
-        for (TrackerAgentDrawable agent : agents) {
+            for (TrackerAgentDrawable agent : agents.values()) {
             agent.setLogging(false);
         }
     }
@@ -117,10 +132,43 @@ public class TrackerManager {
     }
     
   
-    // Method to update agents and manage cluster quality
-    public void update() {
-        for (TrackerAgentDrawable agent : agents) {
-            agent.run(); // Execute each agent's run() method to update positions
+    /**
+     * Adds a drawable to the display.
+     * @param drawable The drawable to add.
+     */
+     public void addAgent(  TrackerAgentDrawable agent) {
+        agents.put(agent.getKey(), agent);
+
+        // Set the callback to remove the drawable
+        agent.setParentCallback((action, key) -> {
+            if (action == ActionType.REMOVE) {
+                removeAgent(key);
+            }
+        });
+        
+        display.addDrawable(agent);  // Add agent to the correct display
+        display.repaint();  
+    }
+    
+     public List<String> getAgentKeys() {
+    return new ArrayList<>(agents.keySet());
+    }
+     
+      /**
+     * Removes an agent by its key.
+     * @param key The unique key of the drawable to remove.
+     */
+    // Ensure removal happens on the same display instance
+    public void removeAgent(String key) {
+        agents.remove(key);
+        display.removeDrawable(key);
+        display.repaint();
+    }
+    
+
+    public void updateAgents() {
+     for (TrackerAgentDrawable agent : agents.values()) {
+            agent.run();
         }
     }
    

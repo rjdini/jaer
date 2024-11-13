@@ -83,11 +83,21 @@ public float getElevationRange() {
      * Adds a drawable to the display.
      * @param drawable The drawable to add.
      */
-    public void addDrawable(Drawable drawable) {
+     public void addDrawable(Drawable drawable) {
         drawables.put(drawable.getKey(), drawable);
-        notifyTransformListeners(); // Notify scaling listeners initially
+
+        // Set the callback to remove the drawable
+        drawable.setParentCallback((action, key) -> {
+            if (action == ActionType.REMOVE) {
+                removeDrawable(key);
+            }
+        });
+
+        notifyTransformListeners();
         repaint();
     }
+    
+    
 
     /**
      * Removes a drawable by its key.

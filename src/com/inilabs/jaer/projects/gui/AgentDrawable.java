@@ -94,7 +94,7 @@ public class AgentDrawable extends BasicDrawable {
         g2d.setColor(color);
         int pixelSizeX = (int) (size * azimuthScale);
         int pixelSizeY = (int) (size * elevationScale);
-        g2d.fillOval(x - pixelSizeX / 2, y - pixelSizeY / 2, pixelSizeX, pixelSizeY);
+        g2d.drawOval(x - pixelSizeX / 2, y - pixelSizeY / 2, pixelSizeX, pixelSizeY);
 
         // Draw the path if enabled
         if (showPath) {
