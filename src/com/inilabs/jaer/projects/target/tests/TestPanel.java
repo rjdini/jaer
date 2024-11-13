@@ -17,7 +17,7 @@
  * MA 02110-1301  USA
  */
 
-package com.inilabs.jaer.projects.tracker.tests;
+package com.inilabs.jaer.projects.target.tests;
 
 import com.inilabs.jaer.projects.target.TargetAgentDrawable;
 import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
@@ -29,8 +29,10 @@ import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import com.inilabs.jaer.projects.target.AgentCallback;
+import com.inilabs.jaer.projects.target.ActionType;
 
-public class TestPanel extends JPanel {
+public class TestPanel extends JPanel implements AgentCallback {
     private final PolarSpaceDisplay display;
     private final List<TargetAgentDrawable> agents = new ArrayList<>();
     private float meanSpeed = 1.0f; // Default mean speed in degrees/second
@@ -41,21 +43,20 @@ public class TestPanel extends JPanel {
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         setPreferredSize(new Dimension(200, 400));
 
-        // Button to add a new TargetAgentDrawable
         JButton addAgentButton = new JButton("Add Target Agent");
         addAgentButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 TargetAgentDrawable agent = createAgentNearStart();
                 agents.add(agent);
+                agent.setCallback(TestPanel.this);  // Set the callback to this TestPanel instance
                 display.addDrawable(agent);
                 display.repaint();
             }
         });
         add(addAgentButton);
 
-        // Mean Speed Slider
-        JSlider speedSlider = new JSlider(1, 10, 1); // Range: 1 to 10 degrees/second
+        JSlider speedSlider = new JSlider(1, 10, 1);
         speedSlider.setPaintTicks(true);
         speedSlider.setPaintLabels(true);
         speedSlider.setMajorTickSpacing(1);
@@ -63,8 +64,7 @@ public class TestPanel extends JPanel {
         add(new JLabel("Mean Speed (deg/sec)"));
         add(speedSlider);
 
-        // Mean Lifetime Slider
-        JSlider lifetimeSlider = new JSlider(5, 30, 10); // Range: 5 to 30 seconds
+        JSlider lifetimeSlider = new JSlider(5, 30, 10);
         lifetimeSlider.setPaintTicks(true);
         lifetimeSlider.setPaintLabels(true);
         lifetimeSlider.setMajorTickSpacing(5);
@@ -72,8 +72,7 @@ public class TestPanel extends JPanel {
         add(new JLabel("Mean Max Lifetime (seconds)"));
         add(lifetimeSlider);
 
-        // Timer for periodic updates of agents
-        Timer updateTimer = new Timer(1000, e -> updateAgents());
+        Timer updateTimer = new Timer(100, e -> updateAgents());
         updateTimer.start();
     }
 
@@ -81,13 +80,11 @@ public class TestPanel extends JPanel {
         TargetAgentDrawable agent = new TargetAgentDrawable();
         Random random = new Random();
 
-        // Initialize position and velocity using TestPanel’s factory setup
-        float azimuth = -20 + random.nextFloat() * 10 - 5; // Randomly near -20
-        float elevation = 20 + random.nextFloat() * 10 - 5; // Randomly near +20
+        float azimuth = -20 + random.nextFloat() * 10 - 5;
+        float elevation = 20 + random.nextFloat() * 10 - 5;
         agent.setAzimuth(azimuth);
         agent.setElevation(elevation);
-        
-        // Set velocity directed towards (20, -20)
+
         float targetAzimuth = 20;
         float targetElevation = -20;
         float distance = (float) Math.sqrt(Math.pow(targetAzimuth - azimuth, 2) + Math.pow(targetElevation - elevation, 2));
@@ -101,9 +98,19 @@ public class TestPanel extends JPanel {
     }
 
     private void updateAgents() {
-        for (TargetAgentDrawable agent : agents) {
+        for (TargetAgentDrawable agent : new ArrayList<>(agents)) {
             agent.run();
         }
         display.repaint();
     }
+
+    @Override
+    public void onAgentAction(ActionType action, String key) {
+        if (action == ActionType.REMOVE) {
+            agents.removeIf(agent -> agent.getKey().equals(key));
+            display.removeDrawable(key);
+            display.repaint();
+        }
+    }
 }
+

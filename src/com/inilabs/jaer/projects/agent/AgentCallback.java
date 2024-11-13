@@ -16,12 +16,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
-package com.inilabs.jaer.projects.gui;
+package com.inilabs.jaer.projects.agent;
 
-/**
- *
- * @author rjd
- */
-class SwingUtilitiaes {
-    
+// Define the callback interface
+public interface AgentCallback {
+    void onAgentAction(ActionType action, String key);
 }

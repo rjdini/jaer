@@ -18,7 +18,7 @@
  */
 
 
-package com.inilabs.jaer.projects.tracker.tests;
+package com.inilabs.jaer.projects.target.tests;
 
 import javax.swing.*;
 import java.awt.*;
