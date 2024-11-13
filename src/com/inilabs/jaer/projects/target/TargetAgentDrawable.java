@@ -40,7 +40,6 @@ public class TargetAgentDrawable extends AgentDrawable implements Runnable {
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(TargetAgentDrawable.class);
     private static final org.apache.logging.log4j.Logger datalog = LogManager.getLogger(TargetAgentDrawable.class);
    
-    private final String key;
     private AgentCallback callback;  // Add the callback
     private final List<EventCluster> clusters = new ArrayList<>();
     private boolean isLogging = false;
@@ -67,6 +66,7 @@ public class TargetAgentDrawable extends AgentDrawable implements Runnable {
         datalog.info(createLog("creation"));
     }
 
+    
     public void setCallback(AgentCallback callback) {
         this.callback = callback;
     }

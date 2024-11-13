@@ -36,6 +36,10 @@ public class AgentDrawable implements Drawable {
     private double azimuthScale = 1.0;  // Scale for converting degrees to pixels
     private double elevationScale = 1.0;
 
+    public AgentDrawable() {
+        super();
+    }
+    
     public AgentDrawable(String key, double azimuthDegrees, double elevationDegrees, Color color, int size) {
         this.key = key;
         this.azimuthDegrees = azimuthDegrees;
@@ -44,6 +48,10 @@ public class AgentDrawable implements Drawable {
         this.size = size;
     }
 
+  
+    
+    
+    
     @Override
     public void draw(Graphics g) {
         // Convert azimuth and elevation from degrees to pixels

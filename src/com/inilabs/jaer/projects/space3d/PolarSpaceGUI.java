@@ -136,8 +136,8 @@ private double calculateElevationScale() {
         PolarSpaceGUI gui = new PolarSpaceGUI();
 
         // Initialize FieldOfView with specific yaw, pitch, and roll in degrees
-        FieldOfView fov = FieldOfView.getInstance(20, -10, 15); // Pass yaw, pitch, roll directly in degrees
-        gui.addDrawable(fov);
+        FieldOfView fov = FieldOfView.getInstance(); // Pass yaw, pitch, roll directly in degrees
+//        gui.addDrawable(fov);
 
         // Initialize an AgentDrawable with azimuth and elevation in degrees, and size in pixels
         AgentDrawable agent = new AgentDrawable("agent1", 30, -20, Color.BLUE, 20);
