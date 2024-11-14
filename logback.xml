@@ -1,41 +1,28 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<configuration>
+<configuration debug="true">
 
-    <!-- Define a property for the log file location -->
-    <property name="LOG_FILE" value="./logs/app.log" />
-
-    <!-- Console appender for logging to the console -->
-    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <!-- JSON Message-Only Appender for JSON output -->
+    <appender name="JSON_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/AgentDrawable.json</file>
+        
+        <!-- Rolling policy to handle file rotation -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/AgentDrawable-%d{yyyy-MM-dd}.json</fileNamePattern>
+            <maxHistory>7</maxHistory> <!-- Retain logs for 7 days -->
+        </rollingPolicy>
+        
+        <!-- Custom Encoder to log only the message part (assumed JSON format) -->
         <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5level %logger{36} - %msg%n</pattern>
+            <pattern>%msg%n</pattern> <!-- Only log the message part -->
         </encoder>
-        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
-            <level>ERROR</level> <!-- Change to desired console log level -->
-        </filter>
     </appender>
 
-    <!-- File appender for logging to a file, restricted to error level -->
-    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
-        <file>${LOG_FILE}</file>
-        <append>true</append>
-        <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5level %logger{36} - %msg%n</pattern>
-        </encoder>
-        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
-            <level>ERROR</level> <!-- Change this level if you need a different file log level -->
-        </filter>
-    </appender>
-
-    <!-- Logger for your application -->
-    <logger name="com.inilabs.jaer.projects.gimbal" level="debug" additivity="false">
-        <appender-ref ref="CONSOLE" />
-        <appender-ref ref="FILE" />
+    <!-- Logger for AgentDrawable Class -->
+    <logger name="com.inilabs.jaer.projects.gui.AgentDrawable" level="INFO" additivity="false">
+        <appender-ref ref="JSON_FILE"/>
     </logger>
 
-    <!-- Root logger -->
-    <root level="error">
-        <appender-ref ref="CONSOLE" />
-        <appender-ref ref="FILE" />
+    <!-- Root Logger (for other logging, if needed) -->
+    <root level="DEBUG">
+        <!-- Other appenders (like CONSOLE, FILE) if needed -->
     </root>
-
 </configuration>

@@ -26,8 +26,17 @@ package com.inilabs.jaer.projects.space3d;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Point;
+import com.inilabs.jaer.projects.logging.LogEventFormatter;
+import com.inilabs.jaer.projects.tracker.EventCluster;
+import java.util.ArrayList;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class AgentDrawable implements Drawable {
+   
     private String key;
     private double azimuthDegrees;  // Azimuth in degrees
     private double elevationDegrees; // Elevation in degrees
@@ -35,7 +44,7 @@ public class AgentDrawable implements Drawable {
     private int size; // Size in pixels
     private double azimuthScale = 1.0;  // Scale for converting degrees to pixels
     private double elevationScale = 1.0;
-
+    
     public AgentDrawable() {
         super();
     }
@@ -94,4 +103,5 @@ public class AgentDrawable implements Drawable {
     public double getElevation() {
         return elevationDegrees;
     }
+    
 }

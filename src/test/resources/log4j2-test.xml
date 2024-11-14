@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Appenders>
+        <!-- Configure ListAppender for capturing log messages in memory -->
+        <List name="TestListAppender" />
+    </Appenders>
+
+    <Loggers>
+        <Logger name="com.inilabs.jaer.projects.gui.AgentDrawable" level="DEBUG" additivity="false">
+            <AppenderRef ref="TestListAppender" />
+        </Logger>
+        <!-- Add Root Logger if needed -->
+        <Root level="error">
+            <AppenderRef ref="TestListAppender" />
+        </Root>
+    </Loggers>
+</Configuration>
+

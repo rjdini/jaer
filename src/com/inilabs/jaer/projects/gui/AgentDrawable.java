@@ -18,10 +18,19 @@
  */
 package com.inilabs.jaer.projects.gui;
 
+import com.inilabs.jaer.projects.logging.LogEventFormatter;
+import com.inilabs.jaer.projects.tracker.EventCluster;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 
 public class AgentDrawable extends BasicDrawable {
     private boolean showPath = true;
@@ -33,10 +42,38 @@ public class AgentDrawable extends BasicDrawable {
     private float elevationHeading;
     private int centerX;
     private int centerY;
-
+    private final List<EventCluster> clusters = new ArrayList<>();
+     // Static logger and custom log level
+    private static final Logger datalog = LoggerFactory.getLogger(AgentDrawable.class);
+    private static final Marker DATA_MARKER = MarkerFactory.getMarker("DATA");
+  
+        
+    /**
+     * Logs an event with the specified type using the DATA log level.
+     * This method can be inherited by subclasses for consistent logging.
+     *
+     * @param eventType The type of the event (e.g., "creation", "run", "close").
+     * @param key The unique key of the agent.
+     * @param azimuth The azimuth value of the agent.
+     * @param elevation The elevation value of the agent.
+     * @param clusters List of associated cluster keys.
+     */
+    
+    public static void logEvent(String eventType, String key, float azimuth, float elevation, List<String> clusters) {
+        long timestamp = System.currentTimeMillis();
+        String logMessage = LogEventFormatter.createLog(eventType, timestamp, key, azimuth, elevation, clusters);
+        datalog.info(DATA_MARKER, logMessage);
+    }
+   
+    // Helper method to get cluster keys as a list of strings
+    private List<String> getClusterKeys() {
+        return clusters.stream().map(EventCluster::getKey).collect(Collectors.toList());
+    }
+    
     public AgentDrawable() {
         super();
         init();
+            logEvent("creation", getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
 
     private void init() {
@@ -100,6 +137,7 @@ public class AgentDrawable extends BasicDrawable {
         if (showPath) {
             drawPath(g2d);
         }
+           logEvent("draw", getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
 
     
@@ -127,5 +165,5 @@ public class AgentDrawable extends BasicDrawable {
         previousPosition = position;
     }
 }
-
+     
 }

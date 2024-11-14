@@ -9,6 +9,7 @@ import com.jogamp.opengl.GLAutoDrawable;
 import java.awt.Graphics2D;
 import java.awt.geom.Point2D;
 
+import java.util.TimerTask;
 import com.jogamp.opengl.GL;
 
 import net.sf.jaer.Description;
@@ -21,7 +22,6 @@ import net.sf.jaer.eventprocessing.FilterChain;
 import net.sf.jaer.eventprocessing.tracking.RectangularClusterTracker;
 import net.sf.jaer.graphics.FrameAnnotater;
 import net.sf.jaer.hardwareinterface.HardwareInterfaceException;
-import net.sf.jaer.eventprocessing.tracking.RectangularClusterTracker;
 import com.jogamp.opengl.util.gl2.GLUT;
 import net.sf.jaer.eventprocessing.tracking.ClusterInterface;
 import net.sf.jaer.eventprocessing.tracking.ClusterPathPoint;
@@ -41,7 +41,8 @@ import net.sf.jaer.eventprocessing.tracking.RectangularClusterTracker.Cluster;
 import org.slf4j.LoggerFactory;
 import com.inilabs.jaer.projects.gui.PolarSpaceGUI;
 import com.inilabs.jaer.gimbal.FieldOfView;
-import com.inilabs.jaer.projects.gui.AgentDrawable;
+import com.inilabs.jaer.projects.tracker.TrackerAgentDrawable;
+import java.util.Timer;
 
 
 
@@ -79,6 +80,7 @@ public class TrackerManager extends EventFilter2DMouseAdaptor implements FrameAn
     
     private PolarSpaceGUI polarSpaceGUI = null;
     private AgentDrawable agentDrawable = null;
+    Timer timer = new Timer();
 
     public TrackerManager(AEChip chip) {
         super(chip);
@@ -95,6 +97,10 @@ public class TrackerManager extends EventFilter2DMouseAdaptor implements FrameAn
 
         who = "TargetManager";
         support = new PropertyChangeSupport(this);
+        
+         javax.swing.Timer updateTimer = new javax.swing.Timer(1000, e ->   logAgentData()) ;
+        updateTimer.start();  
+    
     }
     
    
@@ -109,6 +115,8 @@ public class TrackerManager extends EventFilter2DMouseAdaptor implements FrameAn
         }
         return polarSpaceGUI;
     }
+    
+    
     
     
     
@@ -235,11 +243,21 @@ public class TrackerManager extends EventFilter2DMouseAdaptor implements FrameAn
     
     private AgentDrawable assignAgentDrawable() {
         if ((agentDrawable == null ) && ( polarSpaceGUI != null )) {
-            agentDrawable = new AgentDrawable()  ;
+            agentDrawable = new TrackerAgentDrawable()  ;
             polarSpaceGUI.getPolarSpaceDisplay().addDrawable(agentDrawable) ;
         }
         return agentDrawable ;
     }
+    
+    
+      
+    
+    public void logAgentData() {
+        if ( agentDrawable !=null ) {
+        log.info("******** agent {} az {} el {}",agentDrawable.getKey(),  agentDrawable.getAzimuth(), agentDrawable.getElevation());
+    }
+    }
+    
     
     private void deassignAgentDrawable() {
         if ((agentDrawable != null ) && ( polarSpaceGUI != null )) {

@@ -35,11 +35,14 @@ MA 02110-1301  USA
         <!--jogl 2.5.0 is currently statically included as a fat jar in the jars folder.-->
         <!--<dependency org="org.jogamp.jogl" name="jogl-all-main" rev="2.5.0" />--> 
         
-         <!-- Log4j2 API for logging interfaces -->
-    <dependency org="org.apache.logging.log4j" name="log4j-api" rev="2.17.1" />
-    <!-- Log4j2 Core for actual logging implementations -->
-    <dependency org="org.apache.logging.log4j" name="log4j-core" rev="2.17.1" />
- 
+        
+           <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-api -->
+            <dependency org="org.slf4j" name="slf4j-api" rev="2.0.9"/>
+            <!-- https://mvnrepository.com/artifact/ch.qos.logback/logback-classic -->
+           <dependency org="ch.qos.logback" name="logback-classic" rev="1.4.11"/>
+           <!-- https://mvnrepository.com/artifact/ch.qos.logback/logback-classic -->
+           <dependency org="ch.qos.logback" name="logback-core" rev="1.4.11"/>
+     
         <dependency org="org.swinglabs" name="swing-layout" rev="1.0.3" />
         <dependency org="org.jdesktop" name="beansbinding" rev="1.2.1" />
         
