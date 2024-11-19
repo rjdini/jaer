@@ -21,23 +21,20 @@ package com.inilabs.jaer.projects.target;
 
 import com.inilabs.jaer.projects.gui.AgentDrawable;
 import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
+import com.inilabs.jaer.projects.logging.AgentLogger;
+import com.inilabs.jaer.projects.logging.EventType;
 import com.inilabs.jaer.projects.tracker.EventCluster;
-//import org.slf4j.Logger;
+import com.inilabs.jaer.projects.tracker.TrackerAgentDrawable;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.Graphics;
 import java.util.ArrayList;
 import java.util.List;
-
-
-import com.inilabs.jaer.projects.target.AgentCallback;
-import com.inilabs.jaer.projects.target.ActionType;
-import com.inilabs.jaer.projects.tracker.TrackerAgentDrawable;
 import java.util.stream.Collectors;
-import org.slf4j.Logger;
 
 public class TargetAgentDrawable extends AgentDrawable implements Runnable {
-    private AgentCallback callback;  // Add the callback
+    private AgentCallback callback;
     private final List<EventCluster> clusters = new ArrayList<>();
     private boolean isLogging = false;
     private static final float DEFAULT_LIFETIME = 100.0f;
@@ -49,10 +46,7 @@ public class TargetAgentDrawable extends AgentDrawable implements Runnable {
     private float velocityAzimuth;
     private float velocityElevation;
     private PolarSpaceDisplay display;
-    private final long creationTime;
-    // this logger logs class specific  perfomance issues.
-    // it is not the datalogger
-    private static final Logger logger = LoggerFactory.getLogger(TrackerAgentDrawable.class);
+    private static final Logger logger = LoggerFactory.getLogger(TargetAgentDrawable.class);
 
     public TargetAgentDrawable() {
         super();
@@ -61,23 +55,17 @@ public class TargetAgentDrawable extends AgentDrawable implements Runnable {
         this.maxLifeTime = DEFAULT_LIFETIME;
         this.velocityAzimuth = DEFAULT_VELOCITY;
         this.velocityElevation = DEFAULT_VELOCITY;
-        this.creationTime = System.currentTimeMillis();
+
         // Log agent creation
-    }
-   
-   
-    
-    
-    public String getKey() {
-    return this.getKey();    
-    }
-    
-    public void setCallback(AgentCallback callback) {
-        this.callback = callback;
+        AgentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
 
-    public static long getTimestamp() {
-        return System.currentTimeMillis();
+    public String getKey() {
+        return this.getKey();
+    }
+
+    public void setCallback(AgentCallback callback) {
+        this.callback = callback;
     }
 
     public void setMaxLifeTime(float maxLifeTimeSeconds) {
@@ -92,32 +80,37 @@ public class TargetAgentDrawable extends AgentDrawable implements Runnable {
     @Override
     public void run() {
         move();
-        
+
         // Check if the agent has exceeded its max lifetime
         long currentTime = getTimestamp();
-        float elapsedTime = (currentTime - startTime) / 1000.0f; // Convert ms to seconds
+        float elapsedTime = (currentTime - startTime) / 1000.0f;
         if (elapsedTime > maxLifeTime) {
-            close(); // Close and remove the agent from the display
+            close();
         }
+
+        // Log run event
+        AgentLogger.logAgentEvent(EventType.RUN, getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
 
     private void move() {
         long currentTime = getTimestamp();
-        float deltaTime = (currentTime - lastTime) / 1000.0f; // Convert ms to seconds
+        float deltaTime = (currentTime - lastTime) / 1000.0f;
         lastTime = currentTime;
 
         setAzimuth(getAzimuth() + velocityAzimuth * deltaTime);
         setElevation(getElevation() + velocityElevation * deltaTime);
+        logger.debug("Agent {} position updated to Azimuth = {}, Elevation = {}", getKey(), getAzimuth(), getElevation());
     }
 
     public void close() {
         lastTime = getTimestamp();
         clusters.clear();
         removeFromDisplay();
-        // Notify the callback (manager) to remove this agent
         if (callback != null) {
             callback.onAgentAction(ActionType.REMOVE, getKey());
         }
+        // Log close event
+        AgentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
 
     private void removeFromDisplay() {
@@ -133,11 +126,13 @@ public class TargetAgentDrawable extends AgentDrawable implements Runnable {
         for (EventCluster cluster : clusters) {
             cluster.draw(g);
         }
+        // Log draw event
+        AgentLogger.logAgentEvent(EventType.DRAW, getKey(), getAzimuth(), getElevation(), getClusterKeys());
         logger.trace("Agent {} draw operation completed.", getKey());
     }
     
-    private List<String> getClusterKeys() {
-        return clusters.stream().map(EventCluster::getKey).collect(Collectors.toList());
-    }
+//    @Override
+//    private List<String> getClusterKeys() {
+//        return clusters.stream().map(EventCluster::getKey).collect(Collectors.toList());
+//    }
 }
-

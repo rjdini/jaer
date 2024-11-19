@@ -20,172 +20,112 @@ package com.inilabs.jaer.projects.gui;
 
 import javax.swing.*;
 import java.awt.*;
-import javax.swing.Timer;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.util.List;
-import java.util.ArrayList;
-import com.inilabs.jaer.projects.tracker.TrackerManager;
 
 public class PolarSpaceGUI extends JFrame {
 
-    private JPanel controlPanel;
-    
-    private PolarSpaceDisplay polarDisplay;
-    private JSlider azimuthRangeSlider;
-    private JSlider elevationRangeSlider;
-    private JTextField azimuthHeadingField;
-    private JTextField elevationHeadingField;
-    private JButton closeButton;
-    private JToggleButton linkSlidersButton;
-    private boolean slidersLinked = false;
-
+    private PolarSpaceControlPanel controlPanel;
+    public PolarSpaceDisplay polarDisplay;
+    private DrawableDisplayPanel drawableDisplayPanel; // Re-added
+    private BasicTestPanel testPanel;
     private Timer updateTimer;
-    
-    
-  //  private final PolarSpaceDisplay polarDisplay;
-    private DefaultListModel<String> drawableListModel;
-    private JList<String> drawableList;
 
-    
-    private final TrackerManager targetManager;
-
-    // Default constructor
     public PolarSpaceGUI() {
-        //super("Polar Space GUI");
-        this.targetManager = null; // No TrackerManager assigned
         initializeGUI();
+        Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
     }
-    
+
+    private void shutdown() {
+        polarDisplay.shutdown();
+        controlPanel.shutdown();
+    }
+
     private void initializeGUI() {
-     
-         // Frame settings
-       // setDefaultCloseOperation(JPanel );
-        setSize(1000, 1000);
-        setLayout(new BorderLayout());
-        
-        // Initialize display panel for drawables
-        polarDisplay = new PolarSpaceDisplay();
-        add(polarDisplay, BorderLayout.CENTER);
+        // Frame settings    
+    setSize(1500, 1000); // Adjust overall frame size
+    setLayout(new BorderLayout());
 
-        // Side panel setup to show drawable names
-        drawableListModel = new DefaultListModel<>();
-        drawableList = new JList<>(drawableListModel);
-        JScrollPane scrollPane = new JScrollPane(drawableList);
-        scrollPane.setPreferredSize(new Dimension(200, 0));
-        
-        JPanel sidePanel = new JPanel(new BorderLayout());
-        sidePanel.add(new JLabel("Drawable Objects"), BorderLayout.NORTH);
-        sidePanel.add(scrollPane, BorderLayout.CENTER);
-        add(sidePanel, BorderLayout.WEST);
+    // Initialize the PolarSpaceDisplay at the center
+    polarDisplay = PolarSpaceDisplay.getInstance();
+    polarDisplay.setPreferredSize(new Dimension(1200, 800)); // Ensure broader width
+    polarDisplay.setMinimumSize(new Dimension(1000, 800));   // Minimum size constraints
+    polarDisplay.setMaximumSize(new Dimension(1500, 1000));   // Maximum size constraints
+    add(polarDisplay, BorderLayout.CENTER);
 
-        // Control panel setup (omitted for brevity)
-        PolarSpaceControlPanel controlPanel = new PolarSpaceControlPanel(polarDisplay, e -> dispose());
-        controlPanel.setPreferredSize(new Dimension(1000, 200));
-        add(controlPanel, BorderLayout.SOUTH);
-        controlPanel.updateAzimuthRange();
-        controlPanel.updateElevationRange();
-        
-        // Set up the timer to refresh the display at regular intervals
+    
+    
+    // Initialize the control panel at the bottom
+    controlPanel = new PolarSpaceControlPanel(polarDisplay, e -> dispose());
+    add(controlPanel, BorderLayout.SOUTH);
+
+    // Initialize the DrawableDisplayPanel at the left
+    drawableDisplayPanel = new DrawableDisplayPanel(polarDisplay);
+    drawableDisplayPanel.setPreferredSize(new Dimension(200, 800)); // Adjust width if needed
+    add(drawableDisplayPanel, BorderLayout.WEST);
+    
+        // Set up a timer to refresh the display at regular intervals
         int refreshRate = 30; // Refresh every 30 ms (~33 FPS)
         updateTimer = new Timer(refreshRate, e -> {
-            polarDisplay.repaint(); // Repaint display at each timer tick
-            updateDrawableList(); // Update the side panel with drawable names
+            polarDisplay.repaint();
+            if (testPanel != null) {
+                testPanel.update();
+            }
+            drawableDisplayPanel.updateDrawableList(); // Update the list of drawables
         });
         updateTimer.start();
-
-        SwingUtilities.invokeLater(() -> polarDisplay.repaint());
-
-        setVisible(true);
     }
 
-
-     public PolarSpaceDisplay getPolarSpaceDisplay() {
-        return polarDisplay;
-    }
-    
-    private void updateHeadingFromField() {
-        try {
-            int azimuthHeading = Integer.parseInt(azimuthHeadingField.getText());
-            int elevationHeading = Integer.parseInt(elevationHeadingField.getText());
-            polarDisplay.setHeading(azimuthHeading, elevationHeading);
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "Please enter valid integer values for heading.");
+    /**
+     * Sets the test panel to the EAST region, replacing any existing one.
+     *
+     * @param testPanel The test panel to set.
+     */
+    public void setTestPanel(BasicTestPanel testPanel) {
+        if (this.testPanel != null) {
+            remove(this.testPanel);
         }
-    }
-
-    // Internal class to handle linked slider updates
-    private class RangeSliderListener implements ChangeListener {
-        @Override
-        public void stateChanged(ChangeEvent e) {
-            if (slidersLinked) {
-                if (e.getSource() == azimuthRangeSlider) {
-                    int value = azimuthRangeSlider.getValue();
-                    elevationRangeSlider.setValue(value);
-                    polarDisplay.setAzimuthRange(value);
-                    polarDisplay.setElevationRange(value);
-                } else if (e.getSource() == elevationRangeSlider) {
-                    int value = elevationRangeSlider.getValue();
-                    azimuthRangeSlider.setValue(value);
-                    polarDisplay.setAzimuthRange(value);
-                    polarDisplay.setElevationRange(value);
-                }
-            } else {
-                if (e.getSource() == azimuthRangeSlider) {
-                    polarDisplay.setAzimuthRange(azimuthRangeSlider.getValue());
-                } else if (e.getSource() == elevationRangeSlider) {
-                    polarDisplay.setElevationRange(elevationRangeSlider.getValue());
-                }
-            }
+        this.testPanel = testPanel;
+        if (this.testPanel != null) {
+            this.testPanel.setGUICallBack(this);
+            add(this.testPanel, BorderLayout.EAST);
         }
+        revalidate();
+        repaint();
     }
 
-    // Update control values to match internal state
-    public void setAzimuthRange(int range) {
-        azimuthRangeSlider.setValue(range);
-        polarDisplay.setAzimuthRange(range);
-    }
-
-    public void setElevationRange(int range) {
-        elevationRangeSlider.setValue(range);
-        polarDisplay.setElevationRange(range);
-    }
-
-    public void setAzimuthHeading(int heading) {
-        azimuthHeadingField.setText(String.valueOf(heading));
-        polarDisplay.setHeading(heading, getElevationHeading());
-    }
-
-    public void setElevationHeading(int heading) {
-        elevationHeadingField.setText(String.valueOf(heading));
-        polarDisplay.setHeading(getAzimuthHeading(), heading);
-    }
-
-    public int getAzimuthHeading() {
-        return Integer.parseInt(azimuthHeadingField.getText());
-    }
-
-    public int getElevationHeading() {
-        return Integer.parseInt(elevationHeadingField.getText());
-    }
-    
-    
-     // Method to stop the timer if needed
+    /**
+     * Stops the scheduler timer.
+     */
     public void stopScheduler() {
         if (updateTimer != null) {
             updateTimer.stop();
         }
     }
-    
-     // Method to update the list of drawable names in the side panel
-    private void updateDrawableList() {
-        List<String> currentDrawableNames = polarDisplay.getDrawableNames();
-        drawableListModel.clear();
-        for (String name : currentDrawableNames) {
-            drawableListModel.addElement(name);
-        }
+
+    /**
+     * Gets the PolarSpaceDisplay.
+     *
+     * @return The PolarSpaceDisplay instance.
+     */
+    public PolarSpaceDisplay getPolarSpaceDisplay() {
+        return polarDisplay;
     }
-    
+
+    /**
+     * Gets the PolarSpaceControlPanel.
+     *
+     * @return The PolarSpaceControlPanel instance.
+     */
+    public PolarSpaceControlPanel getPolarSpaceControlPanel() {
+        return controlPanel;
+    }
+
+    /**
+     * Gets the DrawableDisplayPanel.
+     *
+     * @return The DrawableDisplayPanel instance.
+     */
+    public DrawableDisplayPanel getDrawableDisplayPanel() {
+        return drawableDisplayPanel;
+    }
 }
+

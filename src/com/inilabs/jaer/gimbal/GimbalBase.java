@@ -15,6 +15,7 @@ import java.util.TimerTask;
 import org.slf4j.LoggerFactory;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.Level;
+import com.inilabs.jaer.projects.logging.AgentLogger;
 
 import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
@@ -627,6 +628,23 @@ rs4controllerGUI = new RS4ControllerGUISwingV1();
         }      
     }
 
+    public void  setGimbalPoseDirect( float yaw, float roll, float pitch) {       
+          float [] previousSendPose = {previousSendYaw, previousSendRoll, previousSendPitch};
+           currentSendYaw = yaw;
+           currentSendRoll = roll;
+           currentSendPitch = pitch;         
+          rs4controller.setPose(currentSendYaw, currentSendRoll, currentSendPitch); // PanTilt does not consider Roll 
+           
+           previousSendYaw = currentSendYaw;
+           previousSendRoll = currentSendRoll;
+           previousSendPitch = currentSendPitch;
+           float [] newSendPose = {currentSendYaw, currentSendRoll,  currentSendPitch};
+            this.pcs.firePropertyChange("SendGimbalPose", previousSendPose, newSendPose);    
+            log.info("SendGimbalPoseDirect (y,r,p) " + currentSendYaw + ",  " + currentSendRoll + ", " + currentSendPitch );
+    }
+    
+   
+    
     public void enableGimbal(boolean yes) {
         enableGimbal = yes;
     }

@@ -38,7 +38,7 @@ public class AgentDrawableTest {
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(1000, 800);
 
-        PolarSpaceDisplay display = new PolarSpaceDisplay();
+        PolarSpaceDisplay display = PolarSpaceDisplay.getInstance();
 
         // Pass a dummy ActionListener that does nothing, just to satisfy the constructor requirement
         PolarSpaceControlPanel controlPanel = new PolarSpaceControlPanel(display, e -> {});

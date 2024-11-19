@@ -17,26 +17,30 @@
  * MA 02110-1301  USA
  */
 
-import com.inilabs.jaer.projects.gui.BasicTestPanel;
-import com.inilabs.jaer.projects.gui.PolarSpaceGUI;
-import java.awt.BorderLayout;
-import java.awt.LayoutManager;
+package com.inilabs.jaer.projects.gui;
 
-import javax.swing.*;
+import javax.swing.JPanel;
 
-public class TrackerManagerTest {
+public class BasicTestPanel extends JPanel implements TestPanel {
 
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            PolarSpaceGUI gui = new PolarSpaceGUI();
-            LayoutManager layout = gui.getLayout();
-             BasicTestPanel testPanel = new BasicTestPanel();
-             
-            testPanel.setGUICallBack(gui);
-            gui.add(testPanel, BorderLayout.EAST);
-  //         gui.add(testPanel);
-          
-           gui.setVisible(true);
-        });
+    private PolarSpaceGUI guiCallback;
+
+    @Override
+    public void setGUICallBack(PolarSpaceGUI gui) {
+        this.guiCallback = gui;
+    }
+
+    @Override
+    public void update() {
+        // Default implementation; subclasses can override this if needed.
+    }
+
+    /**
+     * Returns the current PolarSpaceGUI callback instance.
+     *
+     * @return The PolarSpaceGUI instance.
+     */
+    protected PolarSpaceGUI getGUICallBack() {
+        return guiCallback;
     }
 }

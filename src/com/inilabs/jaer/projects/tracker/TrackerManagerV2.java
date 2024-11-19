@@ -2,8 +2,9 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.inilabs.jaer.projects.gui;
+package com.inilabs.jaer.projects.tracker;
 
+import com.inilabs.jaer.projects.gui.*;
 import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GLAutoDrawable;
 import java.awt.Graphics2D;
@@ -44,7 +45,9 @@ import com.inilabs.jaer.gimbal.FieldOfView;
 import com.inilabs.jaer.projects.logging.AgentLogger;
 import com.inilabs.jaer.projects.logging.LoggingStatePropertyChangeFilter;
 import com.inilabs.jaer.projects.tracker.TrackerAgentDrawable;
+import com.inilabs.jaer.projects.tracker.TrackerManagerEngine;
 import java.util.Timer;
+import java.util.stream.Collectors;
 
 
 
@@ -63,9 +66,9 @@ import java.util.Timer;
  */
 @DevelopmentStatus(DevelopmentStatus.Status.Experimental)
 @Description("Rev 12Nov24:  Steers RS4 gimbal pose,  FOV and tracked target on PolarSpaceGUI")
-public class TrackerManager extends EventFilter2DMouseAdaptor implements FrameAnnotater {
+public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements FrameAnnotater {
 
-    private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(TrackerManager.class);
+    private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(TrackerManagerV2.class);
 
     RectangularClusterTracker tracker;
     GimbalAimer panTilt = null;
@@ -84,12 +87,12 @@ public class TrackerManager extends EventFilter2DMouseAdaptor implements FrameAn
     private PolarSpaceGUI polarSpaceGUI = null;
     private TrackerAgentDrawable trackerAgentDrawable = null;
     private LoggingStatePropertyChangeFilter loggingStateFilter;
-    
+   private TrackerManagerEngine engine; 
        
     
     Timer timer = new Timer();
 
-    public TrackerManager(AEChip chip) {
+    public TrackerManagerV2(AEChip chip) {
         super(chip);
         targetLocation = new Point2D.Float(100, 100);
 
@@ -108,10 +111,12 @@ public class TrackerManager extends EventFilter2DMouseAdaptor implements FrameAn
         who = "TargetManager";
         support = new PropertyChangeSupport(this);
         
-         javax.swing.Timer updateTimer = new javax.swing.Timer(500, e ->   updateTrackerAgentDrawable()) ;
-        updateTimer.start();  
+     //    javax.swing.Timer updateTimer = new javax.swing.Timer(500, e ->   engine.updateTrackerAgentDrawable()) ;
+     //   updateTimer.start();  
          Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
-         getPolarSpaceGUI();
+         polarSpaceGUI = getPolarSpaceGUI();
+         engine = new TrackerManagerEngine();
+         engine.setPolarSpaceDisplay(polarSpaceGUI.getPolarSpaceDisplay());
         AgentLogger.initialize();
     }
     
@@ -135,8 +140,6 @@ public class TrackerManager extends EventFilter2DMouseAdaptor implements FrameAn
         return polarSpaceGUI;
     }
     
-        
-    
     
     @Override
     public EventPacket<? extends BasicEvent> filterPacket(EventPacket<? extends BasicEvent> in) {
@@ -145,31 +148,32 @@ public class TrackerManager extends EventFilter2DMouseAdaptor implements FrameAn
         }
         AgentLogger.setJAERTimestamp(in.getLastTimestamp() ) ;
         getEnclosedFilterChain().filterPacket(in);
-//		if(panTilt.isLockOwned()) {
-//			return in;
-//		}
-        if (tracker.getNumClusters() > 0) {
-            targetCluster = tracker.getClusters().get(0);
-            if (targetCluster.isVisible()) {
-                Point2D.Float p = targetCluster.getLocation();
-                targetLocation = p;
-                bestTargetCluster();
-                float[] xy = {p.x, p.y, 1};
-                try {
-                    setPanTiltVisualAimPixels(p.x, p.y);
-                } catch (Exception ex) {
-                    log.warn(ex.toString());
-                }
-                panTilt.getGimbalBase().setLaserOn(true);
-            } else {
-                panTilt.getGimbalBase().setLaserOn(false);
-            }
-        } else {
-            panTilt.getGimbalBase().setLaserOn(false);
-        }
-        return in;
+        
+        
+        if (!tracker.getVisibleClusters().isEmpty()) {
+                 engine.updateAgentClusterList(tracker.getVisibleClusters());
+                 trackerAgentDrawable = engine.getBestTrackerAgentDrawable();
+                 if (trackerAgentDrawable != null ) {
+                     float azi = trackerAgentDrawable.getAzimuth();
+                     float ele = trackerAgentDrawable.getElevation();
+                     panTilt.getGimbalBase().setGimbalPoseDirect(azi, 0f, ele);
+                 }            
+            
+                 // here we need to drive gimbal
+                 //
+//                 Point2D.Float p = targetCluster.getLocation();
+//                targetLocation = p;
+//                float[] xy = {p.x, p.y, 1};
+//                try {
+//                   setPanTiltVisualAimPixels(p.x, p.y);
+//                } catch (Exception ex) {
+//                    log.warn(ex.toString());
+//                } 
     }
-
+         return in;
+    }
+    
+    
     // <editor-fold defaultstate="collapsed" desc="GUI button --Aim--">
     /**
      * Invokes the calibration GUI Calibration values are stored persistently as
@@ -204,74 +208,6 @@ public class TrackerManager extends EventFilter2DMouseAdaptor implements FrameAn
     // </editor-fold>
     
    
-    public Cluster bestTargetCluster() {
-        //  RectangularClusterTracker.Cluster thresholdCluster = new RectangularClusterTracker.Cluster();
-        float eventThreshold = 2f;
-        float sizeThreshold = 10f;
-
-        if (tracker.getClusters() != null) {
-
-            // intitialize cluster with first in group
-            Cluster bestCluster = tracker.getClusters().get(0);
-            List<Cluster> clusters = tracker.getClusters();
-            Iterator<Cluster> clusterIterator = clusters.iterator();
-
-            // check is there is a better custer than the first one
-            while (clusterIterator.hasNext()) {
-                Cluster c = clusterIterator.next();
-                if (c.getAvgEventRateHz()>= eventThreshold && c.getRadius() < sizeThreshold && c.getAvgEventRateHz() > bestCluster.getMeasuredAverageEventRate()) {
-                    bestCluster = c;
-                }
-            }
-            if(true){
- //           if (bestCluster.getAvgEventRateHzPerPx() >= eventThreshold && bestCluster.getRadius() < sizeThreshold) {
-                targetCluster = bestCluster;
-                targetCluster.setColor(Color.red); 
-                    log.info("$$$$$$$$$$$$$$$$$$$$$  bestTargetCluster");
-                updateTrackerAgentDrawable( );
-            } else {
-                // there is no suitable cluster
-                deassignTrackerAgentDrawable();
-                targetCluster = null;
-            }
-        } else {
-            // there is no suitable cluster
-            deassignTrackerAgentDrawable();
-            targetCluster = null;
-        }
-
-        return targetCluster;
-
-    }
-    
-    private void updateTrackerAgentDrawable() {
-        assignTrackerAgentDrawable();
-         if ((trackerAgentDrawable != null ) && ( polarSpaceGUI != null )) {
-             float[] target = panTilt.getGimbalBase().getTarget();
-             float y = panTilt.getGimbalBase().getFOV().getYawAtPan(target[0]);
-             float p = panTilt.getGimbalBase().getFOV().getPitchAtTilt(target[1]);
-             trackerAgentDrawable.setAzimuth(y);
-             trackerAgentDrawable.setElevation(p);
-             trackerAgentDrawable.run();
-             polarSpaceGUI.repaint();
-         }
-    }
-    
-    private AgentDrawable assignTrackerAgentDrawable() {
-        if ((trackerAgentDrawable == null ) && ( polarSpaceGUI != null )) {
-            trackerAgentDrawable = new TrackerAgentDrawable()  ;
-            polarSpaceGUI.getPolarSpaceDisplay().addDrawable(trackerAgentDrawable) ;
-        }
-        return trackerAgentDrawable ;
-    }
-    
-    private void deassignTrackerAgentDrawable() {
-        if ((trackerAgentDrawable != null ) && ( polarSpaceGUI != null )) {
-            polarSpaceGUI.getPolarSpaceDisplay().removeDrawable(trackerAgentDrawable.getKey()) ;        
-        }
-    }
-   
-
     public void setPanTiltVisualAimPixels(float pan, float tilt) {
         // convert pixels to normalized (0-1) location
         float normalizedPan = pan / chip.getSizeX();
@@ -291,10 +227,9 @@ public class TrackerManager extends EventFilter2DMouseAdaptor implements FrameAn
     // <editor-fold defaultstate="collapsed" desc="getter/setter for --PanTiltTarget--">
     @Override
     public void mouseClicked(MouseEvent e) {
-        Point p = this.getMousePixel(e);
-       
+        Point p = this.getMousePixel(e);       
         setPanTiltVisualAimPixels(p.x, p.y); 
-            
+     
     }
 
     @Override

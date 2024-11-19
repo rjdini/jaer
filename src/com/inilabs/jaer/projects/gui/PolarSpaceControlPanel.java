@@ -29,6 +29,7 @@ import javax.swing.event.ChangeListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import com.inilabs.jaer.projects.logging.AgentLogger;
 
 public class PolarSpaceControlPanel extends JPanel {
 
@@ -43,11 +44,12 @@ public class PolarSpaceControlPanel extends JPanel {
     private final JButton stopLoggingButton;
     private final PolarSpaceDisplay polarDisplay;
     private boolean slidersLinked = true;
+    
 
     public PolarSpaceControlPanel(PolarSpaceDisplay polarDisplay, ActionListener closeAction) {
         this.polarDisplay = polarDisplay;
         setLayout(new BorderLayout(10, 10)); // Use BorderLayout for WEST and EAST sections
-
+          AgentLogger.initialize();
         // Settings panel for sliders and heading fields
         JPanel settingsPanel = new JPanel(new GridLayout(0, 2, 10, 5));
 
@@ -168,10 +170,12 @@ public class PolarSpaceControlPanel extends JPanel {
 
     private void startLogging() {
         // Implement logging start logic
+        AgentLogger.setGUILoggingEnabled(true);
     }
 
     private void stopLogging() {
         // Implement logging stop logic
+         AgentLogger.setGUILoggingEnabled(false);
     }
 
     private class PathToggleListener implements ActionListener {
@@ -180,4 +184,8 @@ public class PolarSpaceControlPanel extends JPanel {
             polarDisplay.showPaths(pathToggleButton.isSelected());
         }
     }
+    
+   public void shutdown() {
+       AgentLogger.shutdown();
+   }
 }

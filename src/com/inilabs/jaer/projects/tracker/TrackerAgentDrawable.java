@@ -18,38 +18,37 @@
  */
 package com.inilabs.jaer.projects.tracker;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.inilabs.jaer.projects.gui.AgentDrawable;
+import com.inilabs.jaer.projects.gui.Drawable;
+import com.inilabs.jaer.projects.gui.DrawableListener;
+import com.inilabs.jaer.projects.logging.AgentLogger;
+import com.inilabs.jaer.projects.logging.EventType;
+import java.awt.Color;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.util.ArrayList;
 import java.util.List;
-import com.inilabs.jaer.projects.gui.AgentDrawable;
 import java.util.stream.Collectors;
 
-public class TrackerAgentDrawable extends AgentDrawable implements Runnable {
-    // this logger logs class specific  perfomance issues.
-    // it is not the datalogger
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class TrackerAgentDrawable extends AgentDrawable implements Runnable, Drawable, DrawableListener  {
+    // This logger logs class-specific performance issues, not the event logger
     private static final Logger logger = LoggerFactory.getLogger(TrackerAgentDrawable.class);
-    private final List<EventCluster> clusters = new ArrayList<>();
     private static final float QUALITY_THRESHOLD = 0.5f; // Threshold for cluster support quality
 
-    private final long startTime;
-    private long lastTime;
+    
 
     public TrackerAgentDrawable() {
         super();
         this.startTime = getTimestamp();
-        logger.info("TargetAgentDrawable created with key: {} at startTime: {}", this.getKey(), startTime);
-         logEvent("creation", getKey(), getAzimuth(), getElevation(), getClusterKeys());
-    }
-    
-     // Helper method to get cluster keys as a list of strings
-    private List<String> getClusterKeys() {
-        return clusters.stream().map(EventCluster::getKey).collect(Collectors.toList());
+        setColor(Color.BLACK);
+        logger.info("TrackerAgentDrawable created with key: {} at startTime: {}", this.getKey(), startTime);
+        AgentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
 
-    
-  private boolean loggingEnabled = true;
+    private boolean loggingEnabled = true;
 
     public void setLogging(boolean enabled) {
         this.loggingEnabled = enabled;
@@ -58,12 +57,22 @@ public class TrackerAgentDrawable extends AgentDrawable implements Runnable {
     public boolean isLoggingEnabled() {
         return loggingEnabled;
     }
-    
 
-    public static long getTimestamp() {
-        return System.currentTimeMillis();
+     // Example implementation for support quality calculation
+    public double getSupportQuality() {
+        // Aggregate the support quality of all associated clusters
+        List<EventCluster> clusters = getClusters(); // Assuming getClusters() exists
+        return clusters.stream()
+                .mapToDouble(EventCluster::getSupportQuality)
+                .sum();
     }
 
+    // Stub for `getClusters()` - ensure this method exists to retrieve associated clusters
+    public List<EventCluster> getClusters() {
+        // Replace with actual logic to return associated clusters
+        return clusters; // Return an empty list for now
+    }
+    
     public void addCluster(EventCluster cluster) {
         cluster.setEnclosingAgent(this);
         clusters.add(cluster);
@@ -72,18 +81,16 @@ public class TrackerAgentDrawable extends AgentDrawable implements Runnable {
 
     public void removeCluster(EventCluster cluster) {
         clusters.remove(cluster);
-        logger.info("Cluster removed from agent {}: Cluster ID = {}", getKey(), cluster.getId() 
-        );
+        logger.info("Cluster removed from agent {}: Cluster ID = {}", getKey(), cluster.getId());
     }
 
     @Override
     public void run() {
         updatePosition();
-   //     clusters.removeIf(cluster -> cluster.getSupportQuality() < QUALITY_THRESHOLD);
         if (clusters.isEmpty()) {
-  //          close();
+            // close();
         }
-         logEvent("run", getKey(), getAzimuth(), getElevation(), getClusterKeys());
+        AgentLogger.logAgentEvent(EventType.RUN, getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
 
     private void updatePosition() {
@@ -101,21 +108,36 @@ public class TrackerAgentDrawable extends AgentDrawable implements Runnable {
         logger.debug("Agent {} position updated to Azimuth = {}, Elevation = {}", getKey(), getAzimuth(), getElevation());
     }
 
+    @Override
     public void close() {
         lastTime = getTimestamp();
         clusters.clear();
         logger.info("Agent {} closed at lastTime: {}", getKey(), lastTime);
-          logEvent("close", getKey(), getAzimuth(), getElevation(), getClusterKeys());
+        AgentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
 
     @Override
     public void draw(Graphics g) {
-        super.draw(g);
+        Graphics2D g2d = (Graphics2D) g;
+
+        int x = centerX + (int) ((getAzimuth() - azimuthHeading) * azimuthScale);
+        int y = centerY - (int) ((getElevation() - elevationHeading) * elevationScale);
+
+        g2d.setColor(color);
+        int pixelSizeX = (int) (size * azimuthScale);
+        int pixelSizeY = (int) (size * elevationScale);
+        g2d.drawOval(x - pixelSizeX / 2, y - pixelSizeY / 2, pixelSizeX, pixelSizeY);
+        g2d.drawString(getKey(), x, y - pixelSizeY / 2);
+      
         for (EventCluster cluster : clusters) {
             cluster.draw(g);
         }
-         logEvent("draw", getKey(), getAzimuth(), getElevation(), getClusterKeys());
-        logger.trace("Agent {} draw operation completed.", getKey());
+
+        if (showPath) {
+            drawPath(g2d);
+        }
+        
+     logger.trace("Agent {} draw operation completed.", getKey());
     }
 }
 

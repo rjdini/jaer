@@ -16,27 +16,15 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
+package com.inilabs.jaer.projects.tracker;
 
-import com.inilabs.jaer.projects.gui.BasicTestPanel;
-import com.inilabs.jaer.projects.gui.PolarSpaceGUI;
-import java.awt.BorderLayout;
-import java.awt.LayoutManager;
+import java.awt.geom.Point2D;
 
-import javax.swing.*;
-
-public class TrackerManagerTest {
-
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            PolarSpaceGUI gui = new PolarSpaceGUI();
-            LayoutManager layout = gui.getLayout();
-             BasicTestPanel testPanel = new BasicTestPanel();
-             
-            testPanel.setGUICallBack(gui);
-            gui.add(testPanel, BorderLayout.EAST);
-  //         gui.add(testPanel);
-          
-           gui.setVisible(true);
-        });
-    }
+public interface ClusterAdapter {
+    float getAzimuth();  // degrees in PolarSpace
+    float getElevation(); // egrees in PolarSpace
+    Point2D.Float getLocation(); // x, y in chip pixels space.
+    String getKey(); // For unique identification
+    boolean isVisible(); // for rendering
+    void setIsVisible(boolean yes);
 }

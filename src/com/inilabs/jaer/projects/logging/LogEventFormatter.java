@@ -16,7 +16,6 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
-
 package com.inilabs.jaer.projects.logging;
 
 import java.util.List;
@@ -25,44 +24,54 @@ import java.util.stream.Collectors;
 public class LogEventFormatter {
 
     /**
-     * Formats a log message based on the event type and provided parameters.
+     * Formats agent-specific log events as JSON.
      *
-     * @param eventType The type of event to log (e.g., "run", "creation", "close").
-     * @param timestamp The timestamp of the event.
-     * @param key The unique identifier for the agent.
-     * @param azimuth The azimuth value of the agent.
+     * @param eventType The type of event to log (e.g., EventType.RUN, EventType.CREATION).
+     * @param timestamp The timestamp of the event in milliseconds.
+     * @param key       The unique identifier for the agent.
+     * @param azimuth   The azimuth value of the agent.
      * @param elevation The elevation value of the agent.
-     * @param clusters A list of cluster keys associated with the agent.
-     * @return A JSON-formatted log string tailored to the event type.
+     * @param clusters  A list of cluster keys associated with the agent.
+     * @return A JSON-formatted log string.
      */
-    public static String createLog(String eventType, long timestamp, String key, float azimuth, float elevation, List<String> clusters) {
-        String clustersList = clusters.stream().collect(Collectors.joining(", "));
-
-        switch (eventType.toLowerCase()) {
-            case "run":
-                return String.format(
-                    "{\"time\": \"%d\", \"event_type\": \"%s\", \"key\": \"%s\", \"azimuth\": %.2f, \"elevation\": %.2f, \"clusters\": [%s]}",
-                    timestamp, eventType, key, azimuth, elevation, clustersList
-                );
-                
-            case "creation":
-                return String.format(
-                    "{\"time\": \"%d\", \"event_type\": \"%s\", \"key\": \"%s\", \"azimuth\": %.2f, \"elevation\": %.2f, \"clusters\": [%s]}",
-                    timestamp, eventType, key, azimuth, elevation, clustersList
-                );
-
-            case "close":
-                return String.format(
-                    "{\"time\": \"%d\", \"event_type\": \"%s\", \"key\": \"%s\", \"azimuth\": %.2f, \"elevation\": %.2f, \"clusters\": [%s]}",
-                    timestamp, eventType, key, azimuth, elevation, clustersList
-                );
-
-            default:
-                // Default format if the eventType is not specifically handled
-                return String.format(
-                    "{\"time\": \"%d\", \"event_type\": \"%s\", \"key\": \"%s\", \"azimuth\": %.2f, \"elevation\": %.2f, \"clusters\": [%s]}",
-                    timestamp, eventType, key, azimuth, elevation, clustersList
-                );
-        }
+    public static String formatAgentLogEvent(EventType eventType, long timestamp, String key, float azimuth, float elevation, List<String> clusters) {
+        String clustersList = clusters.stream().map(String::valueOf).collect(Collectors.joining(", "));
+        return String.format(
+            "{\"jaerts\": \"%d\", \"event\": \"%s\", \"key\": \"%s\", \"azim\": %.2f, \"elev\": %.2f, \"clust\": [%s]}",
+            timestamp, eventType.name().toLowerCase(), key, azimuth, elevation, clustersList
+        );
     }
+
+    /**
+     * Formats a general system log event as JSON.
+     *
+     * @param eventType The type of system event (e.g., LOGGER_START, LOGGER_CLOSE).
+     * @param datetime  The ISO 24-hour format datetime string.
+     * @param timestamp The timestamp of the event in milliseconds.
+     * @param message   A message describing the system event.
+     * @return A JSON-formatted log string.
+     */
+    public static String formatSystemLogEvent(EventType eventType, String datetime, long timestamp, String message) {
+        return String.format(
+            "{\"jaerts\": \"%d\", \"datetime\": \"%s\", \"event\": \"%s\", \"message\": \"%s\"}",
+            timestamp, datetime, eventType.name().toLowerCase(), message
+        );
+    }
+    
+    public static String formatJAERLogEvent(EventType eventType, String datetime, long timestamp, int sessionNumber, String filename) {
+        return String.format(
+            "{\"jaerts\": \"%d\", \"datetime\": \"%s\", \"event\": \"%s\",\"session\": \"%d\", \"filename\": \"%s\"}",
+            timestamp, datetime, eventType.name().toLowerCase(), sessionNumber, filename
+        );
+    }
+    
+    public static String formatGUILogEvent(EventType eventType, String datetime, long timestamp, int sessionNumber, String filename) {
+        return String.format(
+            "{\"jaerts\": \"%d\", \"datetime\": \"%s\", \"event\": \"%s\", \"session\": \"%d\", \"message\": \"%s\"}",
+            timestamp, datetime, eventType.name().toLowerCase(), sessionNumber, filename
+        );
+    }
+    
+    
 }
+

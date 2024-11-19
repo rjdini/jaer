@@ -19,25 +19,29 @@
 
 package com.inilabs.jaer.projects.gui;
 
+import com.inilabs.jaer.projects.tracker.EventCluster;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
 
 public class BasicDrawable implements Drawable, DrawableListener {
 
-    private static int idCounter = 0; // Auto-incrementing ID counter for instances
-    private final String key;
-    private final int id; // Unique ID for this instance
-    private BiConsumer<ActionType, String> parentCallback;
+    protected static int idCounter = 0; // Auto-incrementing ID counter for instances
+    protected String key;
+    protected int id; // Unique ID for this instance
+    protected BiConsumer<ActionType, String> parentCallback;
 
     // Path buffer for recent positions
     protected final LinkedList<float[]> pathBuffer = new LinkedList<>();
     protected final int maxPathLength = 20;
-    protected Color color = Color.RED;
+    protected Color color = Color.BLACK;
     protected boolean showPath = false;
-    protected float size = 5.0f;
+    protected float size = 1.0f;
     protected float azimuth = 0.0f;
     protected float elevation = 0.0f;
     protected int centerX = 0;
@@ -46,25 +50,43 @@ public class BasicDrawable implements Drawable, DrawableListener {
     protected float elevationScale = 1.0f;
     protected float azimuthHeading = 0f;
     protected float elevationHeading = 0f;
+    protected long startTime;
+    protected long lastTime;
+    
+    protected List<EventCluster> clusters = new ArrayList<>();
     
 
     // Default constructor, places object at (0,0) and auto-generates key
     public BasicDrawable() {
         this.id = ++idCounter;
-        this.key = getClass().getSimpleName() + id;
+        this.key = getClass().getSimpleName() + "_" + id;
     }
 
     // Constructor with specific azimuth and elevation, and optional key
     public BasicDrawable(String key, float initialAzimuth, float initialElevation) {
         this.id = ++idCounter;
-        this.key = key != null ? key : getClass().getSimpleName() + id;
+        this.key = key != null ? key : getClass().getSimpleName() + "_" + id;
         this.azimuth = initialAzimuth;
         this.elevation = initialElevation;
     }
-
+ 
+    
+    @Override
     public int getId() {
         return id;
     }
+    
+    @Override
+    public String getKey() {
+        return this.key;
+    }
+    
+        // the cluster management shouldnt be down here in BasicDrawable!  TODO
+       // Helper method to get cluster keys as a list of strings
+    public List<String> getClusterKeys() {
+        return clusters.stream().map(EventCluster::getKey).collect(Collectors.toList());
+    }
+    
     // Drawable interface method to draw the drawable on the Graphics context
     @Override
     public void draw(Graphics g) {
@@ -94,6 +116,7 @@ public class BasicDrawable implements Drawable, DrawableListener {
     //   addCurrentPositionToPath();  updated only through update azimuth / elevation
     }
 
+   
     protected void drawPath(Graphics2D g2d, int centerX, int centerY) {
         g2d.setColor(Color.GRAY);
         float[] previousPosition = null;
@@ -126,12 +149,6 @@ public class BasicDrawable implements Drawable, DrawableListener {
         this.elevationHeading = elevationHeading;
         this.centerX = centerX;
         this.centerY = centerY;
-    }
-
-    // Drawable interface methods for setting properties
-    @Override
-    public String getKey() {
-        return key;
     }
 
     @Override
@@ -200,11 +217,17 @@ public class BasicDrawable implements Drawable, DrawableListener {
         return showPath;
     }
 
+    
+    public void setMaxPathLength(int maxPathLength) {
+        maxPathLength = maxPathLength;
+    }
+
+    
     protected void drawPath(Graphics2D g2d) {
         drawPath(g2d, g2d.getClipBounds().width / 2, g2d.getClipBounds().height / 2);
     }
     
-    
+   @Override 
      public void close() {
         // Clear the path buffer
         pathBuffer.clear();

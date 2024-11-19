@@ -16,9 +16,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
+
 package com.inilabs.jaer.projects.gui;
 
-import com.inilabs.jaer.projects.logging.LogEventFormatter;
+import com.inilabs.jaer.projects.logging.AgentLogger;
+import com.inilabs.jaer.projects.logging.EventType;
 import com.inilabs.jaer.projects.tracker.EventCluster;
 import java.awt.Color;
 import java.awt.Graphics;
@@ -27,66 +29,33 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.slf4j.Marker;
-import org.slf4j.MarkerFactory;
 
-public class AgentDrawable extends BasicDrawable {
-    private boolean showPath = true;
-    private final LinkedList<float[]> pathBuffer = new LinkedList<>();
-    private int maxPathLength = 20; // Increased path length
-    private float azimuthScale;
-    private float elevationScale;
-    private float azimuthHeading;
-    private float elevationHeading;
-    private int centerX;
-    private int centerY;
-    private final List<EventCluster> clusters = new ArrayList<>();
-     // Static logger and custom log level
-    private static final Logger datalog = LoggerFactory.getLogger(AgentDrawable.class);
-    private static final Marker DATA_MARKER = MarkerFactory.getMarker("DATA");
-  
-        
-    /**
-     * Logs an event with the specified type using the DATA log level.
-     * This method can be inherited by subclasses for consistent logging.
-     *
-     * @param eventType The type of the event (e.g., "creation", "run", "close").
-     * @param key The unique key of the agent.
-     * @param azimuth The azimuth value of the agent.
-     * @param elevation The elevation value of the agent.
-     * @param clusters List of associated cluster keys.
-     */
-    
-    public static void logEvent(String eventType, String key, float azimuth, float elevation, List<String> clusters) {
-        long timestamp = System.currentTimeMillis();
-        String logMessage = LogEventFormatter.createLog(eventType, timestamp, key, azimuth, elevation, clusters);
-        datalog.info(DATA_MARKER, logMessage);
-    }
+public class AgentDrawable extends BasicDrawable implements Drawable, DrawableListener{
    
-    // Helper method to get cluster keys as a list of strings
-    private List<String> getClusterKeys() {
-        return clusters.stream().map(EventCluster::getKey).collect(Collectors.toList());
+     /**
+     * Returns the current timestamp. This method encapsulates the time source,
+     * allowing for flexibility in future implementations.
+     *
+     * @return The current timestamp in milliseconds.
+     */
+    protected long getTimestamp() {
+        return System.currentTimeMillis();
     }
-    
+
     public AgentDrawable() {
         super();
         init();
-            logEvent("creation", getKey(), getAzimuth(), getElevation(), getClusterKeys());
+        // *** the constuctor of EventCluster si broken by this looging call - ?? reason?
+    //    AgentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
 
     private void init() {
         setSize(2f);
-        setColor(Color.MAGENTA);
+        setColor(Color.BLACK);
     }
 
     public void setShowPath(boolean showPath) {
         this.showPath = showPath;
-    }
-
-    public void setMaxPathLength(int maxPathLength) {
-        this.maxPathLength = maxPathLength;
     }
 
     @Override
@@ -123,47 +92,42 @@ public class AgentDrawable extends BasicDrawable {
     public void draw(Graphics g) {
         Graphics2D g2d = (Graphics2D) g;
 
-        // Calculate screen position based on the absolute polar coordinates
         int x = centerX + (int) ((getAzimuth() - azimuthHeading) * azimuthScale);
         int y = centerY - (int) ((getElevation() - elevationHeading) * elevationScale);
 
-        // Draw the drawable as a circle
         g2d.setColor(color);
         int pixelSizeX = (int) (size * azimuthScale);
         int pixelSizeY = (int) (size * elevationScale);
         g2d.drawOval(x - pixelSizeX / 2, y - pixelSizeY / 2, pixelSizeX, pixelSizeY);
+        g2d.drawString(getKey(), x, y+pixelSizeY);
 
-        // Draw the path if enabled
         if (showPath) {
             drawPath(g2d);
         }
-           logEvent("draw", getKey(), getAzimuth(), getElevation(), getClusterKeys());
+
+    //    AgentLogger.logAgentEvent(EventType.DRAW, getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
 
-    
     protected void drawPath(Graphics2D g2d) {
-    g2d.setColor(color); // Use the same color as the agent
+        g2d.setColor(color);
+        float[] previousPosition = {0,0};
 
-    // Initialize previous point as null
-    float[] previousPosition = null;
+        for (float[] position : pathBuffer) {
+            int pathX = centerX + (int) ((position[0] - azimuthHeading) * azimuthScale);
+            int pathY = centerY - (int) ((position[1] - elevationHeading) * elevationScale);
 
-    for (float[] position : pathBuffer) {
-        int pathX = centerX + (int) ((position[0] - azimuthHeading) * azimuthScale);
-        int pathY = centerY - (int) ((position[1] - elevationHeading) * elevationScale);
-
-        // Draw a small point at the path location
-      //  g2d.fillOval(pathX - 2, pathY - 2, 4, 4);
-
-        // Draw a line from the previous point to the current one, if there is a previous point
-        if (previousPosition != null) {
-            int prevX = centerX + (int) ((previousPosition[0] - azimuthHeading) * azimuthScale);
-            int prevY = centerY - (int) ((previousPosition[1] - elevationHeading) * elevationScale);
-            g2d.drawLine(prevX, prevY, pathX, pathY);
+            if (previousPosition != null) {
+                int prevX = centerX + (int) ((previousPosition[0] - azimuthHeading) * azimuthScale);
+                int prevY = centerY - (int) ((previousPosition[1] - elevationHeading) * elevationScale);
+                g2d.drawLine(prevX, prevY, pathX, pathY);
+            }
+            previousPosition = position;
         }
-
-        // Update previous position to current position
-        previousPosition = position;
     }
-}
-     
+
+    public void close() {
+        lastTime = getTimestamp();
+        clusters.clear();
+        AgentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
+    }
 }

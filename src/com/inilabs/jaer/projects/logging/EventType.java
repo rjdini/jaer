@@ -16,27 +16,29 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
+package com.inilabs.jaer.projects.logging;
 
-import com.inilabs.jaer.projects.gui.BasicTestPanel;
-import com.inilabs.jaer.projects.gui.PolarSpaceGUI;
-import java.awt.BorderLayout;
-import java.awt.LayoutManager;
+/**
+ *
+ * @author rjd
+ */
 
-import javax.swing.*;
-
-public class TrackerManagerTest {
-
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            PolarSpaceGUI gui = new PolarSpaceGUI();
-            LayoutManager layout = gui.getLayout();
-             BasicTestPanel testPanel = new BasicTestPanel();
-             
-            testPanel.setGUICallBack(gui);
-            gui.add(testPanel, BorderLayout.EAST);
-  //         gui.add(testPanel);
-          
-           gui.setVisible(true);
-        });
-    }
+public enum EventType {
+    CREATE,
+    RUN,
+    MOVE,
+    DRAW,
+    UPDATE,
+    CLOSE,
+    DELETE,
+    CLUSTER_ADDED,
+    CLUSTER_LOST,
+    JAER_START_LOG,
+    JAER_STOP_LOG,
+    GUI_START_LOG,
+    GUI_STOP_LOG,
+    LOGGER_START,
+    LOGGER_CLOSE,
+    SYSTEM_START,
+    SYSTEM_SHUTDOWN;
 }
