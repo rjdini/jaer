@@ -67,7 +67,7 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter) {
     eventCluster.elevation = clusterAdapter.getElevation();
     eventCluster.color=Color.BLACK;
     eventCluster.size = 1f;
-    eventCluster.setMaxLifeTime(1000f);
+    eventCluster.setMaxLifeTime(1000);
     return eventCluster;
 }
     public EventCluster() {
@@ -139,7 +139,7 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter) {
 
     public void run() {
          updateLifeTime();
-         if(lifeTime >= maxLifeTime){  setIsExpired(true); }  // kill ourselves 
+         if((getTimestamp() - lifetime0) >= maxLifeTime){  setIsExpired(true);  } // kill ourselves 
     }
     
     public ClusterAdapter getEnclosedCluster() {

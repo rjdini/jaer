@@ -19,10 +19,13 @@
 
 package com.inilabs.jaer.projects.gui;
 
+import com.inilabs.jaer.projects.tracker.FieldOfView;
 import com.inilabs.jaer.projects.tracker.EventCluster;
+import com.inilabs.jaer.projects.tracker.FOVUtils;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -50,21 +53,21 @@ public class BasicDrawable implements Drawable, DrawableListener {
     protected float elevationScale = 1.0f;
     protected float azimuthHeading = 0f;
     protected float elevationHeading = 0f;
-    protected long startTime;
-    protected long lastTime;
+    protected long startTime; // agent created
+    protected long lastTime; // agent closed
+    protected long lifetime0; // temp value used for extending lifetime.
+    protected long maxLifeTime = 100 ; //millisec
     protected boolean isOrphaned = false;
     protected boolean isExpired = false;
-    protected float lifeTime = 0;
-    protected float maxLifeTime = 10000f; // 10 secs
-    
+    protected static FieldOfView fov = new FieldOfView();
     protected List<EventCluster> clusters = new ArrayList<>();
-    
 
     // Default constructor, places object at (0,0) and auto-generates key
     public BasicDrawable() {
         this.id = ++idCounter;
         this.key = getClass().getSimpleName() + "_" + id;
          this.startTime = getTimestamp();
+         this.lifetime0 = this.startTime;
     }
 
     // Constructor with specific azimuth and elevation, and optional key
@@ -91,6 +94,10 @@ public class BasicDrawable implements Drawable, DrawableListener {
         return id;
     }
     
+    public FieldOfView getFOV() {
+        return fov;
+    }
+    
     @Override
     public String getKey() {
         return this.key;
@@ -105,6 +112,39 @@ public class BasicDrawable implements Drawable, DrawableListener {
         isOrphaned = yes;
     }
     
+     
+
+   /**
+     * Resets the lifetime of the agent.
+     */ 
+  public void resetLifeTime() {
+    this.lifetime0 = getTimestamp();
+}
+
+ public long getLifeTime()  {
+     return getTimestamp() - lifetime0;
+ }
+         
+  
+public boolean isTerminated() {
+  //  return this.getLifeTime() >= maxLifeTime; // Check if lifetime has expired
+     return true; // Check if lifetime has expired
+}
+    
+     /**
+     * Clears the assigned clusters.
+     */
+    public void clearClusters() {
+        clusters.clear();
+    }
+   
+    
+    public Point2D.Float getChipLocation() {
+        float x = fov.getPixelsAtYaw(azimuth);
+        float y = fov.getPixelsAtPitch(elevation);
+        return new Point2D.Float(x, y) ;        
+    }
+    
     
     @Override
     public boolean isExpired() {
@@ -116,10 +156,10 @@ public class BasicDrawable implements Drawable, DrawableListener {
     }
     
      protected void updateLifeTime() {
-        lifeTime = getTimestamp() -  startTime;
+        lifetime0 = getTimestamp();
     }
     
-     protected void setMaxLifeTime(float max) {
+     protected void setMaxLifeTime(long max) {
          maxLifeTime = max;
      }
      

@@ -24,15 +24,17 @@ import net.sf.jaer.eventprocessing.tracking.RectangularClusterTracker;
 
 public class RCTClusterAdapter implements ClusterAdapter {
     private final RectangularClusterTracker.Cluster cluster;
-    private static final FOVUtils fov = new FOVUtils();
     private boolean isVisible = true;
     protected long startTime;
     //  a dummy for testing
     private Point2D.Float testLocation = new Point2D.Float(0, 0);
+    private FieldOfView fov;
 
-    public RCTClusterAdapter(RectangularClusterTracker.Cluster cluster) {
+    // Must pass the same fov used in the TrackerManagerEngine, else Polar coords will not be correct
+    public RCTClusterAdapter(RectangularClusterTracker.Cluster cluster, FieldOfView fov) {
         this.cluster = cluster;
         this.startTime = getTimestamp();
+        this.fov = fov;
     }
 
     public float getSize() {    // in degrees

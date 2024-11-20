@@ -53,8 +53,13 @@ public class TrackerManagerEngine {
     private final List<TrackerAgentDrawable> trackerAgentDrawables = new ArrayList<>();
     private final Map<String, Color> originalColors = new HashMap<>(); // Track original colors
     private Color bestAgentColor = Color.RED; // Define the color for the best agents
-
-    public TrackerManagerEngine() {
+    private FieldOfView fov;
+    private final static int MAX_CLUSTERS = 3;
+    
+    
+    
+    public TrackerManagerEngine(FieldOfView fov) {
+        this.fov = fov;
         // Start the periodic processing task (10 Hz)
         scheduler.scheduleAtFixedRate(this::processPeriodically, 0, 100, TimeUnit.MILLISECONDS);
     }
@@ -81,15 +86,15 @@ public class TrackerManagerEngine {
      * 
      * @param clusters List of RectangularClusterTracker.Cluster objects.
      */
-    public synchronized void updateRCTClusterList(List<RectangularClusterTracker.Cluster> clusters) {
-        freshDataAvailable = true; // Mark new data as available
-        List<ClusterAdapter> adaptedClusters = clusters.stream()
-                .map(RCTClusterAdapter::new)
-                .collect(Collectors.toList());
-        processClustersForRCT(adaptedClusters);
-        processTrackers();
-    }
-
+    public synchronized void updateRCTClusterList(List<RectangularClusterTracker.Cluster> clusters, FieldOfView fieldOfView) {
+    freshDataAvailable = true; // Mark new data as available
+    List<RCTClusterAdapter> adaptedClusters = clusters.stream()
+        .map(cluster -> new RCTClusterAdapter(cluster, fieldOfView))
+        .collect(Collectors.toList());
+    processClustersForRCT(adaptedClusters);
+    processTrackers();
+}
+    
     /**
      * Updates the agent and cluster list with test clusters.
      * 
@@ -101,74 +106,74 @@ public class TrackerManagerEngine {
         processTrackers();
     }
 
+    
     private void processClustersForRCT(List<? extends ClusterAdapter> clusters) {
     if (polarSpaceDisplay != null) {
-        // Collect incoming keys for quick comparison
         Set<String> incomingKeys = clusters.stream()
-            .filter(ClusterAdapter::isRCTCluster) // Ensure only RCT clusters are processed
+            .filter(ClusterAdapter::isRCTCluster)
             .map(ClusterAdapter::getKey)
             .collect(Collectors.toSet());
-
-        if (incomingKeys.isEmpty()) {
-            // If no new RCT clusters, clear all existing RCT clusters
-            eventClusters.removeIf(cluster -> {
-                if (cluster.getAdapter().isRCTCluster()) {
-                    polarSpaceDisplay.removeDrawable(cluster.getKey());
-                    log.info("Removed stale RCT cluster: {}", cluster.getKey());
-                    return true; // Remove this cluster
-                }
-                return false; // Retain non-RCT clusters
-            });
-            return; // Exit early since there are no new clusters to process
-        }
 
         // Remove RCT clusters that are not in the incoming list
         eventClusters.removeIf(cluster -> {
             if (cluster.getAdapter().isRCTCluster() && !incomingKeys.contains(cluster.getKey())) {
                 polarSpaceDisplay.removeDrawable(cluster.getKey());
                 log.info("Removed RCT cluster not in the incoming list: {}", cluster.getKey());
-                return true; // Remove this cluster
+                return true;
             }
-            return false; // Retain cluster
+            return false;
         });
 
-        // Update or add incoming RCT clusters
+        // Assign clusters to agents or create new ones
         for (ClusterAdapter adapter : clusters) {
             if (adapter == null || !adapter.isRCTCluster()) {
-                log.warn("Encountered a non-RCT ClusterAdapter, skipping.");
                 continue;
             }
 
-            // Check if the cluster already exists in the list
-            EventCluster existingCluster = eventClusters.stream()
-                .filter(cluster -> cluster.getKey().equals(adapter.getKey()))
-                .findFirst()
-                .orElse(null);
+            EventCluster cluster = EventCluster.fromClusterAdapter(adapter);
+            TrackerAgentDrawable nearestAgent = findNearestAgent(cluster);
 
-            if (existingCluster != null) {
-                // Update the existing RCT cluster
-                existingCluster.updateFromAdapter(adapter);
-                log.info("Updated existing RCT cluster: {}", existingCluster.getKey());
+            if (nearestAgent != null && calculateDistance(nearestAgent, cluster) <= 0.4 * fov.getFOVX()) {
+                nearestAgent.addCluster(cluster);
             } else {
-                // Add a new RCT cluster
-                EventCluster newCluster = EventCluster.fromClusterAdapter(adapter);
-                eventClusters.add(newCluster);
-
-                if (polarSpaceDisplay != null) {
-                    polarSpaceDisplay.addDrawable(newCluster);
-                }
-
-                log.info("Added new RCT cluster: {}", newCluster.getKey());
+                TrackerAgentDrawable newAgent = createNewAgent(cluster);
+                agents.put(newAgent.getKey(), newAgent);
+                newAgent.addCluster(cluster);
             }
-
-            // Link the cluster to its tracker agent
-            TrackerAgentDrawable agent = findOrCreateAgent(existingCluster != null ? existingCluster : EventCluster.fromClusterAdapter(adapter));
-            agent.addCluster(existingCluster != null ? existingCluster : EventCluster.fromClusterAdapter(adapter));
         }
+
+        // Prune any unassigned clusters
+        eventClusters.removeIf(cluster -> cluster.getAdapter().isRCTCluster() && cluster.getEnclosingAgent() == null);
     }
-    updateBestTrackerAgentList(); // Refresh tracker list
 }
 
+    
+    private void removeTerminatedAgents() {
+    Iterator<Map.Entry<String, TrackerAgentDrawable>> iterator = agents.entrySet().iterator();
+    while (iterator.hasNext()) {
+        Map.Entry<String, TrackerAgentDrawable> entry = iterator.next();
+        TrackerAgentDrawable agent = entry.getValue();
+
+        if (agent.isTerminated()) {
+            iterator.remove();
+            if (polarSpaceDisplay != null) {
+                polarSpaceDisplay.removeDrawable(agent.getKey());
+            }
+
+            // Redistribute or discard clusters
+            for (EventCluster cluster : agent.getClusters()) {
+                TrackerAgentDrawable nearestAgent = findNearestAgent(cluster);
+                if (nearestAgent != null) {
+                    nearestAgent.addCluster(cluster);
+                } else {
+                    log.info("Cluster {} discarded as no agent available", cluster.getKey());
+                }
+            }
+        }
+    }
+}
+
+    
     
     /**
      * Generic method to process clusters and encapsulate them as EventClusters.
@@ -213,35 +218,49 @@ public class TrackerManagerEngine {
     updateBestTrackerAgentList();
 }
 
+    
     private void processTrackers() {
-        // Processing logic remains unchanged
-        Set<String> currentClusterKeys = eventClusters.stream()
-                .map(EventCluster::getKey)
-                .collect(Collectors.toSet());
+    // Step 1: Distribute clusters to nearest agents
+    for (EventCluster cluster : eventClusters) {
+        TrackerAgentDrawable nearestAgent = findNearestAgent(cluster);
 
-        Iterator<Map.Entry<String, TrackerAgentDrawable>> agentIterator = agents.entrySet().iterator();
-        while (agentIterator.hasNext()) {
-            Map.Entry<String, TrackerAgentDrawable> entry = agentIterator.next();
-            TrackerAgentDrawable agent = entry.getValue();
+        if (nearestAgent != null && calculateDistance(nearestAgent, cluster) <= 0.4 * fov.getFOVX()) {
+            nearestAgent.addCluster(cluster);
+            nearestAgent.resetLifeTime(); // Reset lifetime if a cluster is added
+        } else {
+            // Step 2: Create a new agent for distant clusters
+            TrackerAgentDrawable newAgent = createNewAgent(cluster);
+            agents.put(newAgent.getKey(), newAgent);
+            newAgent.addCluster(cluster);
+            log.info("Created new agent for distant cluster: {}", cluster.getKey());
+        }
+    }
+   
+    // Step 3: Run agents to update their positions
+    for (TrackerAgentDrawable agent : agents.values()) {
+        agent.run(); // Update centroid and move the agent
+    }
 
-            // Remove orphaned clusters
-            agent.getClusters().removeIf(cluster -> cluster.getEnclosedCluster() == null
-                    || !currentClusterKeys.contains(cluster.getEnclosedCluster().getKey()));
+    // Step 4: Remove terminated agents
+    Iterator<Map.Entry<String, TrackerAgentDrawable>> agentIterator = agents.entrySet().iterator();
+    while (agentIterator.hasNext()) {
+        Map.Entry<String, TrackerAgentDrawable> entry = agentIterator.next();
+        TrackerAgentDrawable agent = entry.getValue();
 
-            // Remove agents with zero support
-            if (agent.getSupportQuality() == 0) {
-                agentIterator.remove();
-                if (polarSpaceDisplay != null) {
-                    polarSpaceDisplay.removeDrawable(agent.getKey());
-                }
-                continue; // Skip further processing for this agent
+        if (agent.getClusters().isEmpty() && agent.isTerminated()) {
+            agentIterator.remove();
+            if (polarSpaceDisplay != null) {
+                polarSpaceDisplay.removeDrawable(agent.getKey());
             }
-
-            // Optimize agent's position
-            optimizeAgentPosition(agent);
+            log.info("Removed terminated agent: {}", agent.getKey());
         }
     }
 
+    // Step 5: Prune excess agents if necessary
+    enforceAgentLimit();
+}
+
+  
     /**
  * Optimize the position of a tracker agent by minimizing its summed distance to the supported clusters.
  */
@@ -318,20 +337,22 @@ private float calculateDistance(TrackerAgentDrawable agent, EventCluster cluster
     }
 
 
-    private TrackerAgentDrawable createNewAgent(EventCluster cluster) {
-        TrackerAgentDrawable agent = new TrackerAgentDrawable();
-        agent.setAzimuth(cluster.getAzimuth());
-        agent.setElevation(cluster.getElevation());
-        agent.setSize(4f);
-        addAgent(agent);
-
-        if (polarSpaceDisplay != null) {
-            polarSpaceDisplay.addDrawable(agent);
-        }
-
-        cluster.setEnclosingAgent(agent);
-        return agent;
+private TrackerAgentDrawable createNewAgent(EventCluster cluster) {
+    if (findNearestAgent(cluster) != null) {
+        return null; // Avoid creating duplicate agents
     }
+
+    TrackerAgentDrawable agent = new TrackerAgentDrawable();
+    agent.setAzimuth(cluster.getAzimuth());
+    agent.setElevation(cluster.getElevation());
+    agent.setSize(4f);
+    agents.put(agent.getKey(), agent);
+    if (polarSpaceDisplay != null) {
+        polarSpaceDisplay.addDrawable(agent);
+    }
+    cluster.setEnclosingAgent(agent);
+    return agent;
+}
 
   private void addAgent(TrackerAgentDrawable agent) {
         if (agents.size() >= MAX_TRACKER_AGENTS) {
@@ -340,6 +361,30 @@ private float calculateDistance(TrackerAgentDrawable agent, EventCluster cluster
         agents.put(agent.getKey(), agent);
     }
     
+  
+  public void redistributeClusters(TrackerAgentDrawable agent) {
+    List<EventCluster> excessClusters = agent.getClusters().stream()
+        .sorted(Comparator.comparingDouble(cluster -> calculateDistance(agent, cluster)))
+        .skip(TrackerAgentDrawable.MAX_CLUSTERS)
+        .collect(Collectors.toList());
+
+    for (EventCluster cluster : excessClusters) {
+        agent.removeCluster(cluster);
+        TrackerAgentDrawable nearestAgent = findNearestAgent(cluster);
+        if (nearestAgent != null) {
+            nearestAgent.addCluster(cluster);
+        } else {
+            TrackerAgentDrawable newAgent = createNewAgent(cluster);
+            agents.put(newAgent.getKey(), newAgent);
+        }
+    }
+}
+  
+  
+  
+  
+  
+  
      private void removeLeastSignificantAgent() {
         TrackerAgentDrawable leastSignificantAgent = agents.values().stream()
                 .min(Comparator.comparingDouble(TrackerAgentDrawable::getSupportQuality))

@@ -39,6 +39,13 @@ public class TrackerAgentDrawable extends AgentDrawable implements Runnable, Dra
     private static final float QUALITY_THRESHOLD = 0.5f; // Threshold for cluster support quality
    private float optimizationCost = 0f;
     
+  // private List<EventCluster> clusters = new ArrayList<>();
+  //  private float azimuth; // Current azimuth position
+  //  private float elevation; // Current elevation position
+    public static final int MAX_CLUSTERS = 4; 
+   
+   
+   
 
     public TrackerAgentDrawable() {
         super();
@@ -56,7 +63,8 @@ public class TrackerAgentDrawable extends AgentDrawable implements Runnable, Dra
     public boolean isLoggingEnabled() {
         return loggingEnabled;
     }
-
+ 
+    
      // Example implementation for support quality calculation
     public double getSupportQuality() {
         // Aggregate the support quality of all associated clusters
@@ -72,29 +80,102 @@ public class TrackerAgentDrawable extends AgentDrawable implements Runnable, Dra
         return clusters; // Return an empty list for now
     }
     
+  
+    
+    /**
+     * Adds a cluster to the agent's list. If the limit is exceeded, removes the farthest cluster.
+     */
     public void addCluster(EventCluster cluster) {
-        cluster.setEnclosingAgent(this);
         clusters.add(cluster);
-        logger.info("Cluster added to agent {}: Cluster ID = {}", getKey(), cluster.getId());
+        resetLifeTime(); // Reset lifetime when a cluster is added
+
+        if (clusters.size() > MAX_CLUSTERS) {
+            // Remove the farthest cluster if the limit is exceeded
+            removeFarthestCluster();
+        }
+          logger.info("Cluster added to agent {}: Cluster ID = {}", getKey(), cluster.getId());
+    }
+    
+    /**
+     * Removes the farthest cluster from the agent's cluster list.
+     */
+    private void removeFarthestCluster() {
+        EventCluster farthestCluster = null;
+        float maxDistance = -1;
+
+        for (EventCluster cluster : clusters) {
+            float distance = calculateDistance(this.azimuth, this.elevation, cluster.getAzimuth(), cluster.getElevation());
+            if (distance > maxDistance) {
+                maxDistance = distance;
+                farthestCluster = cluster;
+            }
+        }
+
+        if (farthestCluster != null) {
+            clusters.remove(farthestCluster);
+        }
     }
 
+    /**
+     * Calculates the distance between two polar coordinates.
+     */
+    private float calculateDistance(float az1, float el1, float az2, float el2) {
+        float deltaAzimuth = az1 - az2;
+        float deltaElevation = el1 - el2;
+        return (float) Math.sqrt(deltaAzimuth * deltaAzimuth + deltaElevation * deltaElevation);
+    }
+
+    
+    
     public void removeCluster(EventCluster cluster) {
         clusters.remove(cluster);
         logger.info("Cluster removed from agent {}: Cluster ID = {}", getKey(), cluster.getId());
     }
 
+    /**
+     * Updates the centroid based on the agent's assigned clusters.
+     */
+    public void updateCentroid() {
+        if (clusters.isEmpty()) {
+            // No clusters, centroid remains unchanged
+            return;
+        }
+
+        // Calculate the average azimuth and elevation
+        double sumAzimuth = 0;
+        double sumElevation = 0;
+
+        for (EventCluster cluster : clusters) {
+            sumAzimuth += cluster.getAzimuth();
+            sumElevation += cluster.getElevation();
+        }
+
+        int clusterCount = clusters.size();
+        this.azimuth = (float) (sumAzimuth / clusterCount);
+        this.elevation = (float) (sumElevation / clusterCount);
+    }
+
+    /**
+     * Moves the agent to its computed centroid position.
+     */
+    public void moveToCentroid() {
+        // Update the agent's polar coordinates to match the centroid
+        setAzimuth(this.azimuth);
+        setElevation(this.elevation);
+    }
    
    
     @Override
     public void run() {
-        updateLifeTime();
         AgentLogger.logAgentEvent(EventType.RUN, getKey(), getAzimuth(), getElevation(), getClusterKeys());
-        updatePosition();
-        if (clusters.isEmpty()) {
+       updateCentroid();
+        moveToCentroid();
+        
+        if (clusters.isEmpty() && isTerminated()) {
             setIsExpired(true);
-            // close();
+             AgentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
+             close();
         }
-        AgentLogger.logAgentEvent(EventType.RUN, getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
 
     private void updatePosition() {
