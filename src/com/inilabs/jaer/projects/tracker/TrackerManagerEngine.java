@@ -59,7 +59,7 @@ public class TrackerManagerEngine {
      * @param clusters List of RectangularClusterTracker.Cluster objects.
      */
     
-    public void updateAgentClusterList(List<RectangularClusterTracker.Cluster> clusters) {
+    public void updateRCTClusterList(List<RectangularClusterTracker.Cluster> clusters) {
     // Step 1: Process clusters
     List<ClusterAdapter> adaptedClusters = clusters.stream()
             .map(RCTClusterAdapter::new)
@@ -70,9 +70,9 @@ public class TrackerManagerEngine {
 
     // Step 2: Manage drawables in PolarSpaceDisplay
     // Remove old drawables from display
-    for (Drawable drawable : trackerAgentDrawables) {
-        removeDrawableFromDisplay(drawable);
-    }
+//    for (Drawable drawable : trackerAgentDrawables) {
+ //       removeDrawableFromDisplay(drawable);
+ //   }
 
     // trackerAgentDrawables.clear();
 
@@ -106,28 +106,39 @@ public void updateTestClusterList(List<TestCluster> clusters) {
      * @param isTestClusters Indicates whether the clusters are test data.
      */
 
+
 private void processClusters(List<? extends ClusterAdapter> clusters) {
     if (polarSpaceDisplay != null) {
-        for (EventCluster cluster : eventClusters) {
-            polarSpaceDisplay.removeDrawable(cluster.getKey());
-        }
+        // Update and remove only expired clusters from the display and TrackerManagerEngine
+        eventClusters.removeIf(cluster -> {
+            cluster.run(); // Update the cluster
+            if (cluster.isExpired()) {
+                // Remove from PolarSpaceDisplay
+                polarSpaceDisplay.removeDrawable(cluster.getKey());
+                log.info("Removed expired cluster with key: {}", cluster.getKey());
+                return true; // Mark for removal from eventClusters
+            }
+            return false; // Retain non-expired clusters
+        });
     }
 
-    eventClusters.clear();
-
+    // Process new clusters
     for (ClusterAdapter adapter : clusters) {
         if (adapter == null) {
             log.warn("Encountered a null ClusterAdapter, skipping.");
             continue;
         }
 
-        EventCluster eventCluster = EventCluster.fromClusterAdapter(adapter);     
+        // Create a new EventCluster from the adapter
+        EventCluster eventCluster = EventCluster.fromClusterAdapter(adapter);
         eventClusters.add(eventCluster);
 
+        // Add to PolarSpaceDisplay if it's not null
         if (polarSpaceDisplay != null) {
             polarSpaceDisplay.addDrawable(eventCluster);
         }
 
+        // Link the cluster to its tracker agent
         TrackerAgentDrawable agent = findOrCreateAgent(eventCluster);
         agent.addCluster(eventCluster);
     }
@@ -135,8 +146,6 @@ private void processClusters(List<? extends ClusterAdapter> clusters) {
     updateBestTrackerAgentList();
 }
 
-
-    
     private void processTrackers() {
     // Gather the current cluster keys
     Set<String> currentClusterKeys = eventClusters.stream()

@@ -183,7 +183,8 @@ public EventPacket<? extends BasicEvent> filterPacket(EventPacket<? extends Basi
                 .collect(Collectors.toList());
         
         // Update the TME engine with these clusters
-        engine.updateAgentClusterList(limitedClusters);
+       // engine.updateRCTClusterList(limitedClusters); // this done automagically within TME
+        engine.updateBestTrackerAgentList();
           }
      return in;
     }
@@ -192,9 +193,14 @@ public EventPacket<? extends BasicEvent> filterPacket(EventPacket<? extends Basi
 
 private void updateTrackerManagerEngineTests() {    
     if(isEnableTestClusters) {
-        engine.updateTestClusterList(exerciser.getTestClustersHorizontal() ); }
-     engine.updateBestTrackerAgentList();
+        engine.updateTestClusterList(exerciser.getTestClustersHorizontal() ); 
+       // engine.updateBestTrackerAgentList(); // this is done by TME
+     } else {
+    engine.updateBestTrackerAgentList(); // this is done by TME
 }
+}
+
+
 
 private void updateGimbal() {
 TrackerAgentDrawable trackerAgentDrawable = engine.getBestTrackerAgentDrawable();

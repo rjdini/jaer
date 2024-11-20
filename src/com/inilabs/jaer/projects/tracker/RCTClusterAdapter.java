@@ -26,13 +26,24 @@ public class RCTClusterAdapter implements ClusterAdapter {
     private final RectangularClusterTracker.Cluster cluster;
     private static final FOVUtils fov = new FOVUtils();
     private boolean isVisible = true;
+    protected long startTime;
     //  a dummy for testing
     private Point2D.Float testLocation = new Point2D.Float(0, 0);
 
     public RCTClusterAdapter(RectangularClusterTracker.Cluster cluster) {
         this.cluster = cluster;
+        this.startTime = getTimestamp();
     }
-    
+
+ protected long getTimestamp() {
+        return System.currentTimeMillis();
+    }
+
+  public long getLifeTime() {
+        return( getTimestamp() -  startTime);
+    }
+  
+  
     // dummy constructor for testing
     public RCTClusterAdapter() {
         this.cluster = null;

@@ -32,15 +32,7 @@ import java.util.stream.Collectors;
 
 public class AgentDrawable extends BasicDrawable implements Drawable, DrawableListener{
    
-     /**
-     * Returns the current timestamp. This method encapsulates the time source,
-     * allowing for flexibility in future implementations.
-     *
-     * @return The current timestamp in milliseconds.
-     */
-    protected long getTimestamp() {
-        return System.currentTimeMillis();
-    }
+   
 
     public AgentDrawable() {
         super();

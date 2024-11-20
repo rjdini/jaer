@@ -42,7 +42,6 @@ public class TrackerAgentDrawable extends AgentDrawable implements Runnable, Dra
 
     public TrackerAgentDrawable() {
         super();
-        this.startTime = getTimestamp();
         setColor(Color.BLACK);
         logger.info("TrackerAgentDrawable created with key: {} at startTime: {}", this.getKey(), startTime);
         AgentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
@@ -84,10 +83,15 @@ public class TrackerAgentDrawable extends AgentDrawable implements Runnable, Dra
         logger.info("Cluster removed from agent {}: Cluster ID = {}", getKey(), cluster.getId());
     }
 
+   
+   
     @Override
     public void run() {
+        updateLifeTime();
+        AgentLogger.logAgentEvent(EventType.RUN, getKey(), getAzimuth(), getElevation(), getClusterKeys());
         updatePosition();
         if (clusters.isEmpty()) {
+            setIsExpired(true);
             // close();
         }
         AgentLogger.logAgentEvent(EventType.RUN, getKey(), getAzimuth(), getElevation(), getClusterKeys());

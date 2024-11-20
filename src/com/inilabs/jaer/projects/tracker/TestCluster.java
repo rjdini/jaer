@@ -8,8 +8,8 @@ public class TestCluster implements ClusterAdapter {
     private float elevation = 0;
     private Point2D.Float location = new Point2D.Float(0,0); 
     private FOVUtils fov = new FOVUtils();
-    
-
+    protected long startTime;
+ 
 
     public TestCluster(float azimuth, float elevation) {
         this.azimuth = azimuth;
@@ -26,8 +26,15 @@ public class TestCluster implements ClusterAdapter {
         this.location = pt;
         this.azimuth = fov.getYawAtPixel(location.x );
         this.elevation = fov.getPitchAtPixel(location.y);
+        this.startTime = getTimestamp();
     }
 
+    
+     protected long getTimestamp() {
+        return System.currentTimeMillis();
+    }
+     
+     
     // This is the call the simulation engine will use to set TestCluster position in FOV
     public void setLocation(Point2D.Float pt) {
         location = pt;  
@@ -35,6 +42,9 @@ public class TestCluster implements ClusterAdapter {
         this.elevation = fov.getPitchAtPixel(location.y);
     }
 
+    public long getLifeTime() {
+        return( getTimestamp() -  startTime);
+    }
        
      @Override
     public float getAzimuth() {

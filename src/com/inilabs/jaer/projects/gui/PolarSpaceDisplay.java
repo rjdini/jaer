@@ -36,6 +36,7 @@ import javax.swing.SwingUtilities;
 import org.slf4j.LoggerFactory;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.Collections;
 import javax.swing.JLabel;
 import javax.swing.ToolTipManager;
 
@@ -54,7 +55,8 @@ public class PolarSpaceDisplay extends JPanel {
     private JLabel coordinatesLabel;
     private static PolarSpaceDisplay instance = null;
 
-    private final  Map<String, Drawable> drawables = new HashMap<>(); // Map of drawables managed by key
+    private final Map<String, Drawable> drawables = Collections.synchronizedMap(new HashMap<>());
+    
   private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(PolarSpaceDisplay.class);
     
   public PolarSpaceDisplay() {
@@ -108,7 +110,33 @@ public class PolarSpaceDisplay extends JPanel {
     
     }
 
-
+ /**
+     * Re-initializes the display to its default state.
+     */
+    public synchronized void reinitializeDisplay() {
+        drawables.clear();
+        initializeDisplay();
+        log.info("PolarSpaceDisplay re-initialized.");
+        repaint();
+    }
+    
+    
+     /**
+     * Clears orphaned drawables that are no longer valid.
+     */
+    public synchronized void clearOrphanedDrawables() {
+        List<String> orphans = new ArrayList<>();
+        for (Map.Entry<String, Drawable> entry : drawables.entrySet()) {
+            if (entry.getValue().isOrphaned()) { // Assuming Drawable has an `isOrphaned` method
+                orphans.add(entry.getKey());
+            }
+        }
+        for (String key : orphans) {
+            drawables.remove(key);
+            log.info("Removed orphaned drawable with key: {}", key);
+        }
+        repaint();
+    }
     
     private void showTooltipOnClick(MouseEvent e) {
       int centerX = getWidth() / 2;
@@ -293,6 +321,11 @@ public synchronized boolean containsDrawable(Drawable drawable) {
     }
    
     
+     public synchronized void removeAllDrawables() {
+        drawables.clear();
+        repaint();
+    }  
+    
     @Override
     protected synchronized void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -315,20 +348,22 @@ public synchronized boolean containsDrawable(Drawable drawable) {
         elevationScaleBar.draw(g2d, centerX, centerY);
 
         // Simply call draw() on each Drawable, letting each one handle its position based on scaling
-        for (Drawable drawable : drawables.values()) {
-            drawable.draw(g2d);
-          
+        synchronized (drawables) {
+            for (Drawable drawable : drawables.values()) {
+                try {
+                    drawable.draw(g2d);
+                } catch (Exception e) {
+                    log.error("Error drawing drawable with key: {}", drawable.getKey(), e);
+                }
+            }
+               //   log.info("drawing drawables --- size of drawables = {} ", drawables.size());
         }
         
-    
         // Draw crosshairs or grid if needed
         g.setColor(Color.GRAY);
         g.drawLine(getWidth() / 2, 0, getWidth() / 2, getHeight()); // Vertical line
         g.drawLine(0, getHeight() / 2, getWidth(), getHeight() / 2); // Horizontal line
-    
-        
-        
-      //   log.info("drawing drawables --- size of drawables = {} ", drawables.size());
+  
     }
 }
 

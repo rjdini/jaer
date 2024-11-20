@@ -34,7 +34,7 @@ import net.sf.jaer.eventprocessing.tracking.RectangularClusterTracker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class EventCluster extends AgentDrawable implements Drawable, DrawableListener{
+public class EventCluster extends AgentDrawable implements Runnable, Drawable, DrawableListener{
    private static final Logger log = LoggerFactory.getLogger(EventCluster.class);
    public ClusterAdapter enclosedCluster;
     private TrackerAgentDrawable enclosingAgent; // Reference to the enclosing agent
@@ -67,6 +67,7 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter) {
     eventCluster.elevation = clusterAdapter.getElevation();
     eventCluster.color=Color.BLACK;
     eventCluster.size = 1f;
+    eventCluster.setMaxLifeTime(1000f);
     return eventCluster;
 }
     public EventCluster() {
@@ -123,6 +124,11 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter) {
         }
     }
 
+    public void run() {
+         updateLifeTime();
+         if(lifeTime >= maxLifeTime){  setIsExpired(true); }  // kill ourselves 
+    }
+    
     public ClusterAdapter getEnclosedCluster() {
         return enclosedCluster;
     }

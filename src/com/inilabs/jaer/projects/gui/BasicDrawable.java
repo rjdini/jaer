@@ -52,6 +52,10 @@ public class BasicDrawable implements Drawable, DrawableListener {
     protected float elevationHeading = 0f;
     protected long startTime;
     protected long lastTime;
+    protected boolean isOrphaned = false;
+    protected boolean isExpired = false;
+    protected float lifeTime = 0;
+    protected float maxLifeTime = 10000f; // 10 secs
     
     protected List<EventCluster> clusters = new ArrayList<>();
     
@@ -60,6 +64,7 @@ public class BasicDrawable implements Drawable, DrawableListener {
     public BasicDrawable() {
         this.id = ++idCounter;
         this.key = getClass().getSimpleName() + "_" + id;
+         this.startTime = getTimestamp();
     }
 
     // Constructor with specific azimuth and elevation, and optional key
@@ -71,6 +76,16 @@ public class BasicDrawable implements Drawable, DrawableListener {
     }
  
     
+      /**
+     * Returns the current timestamp. This method encapsulates the time source,
+     * allowing for flexibility in future implementations.
+     *
+     * @return The current timestamp in milliseconds.
+     */
+    protected long getTimestamp() {
+        return System.currentTimeMillis();
+    }
+    
     @Override
     public int getId() {
         return id;
@@ -80,6 +95,34 @@ public class BasicDrawable implements Drawable, DrawableListener {
     public String getKey() {
         return this.key;
     }
+    
+    @Override
+    public boolean isOrphaned() {
+        return isOrphaned;
+    }
+    
+    public void setIsOrphaned(boolean yes) {
+        isOrphaned = yes;
+    }
+    
+    
+    @Override
+    public boolean isExpired() {
+        return isOrphaned;
+    }
+    
+    public void setIsExpired(boolean yes) {
+        isOrphaned = yes;
+    }
+    
+     protected void updateLifeTime() {
+        lifeTime = getTimestamp() -  startTime;
+    }
+    
+     protected void setMaxLifeTime(float max) {
+         maxLifeTime = max;
+     }
+     
     
         // the cluster management shouldnt be down here in BasicDrawable!  TODO
        // Helper method to get cluster keys as a list of strings
