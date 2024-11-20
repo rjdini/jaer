@@ -35,6 +35,18 @@ public class RCTClusterAdapter implements ClusterAdapter {
         this.startTime = getTimestamp();
     }
 
+    public float getSize() {    // in degrees
+        return ( fov.getFOVX() / fov.getChipWidthPixels()) * cluster.getMeasuredRadius();
+    }
+    
+     public void resetLifeTime() {
+        startTime = getTimestamp();
+    }
+     
+     public boolean isRCTCluster() {
+        return true;
+    }
+    
  protected long getTimestamp() {
         return System.currentTimeMillis();
     }

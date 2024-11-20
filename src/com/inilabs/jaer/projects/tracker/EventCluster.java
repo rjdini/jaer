@@ -95,6 +95,19 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter) {
 //        this.color = Color.RED;
 //    }
 //    
+    
+    //  used by TrackerManagerEngine 
+    public ClusterAdapter getAdapter() {
+        return enclosedCluster;
+    }
+    
+    public void updateFromAdapter(ClusterAdapter adapter) {
+    this.azimuth = adapter.getAzimuth();
+    this.elevation = adapter.getElevation();
+    this.size = adapter.getSize();
+    // Update other fields as needed
+}
+
    
     public void setKey(String key) {
         this.key = key;

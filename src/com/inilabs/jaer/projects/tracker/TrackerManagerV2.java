@@ -169,7 +169,7 @@ public EventPacket<? extends BasicEvent> filterPacket(EventPacket<? extends Basi
 
     // Get visible clusters from the RCT tracker
     List<RectangularClusterTracker.Cluster> visibleClusters = tracker.getVisibleClusters();
-
+    log.info("^^^^^^^^^^Number of visible clusters  = {}", visibleClusters.size() );
     if (!visibleClusters.isEmpty()) {
         // Adapt the RCT tracker JAER clusters and pass them to the TrackerManagerEngine 
         // Optionally limit the number of clusters for testing
@@ -183,7 +183,7 @@ public EventPacket<? extends BasicEvent> filterPacket(EventPacket<? extends Basi
                 .collect(Collectors.toList());
         
         // Update the TME engine with these clusters
-       // engine.updateRCTClusterList(limitedClusters); // this done automagically within TME
+       engine.updateRCTClusterList(limitedClusters); 
         engine.updateBestTrackerAgentList();
           }
      return in;

@@ -9,6 +9,7 @@ public class TestCluster implements ClusterAdapter {
     private Point2D.Float location = new Point2D.Float(0,0); 
     private FOVUtils fov = new FOVUtils();
     protected long startTime;
+    private float clusterSize = 0.5f;   // nominal 0.5 deg
  
 
     public TestCluster(float azimuth, float elevation) {
@@ -29,6 +30,17 @@ public class TestCluster implements ClusterAdapter {
         this.startTime = getTimestamp();
     }
 
+    public boolean isRCTCluster() {
+        return false;
+    }
+    
+    public void resetLifeTime() {
+        startTime = getTimestamp();
+    }
+    
+    public float getSize() {    // in degrees
+        return clusterSize;
+    }
     
      protected long getTimestamp() {
         return System.currentTimeMillis();

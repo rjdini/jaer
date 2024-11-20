@@ -27,5 +27,8 @@ public interface ClusterAdapter {
     String getKey(); // For unique identification
     boolean isVisible(); // for rendering
     void setIsVisible(boolean yes);
-    long getLifeTime();  // has the lifetiem of this clsuter expired?
+    long getLifeTime();  // has the lifetiem of this cluster expired?
+    float getSize();
+    boolean isRCTCluster();
+    void resetLifeTime();
 }

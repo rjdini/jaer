@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory;
 public class TMExerciser {
     
  private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(TMExerciser.class);    
-private int numberClustersAdded = 5;
+private int numberClustersAdded = 3;
 // Class-level variables to track the azimuth and direction
 private float currentAzimuth = 0.0f;
 private boolean movingTowardsNegative = true;
@@ -78,12 +78,12 @@ public  LinkedList<TestCluster> getTestClustersHorizontal() {
 
     // Update the azimuth for the next call
     if (movingTowardsNegative) {
-        currentAzimuth -= 0.5f;
+        currentAzimuth -= 1.0f;
         if (currentAzimuth <= -20.0f) {
             movingTowardsNegative = false; // Reverse direction
         }
     } else {
-        currentAzimuth += 0.5f;
+        currentAzimuth += 1.0f;
         if (currentAzimuth >= 20.0f) {
             movingTowardsNegative = true; // Reverse direction
         }
