@@ -41,11 +41,12 @@ import java.util.List;
 import net.sf.jaer.eventprocessing.tracking.RectangularClusterTracker.Cluster;
 import org.slf4j.LoggerFactory;
 import com.inilabs.jaer.projects.gui.PolarSpaceGUI;
-import com.inilabs.jaer.gimbal.FieldOfView;
 import com.inilabs.jaer.projects.logging.AgentLogger;
 import com.inilabs.jaer.projects.logging.LoggingStatePropertyChangeFilter;
+import com.inilabs.jaer.projects.tracker.RCTClusterAdapter;
 import com.inilabs.jaer.projects.tracker.TrackerAgentDrawable;
 import com.inilabs.jaer.projects.tracker.TrackerManagerEngine;
+import java.util.LinkedList;
 import java.util.Timer;
 import java.util.stream.Collectors;
 
@@ -83,12 +84,15 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
     private String who = "";  // the name of  this class, for locking gimbal access (if necessary) 
     private float[] rgb = {0, 0, 0, 0};
     private boolean shutdown = false;
-    
+    private boolean isEnableTestClusters = true;
     private PolarSpaceGUI polarSpaceGUI = null;
     private TrackerAgentDrawable trackerAgentDrawable = null;
     private LoggingStatePropertyChangeFilter loggingStateFilter;
    private TrackerManagerEngine engine; 
-       
+   private FieldOfView fov;
+   
+    private int numberClustersAdded = 5 ; // sets the number of clusters generated for testing
+    private TMExerciser exerciser = new TMExerciser();
     
     Timer timer = new Timer();
 
@@ -111,13 +115,22 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
         who = "TargetManager";
         support = new PropertyChangeSupport(this);
         
-     //    javax.swing.Timer updateTimer = new javax.swing.Timer(500, e ->   engine.updateTrackerAgentDrawable()) ;
-     //   updateTimer.start();  
+         javax.swing.Timer updateTestTimer = new javax.swing.Timer(200, e ->   updateTrackerManagerEngineTests()) ;
+        updateTestTimer.start();  
+         javax.swing.Timer updateGimbalTimer = new javax.swing.Timer(200, e ->   updateGimbal()) ;
+        updateGimbalTimer.start();  
+        
          Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
+         
+         fov = new FieldOfView();
          polarSpaceGUI = getPolarSpaceGUI();
+         polarSpaceGUI.getPolarSpaceDisplay().addDrawable(fov);
+         panTilt.getGimbalBase().addPropertyChangeListener(fov);
          engine = new TrackerManagerEngine();
          engine.setPolarSpaceDisplay(polarSpaceGUI.getPolarSpaceDisplay());
         AgentLogger.initialize();
+         polarSpaceGUI.getPolarSpaceDisplay().setHeading(0, 0);
+         panTilt.getGimbalBase().setGimbalPoseDirect(0f, 0f, 0f); 
     }
     
    private void shutdown() {
@@ -133,47 +146,87 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
     public PolarSpaceGUI getPolarSpaceGUI() {
         if (polarSpaceGUI == null) {
             polarSpaceGUI = new PolarSpaceGUI();
-            polarSpaceGUI.getPolarSpaceDisplay().setHeading(0, -30);
-             polarSpaceGUI.getPolarSpaceDisplay().addDrawable(FieldOfView.getInstance());
+            polarSpaceGUI.getPolarSpaceDisplay().setHeading(0, 0);
+             polarSpaceGUI.getPolarSpaceDisplay().addDrawable(fov);
              polarSpaceGUI.setVisible(false);
         }
         return polarSpaceGUI;
     }
     
+   
     
     @Override
-    public EventPacket<? extends BasicEvent> filterPacket(EventPacket<? extends BasicEvent> in) {
-        if (!isFilterEnabled()) {
-            return in;
+public EventPacket<? extends BasicEvent> filterPacket(EventPacket<? extends BasicEvent> in) {
+    if (!isFilterEnabled()) {
+        return in;
+    }
+
+    // Log the timestamp for debugging purposes
+    AgentLogger.setJAERTimestamp(in.getLastTimestamp());
+    
+    // Apply any preceding filters in the chain
+    getEnclosedFilterChain().filterPacket(in);
+
+    // Get visible clusters from the RCT tracker
+    List<RectangularClusterTracker.Cluster> visibleClusters = tracker.getVisibleClusters();
+
+    if (!visibleClusters.isEmpty()) {
+        // Adapt the RCT tracker JAER clusters and pass them to the TrackerManagerEngine 
+        // Optionally limit the number of clusters for testing
+        List<RectangularClusterTracker.Cluster> limitedClusters = visibleClusters.stream()
+                .limit(10) // Restrict to a maximum of 10 clusters for testing
+                .collect(Collectors.toList());
+
+        // Encapsulate clusters into RCTClusterAdapter for visualization
+         List<RCTClusterAdapter> adaptedClusters = limitedClusters.stream()
+                .map(RCTClusterAdapter::new)
+                .collect(Collectors.toList());
+        
+        // Update the TME engine with these clusters
+        engine.updateAgentClusterList(limitedClusters);
+          }
+     return in;
+    }
+
+    
+
+private void updateTrackerManagerEngineTests() {    
+    if(isEnableTestClusters) {
+        engine.updateTestClusterList(exerciser.getTestClustersHorizontal() ); }
+     engine.updateBestTrackerAgentList();
+}
+
+private void updateGimbal() {
+TrackerAgentDrawable trackerAgentDrawable = engine.getBestTrackerAgentDrawable();
+        if (trackerAgentDrawable != null) {
+            // Update gimbal pose directly using azimuth and elevation
+            float azimuth = trackerAgentDrawable.getAzimuth();
+            float elevation = trackerAgentDrawable.getElevation();
+            panTilt.getGimbalBase().setGimbalPoseDirect(azimuth, 0f, elevation);
+            log.info("**************** setGimbalPoseDirect azi {} ele {} ", azimuth, elevation );
+        } else {
+            // Default behavior if no TrackerAgentDrawable exists
+            panTilt.getGimbalBase().setGimbalPoseDirect(0f, 0f, 0f); // Default pose
+             log.info("@@@@@@  Deafult setting setGimbalPoseDirect azi {} ele {} ", 0, 0, 0           
+             );
         }
-        AgentLogger.setJAERTimestamp(in.getLastTimestamp() ) ;
-        getEnclosedFilterChain().filterPacket(in);
-        
-        
-        if (!tracker.getVisibleClusters().isEmpty()) {
-                 engine.updateAgentClusterList(tracker.getVisibleClusters());
-                 trackerAgentDrawable = engine.getBestTrackerAgentDrawable();
-                 if (trackerAgentDrawable != null ) {
-                     float azi = trackerAgentDrawable.getAzimuth();
-                     float ele = trackerAgentDrawable.getElevation();
-                     panTilt.getGimbalBase().setGimbalPoseDirect(azi, 0f, ele);
-                 }            
-            
-                 // here we need to drive gimbal
-                 //
-//                 Point2D.Float p = targetCluster.getLocation();
-//                targetLocation = p;
-//                float[] xy = {p.x, p.y, 1};
-//                try {
-//                   setPanTiltVisualAimPixels(p.x, p.y);
-//                } catch (Exception ex) {
-//                    log.warn(ex.toString());
-//                } 
-    }
-         return in;
-    }
+}
+
     
-    
+    // <editor-fold defaultstate="collapsed" desc="GUI button --Aim--">
+    /**
+     * Invokes the calibration GUI Calibration values are stored persistently as
+     * preferences. Built automatically into filter parameter panel as an
+     * action.
+     */
+    public void doEnableTestClusters() {
+        if(!isEnableTestClusters) {
+            isEnableTestClusters = true;
+        } else {
+            isEnableTestClusters = false;
+        }
+    }
+    // </editor-fold>      
     // <editor-fold defaultstate="collapsed" desc="GUI button --Aim--">
     /**
      * Invokes the calibration GUI Calibration values are stored persistently as

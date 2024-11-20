@@ -37,7 +37,7 @@ public class TrackerAgentDrawable extends AgentDrawable implements Runnable, Dra
     // This logger logs class-specific performance issues, not the event logger
     private static final Logger logger = LoggerFactory.getLogger(TrackerAgentDrawable.class);
     private static final float QUALITY_THRESHOLD = 0.5f; // Threshold for cluster support quality
-
+   private float optimizationCost = 0f;
     
 
     public TrackerAgentDrawable() {
@@ -116,6 +116,14 @@ public class TrackerAgentDrawable extends AgentDrawable implements Runnable, Dra
         AgentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
 
+    public void setOptimizationCost( float cost) {
+        optimizationCost = cost;
+    }
+    
+    public float getOptimizationCost() {
+        return optimizationCost ;
+    }
+    
     @Override
     public void draw(Graphics g) {
         Graphics2D g2d = (Graphics2D) g;

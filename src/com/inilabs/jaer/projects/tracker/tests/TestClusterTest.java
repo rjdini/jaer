@@ -19,12 +19,14 @@
 
 package com.inilabs.jaer.projects.tracker.tests;
 
+import com.inilabs.jaer.gimbal.FieldOfView;
 import com.inilabs.jaer.projects.tracker.TestCluster;
 
 import java.awt.geom.Point2D;
 
 public class TestClusterTest {
 
+    
     public static void main(String[] args) {
         // Test the constructor with azimuth and elevation
         testAzimuthElevationConstructor();
@@ -33,6 +35,8 @@ public class TestClusterTest {
         testPointConstructor();
     }
 
+    private static FieldOfView fov = FieldOfView.getInstance();
+    
     private static void testAzimuthElevationConstructor() {
         System.out.println("Testing constructor with azimuth and elevation...");
 
@@ -64,8 +68,8 @@ public class TestClusterTest {
         assert cluster.getLocation().equals(testPoint) :
                 "Location mismatch! Expected: " + testPoint + ", Found: " + cluster.getLocation();
 
-        float expectedAzimuth = TestCluster.fov.getYawAtPixel(testPoint.x);
-        float expectedElevation = TestCluster.fov.getPitchAtPixel(testPoint.y);
+        float expectedAzimuth = fov.getYawAtPixel(testPoint.x);
+        float expectedElevation =fov.getPitchAtPixel(testPoint.y);
 
         assert cluster.getAzimuth() == expectedAzimuth :
                 "Azimuth mismatch! Expected: " + expectedAzimuth + ", Found: " + cluster.getAzimuth();

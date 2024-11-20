@@ -20,6 +20,7 @@
 package com.inilabs.jaer.projects.tracker.tests;
 
 import com.inilabs.jaer.projects.gui.PolarSpaceGUI;
+import com.inilabs.jaer.projects.logging.AgentLogger;
 import com.inilabs.jaer.projects.tracker.TrackerManagerEngine;
 import java.awt.Dimension;
 import javax.swing.Timer;
@@ -45,5 +46,8 @@ public class TrackerManagerEngineTest {
        
         gui.setVisible(true);
         gui.getPolarSpaceDisplay().repaint();
+        
+          AgentLogger.initialize();
+         AgentLogger. setIsSystemTimestamp(true);
     }
 }

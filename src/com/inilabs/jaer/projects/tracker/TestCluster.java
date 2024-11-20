@@ -7,7 +7,7 @@ public class TestCluster implements ClusterAdapter {
     private float azimuth = 0;
     private float elevation = 0;
     private Point2D.Float location = new Point2D.Float(0,0); 
-    private FieldOfView fov = FieldOfView.getInstance();
+    private FOVUtils fov = new FOVUtils();
     
 
 

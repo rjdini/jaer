@@ -28,6 +28,7 @@ import javafx.stage.Stage;
 
 import java.lang.Math;
 import net.sf.jaer.chip.AEChip;
+import com.inilabs.jaer.projects.tracker.FieldOfView;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -143,7 +144,9 @@ public class GimbalBase implements GimbalInterface, LaserOnOffControl {
     private boolean enableGimbal = false ; // debugging
 
     private final float chipFOV = 30.0f; // degrees
-    private FieldOfView fov = FieldOfView.getInstance();
+  
+    public FieldOfView fov = new FieldOfView(); 
+    
     
     public GimbalBase() {
         super();
@@ -180,10 +183,6 @@ rs4controllerGUI = new RS4ControllerGUISwingV1();
 
 
     private void init() {
-      fov.setAxialYaw(defaultYaw);
-      fov.setAxialRoll(defaultRoll);
-      fov.setAxialPitch(defaultPitch);
-      this.pcs.addPropertyChangeListener(fov);
       sendDefaultGimbalPose();  
 } 
     
@@ -230,7 +229,7 @@ rs4controllerGUI = new RS4ControllerGUISwingV1();
          
     public FieldOfView getFOV() {
         return fov;
-    }     
+    } 
     
     public RS4ControllerGUISwingV1 getRS4ControllerGUI() {
         return rs4controllerGUI;
@@ -613,7 +612,7 @@ rs4controllerGUI = new RS4ControllerGUISwingV1();
          
            float [] previousSendPose = {previousSendYaw, previousSendRoll, previousSendPitch};
            
-           rs4controller.setPose(currentSendYaw, currentSendRoll, currentSendPitch); // PanTilt does not consider Roll 
+   //        rs4controller.setPose(currentSendYaw, currentSendRoll, currentSendPitch); // PanTilt does not consider Roll 
            previousSendYaw = currentSendYaw;
            previousSendRoll = currentSendRoll;
            previousSendPitch = currentSendPitch;
@@ -624,7 +623,7 @@ rs4controllerGUI = new RS4ControllerGUISwingV1();
          } else 
         {  
             // go to home pose
-          rs4controller.setPose(0.0f, 0.0f, -30.0f); 
+//          rs4controller.setPose(0.0f, 0.0f, -30.0f); 
         }      
     }
 
@@ -639,7 +638,8 @@ rs4controllerGUI = new RS4ControllerGUISwingV1();
            previousSendRoll = currentSendRoll;
            previousSendPitch = currentSendPitch;
            float [] newSendPose = {currentSendYaw, currentSendRoll,  currentSendPitch};
-            this.pcs.firePropertyChange("SendGimbalPose", previousSendPose, newSendPose);    
+            this.pcs.firePropertyChange("SendGimbalPose", previousSendPose, newSendPose);  
+            
             log.info("SendGimbalPoseDirect (y,r,p) " + currentSendYaw + ",  " + currentSendRoll + ", " + currentSendPitch );
     }
     
@@ -678,7 +678,7 @@ rs4controllerGUI = new RS4ControllerGUISwingV1();
           float [] newReceivedPose = {this.getYaw(), this.getRoll(), this.getPitch()};
           
           // notify the listeners of polar cordinate updates
-           this.pcs.firePropertyChange("FetchedGimbalPose", previousReceivedPose, newReceivedPose);    
+           pcs.firePropertyChange("FetchedGimbalPose", previousReceivedPose, newReceivedPose);    
            log.info("Fetched RS4Controller pose (y,r,p)  " + yaw + ",  " + roll + ", "  + pitch );
     //      updateGimbalPoseAsPanTilt();
       // }

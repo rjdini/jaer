@@ -24,26 +24,52 @@ import net.sf.jaer.eventprocessing.tracking.RectangularClusterTracker;
 
 public class RCTClusterAdapter implements ClusterAdapter {
     private final RectangularClusterTracker.Cluster cluster;
-    private static final FieldOfView fov = FieldOfView.getInstance();
+    private static final FOVUtils fov = new FOVUtils();
     private boolean isVisible = true;
+    //  a dummy for testing
+    private Point2D.Float testLocation = new Point2D.Float(0, 0);
 
     public RCTClusterAdapter(RectangularClusterTracker.Cluster cluster) {
         this.cluster = cluster;
     }
+    
+    // dummy constructor for testing
+    public RCTClusterAdapter() {
+        this.cluster = null;
+    }
+    
 
     @Override
     public float getAzimuth() {
+         if (cluster != null) {
         return (float) fov.getYawAtPixel((float)cluster.getLocation().getX());
+         }  else {
+                return (float) fov.getYawAtPixel((float)testLocation.getX());
+           }
     }
 
+    
     @Override
     public float getElevation() {
+         if (cluster != null) {
         return (float) fov.getPitchAtPixel((float)cluster.getLocation().getY());
+         }  else {
+                return (float) fov.getPitchAtPixel((float)testLocation.getY());
+           }
     }
 
     @Override
     public Point2D.Float getLocation() {
-        return  cluster.getLocation();
+        if (cluster != null) {
+                return  cluster.getLocation();
+        } else {
+            return testLocation;
+        }
+    }
+    
+    // for testing
+    public void setLocation(Point2D.Float loc) {
+        testLocation = loc;
     }
     
     @Override

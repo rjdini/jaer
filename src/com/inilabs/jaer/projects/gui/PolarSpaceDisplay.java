@@ -54,22 +54,22 @@ public class PolarSpaceDisplay extends JPanel {
     private JLabel coordinatesLabel;
     private static PolarSpaceDisplay instance = null;
 
-    private final Map<String, Drawable> drawables = new HashMap<>(); // Map of drawables managed by key
+    private final  Map<String, Drawable> drawables = new HashMap<>(); // Map of drawables managed by key
   private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(PolarSpaceDisplay.class);
     
-  private PolarSpaceDisplay() {
+  public PolarSpaceDisplay() {
         setBackground(Color.WHITE);
         initializeDisplay();
         this.repaint();
           SwingUtilities.invokeLater(() -> repaint());
     }
     
-   public static PolarSpaceDisplay getInstance() {
-        if (instance == null) {
-            instance = new PolarSpaceDisplay();
-        }
-        return instance;
-    }
+//   public static PolarSpaceDisplay getInstance() {
+//        if (instance == null) {
+//            instance = new PolarSpaceDisplay();
+//        }
+//        return instance;
+//    }
   
   
     
@@ -226,7 +226,7 @@ public float getElevationRange() {
      * Adds a drawable to the display.
      * @param drawable The drawable to add.
      */
-     public void addDrawable(Drawable drawable) {
+     public synchronized void addDrawable(Drawable drawable) {
         drawables.put(drawable.getKey(), drawable);
 
         // Set the callback to remove the drawable
@@ -246,12 +246,12 @@ public float getElevationRange() {
      * Removes a drawable by its key.
      * @param key The unique key of the drawable to remove.
      */
-    public void removeDrawable(String key) {
+    public synchronized void removeDrawable(String key) {
         drawables.remove(key);
         repaint();
     }
 
-     public List<String> getDrawableNames() {
+     public synchronized List<String> getDrawableNames() {
         return new ArrayList<>(drawables.keySet());
     }
     
@@ -276,7 +276,7 @@ public float getElevationRange() {
  * @param drawable The drawable to check.
  * @return true if the drawable is present, false otherwise.
  */
-public boolean containsDrawable(Drawable drawable) {
+public synchronized boolean containsDrawable(Drawable drawable) {
     return drawables.containsKey(drawable.getKey());
 }
     
@@ -294,7 +294,7 @@ public boolean containsDrawable(Drawable drawable) {
    
     
     @Override
-    protected void paintComponent(Graphics g) {
+    protected synchronized void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
 

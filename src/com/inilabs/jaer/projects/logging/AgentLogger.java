@@ -30,6 +30,7 @@ import net.sf.jaer.graphics.AEViewer;
 
 public class AgentLogger {
 
+   
     private static final Logger datalog = LoggerFactory.getLogger(AgentLogger.class);
     private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
     private static boolean loggingEnabled = true;
@@ -40,6 +41,7 @@ public class AgentLogger {
     private static int jaerTimestamp = 0;
     private static int aerLoggingSessionNumber = 0;
     private static int guiLoggingSessionNumber = 0;
+    private static boolean isSystemTimestamp = false;
     
     /**
      * 
@@ -68,6 +70,20 @@ public class AgentLogger {
             logSystemEvent(EventType.LOGGER_CLOSE, "Logger shutting down");
     }
 
+    /**
+     * @return the isSystemTimestamp
+     */
+    public static boolean isIsSystemTimestamp() {
+        return isSystemTimestamp;
+    }
+
+    /**
+     * @param isSystemTimestamp the isSystemTimestamp to set
+     */
+    public static void setIsSystemTimestamp(boolean yes) {
+        isSystemTimestamp = yes;
+    }
+    
   
     /**
      * Enables or disables logging.
@@ -124,7 +140,6 @@ public class AgentLogger {
         }
     }
 
-    
     /**
      * Checks if logging is enabled.
      */
@@ -176,8 +191,12 @@ public class AgentLogger {
      * Provides the current timestamp in milliseconds, encapsulated for future flexibility.
      */
     protected static long getTimestamp() {
-    //    return System.currentTimeMillis();
+         if( isIsSystemTimestamp() ) { 
+             return System.currentTimeMillis();
+         }
+         else {
            return jaerTimestamp;
+         }
     }
 
     /**

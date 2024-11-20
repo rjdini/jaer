@@ -40,7 +40,7 @@ public class FieldOfViewTest {
         frame.setSize(1000, 800);
 
         // Create a PolarSpaceDisplay to render
-        PolarSpaceDisplay display = PolarSpaceDisplay.getInstance();
+        PolarSpaceDisplay display = new PolarSpaceDisplay();
         frame.add(display, BorderLayout.CENTER);
 
         // Create and configure FieldOfView instance

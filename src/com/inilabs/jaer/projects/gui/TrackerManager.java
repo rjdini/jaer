@@ -40,7 +40,7 @@ import java.util.List;
 import net.sf.jaer.eventprocessing.tracking.RectangularClusterTracker.Cluster;
 import org.slf4j.LoggerFactory;
 import com.inilabs.jaer.projects.gui.PolarSpaceGUI;
-import com.inilabs.jaer.gimbal.FieldOfView;
+import com.inilabs.jaer.projects.tracker.FieldOfView;
 import com.inilabs.jaer.projects.logging.AgentLogger;
 import com.inilabs.jaer.projects.logging.LoggingStatePropertyChangeFilter;
 import com.inilabs.jaer.projects.tracker.TrackerAgentDrawable;
@@ -84,7 +84,7 @@ public class TrackerManager extends EventFilter2DMouseAdaptor implements FrameAn
     private PolarSpaceGUI polarSpaceGUI = null;
     private TrackerAgentDrawable trackerAgentDrawable = null;
     private LoggingStatePropertyChangeFilter loggingStateFilter;
-    
+    private FieldOfView fov;
        
     
     Timer timer = new Timer();
@@ -111,7 +111,11 @@ public class TrackerManager extends EventFilter2DMouseAdaptor implements FrameAn
          javax.swing.Timer updateTimer = new javax.swing.Timer(500, e ->   updateTrackerAgentDrawable()) ;
         updateTimer.start();  
          Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
-         getPolarSpaceGUI();
+         fov = new FieldOfView();
+         polarSpaceGUI = new PolarSpaceGUI();
+         polarSpaceGUI.getPolarSpaceDisplay().setHeading(0, -30);
+         polarSpaceGUI.getPolarSpaceDisplay().addDrawable(fov);
+        
         AgentLogger.initialize();
     }
     
@@ -129,7 +133,7 @@ public class TrackerManager extends EventFilter2DMouseAdaptor implements FrameAn
         if (polarSpaceGUI == null) {
             polarSpaceGUI = new PolarSpaceGUI();
             polarSpaceGUI.getPolarSpaceDisplay().setHeading(0, -30);
-             polarSpaceGUI.getPolarSpaceDisplay().addDrawable(FieldOfView.getInstance());
+             polarSpaceGUI.getPolarSpaceDisplay().addDrawable(fov);
              polarSpaceGUI.setVisible(false);
         }
         return polarSpaceGUI;
@@ -248,8 +252,8 @@ public class TrackerManager extends EventFilter2DMouseAdaptor implements FrameAn
         assignTrackerAgentDrawable();
          if ((trackerAgentDrawable != null ) && ( polarSpaceGUI != null )) {
              float[] target = panTilt.getGimbalBase().getTarget();
-             float y = panTilt.getGimbalBase().getFOV().getYawAtPan(target[0]);
-             float p = panTilt.getGimbalBase().getFOV().getPitchAtTilt(target[1]);
+             float y = fov.getYawAtPan(target[0]);
+             float p =fov.getPitchAtTilt(target[1]);
              trackerAgentDrawable.setAzimuth(y);
              trackerAgentDrawable.setElevation(p);
              trackerAgentDrawable.run();

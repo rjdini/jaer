@@ -37,12 +37,12 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.slf4j.LoggerFactory;
 
-public class FieldOfView extends BasicDrawable implements Drawable, DrawableListener, PropertyChangeListener {
+public class FOVUtils implements PropertyChangeListener  {
 
-    private static FieldOfView instance = null;
+    private static FOVUtils instance = null;
     private final PropertyChangeSupport pcs = new PropertyChangeSupport(this);
 
-    private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(FieldOfView.class);
+    private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(FOVUtils.class);
     
     // Default FOV dimensions and chip parameters
     private float focalLength = 100f;
@@ -57,87 +57,48 @@ public class FieldOfView extends BasicDrawable implements Drawable, DrawableList
     private float axialYaw = 0f;
     private float axialPitch = 0f;
     private float axialRoll = 0f;
-    private final List<EventCluster> clusters = new ArrayList<>();
-    
-    private FOVUtils fovutils = new FOVUtils();
+    private float azimuth = 0f;
+    private float elevation = 0f;
  
-    // Singleton pattern for FieldOfView instance
-    public FieldOfView() {
-        super();
-        setColor(Color.RED);
-        setSize(FOVX);
-        AgentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
-    }
-
-//    public static FieldOfView getInstance() {
-//        if (instance == null) {
-//            instance = new FieldOfView();
-//        }
-//        return instance;
-//    }
-
-    public void close() {
-        AgentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
-    }
     
-   
-    // Property Change Listener Implementation
+    public FOVUtils() {
+    
+    }
+
+     // Property Change Listener Implementation
     @Override
     public void propertyChange(PropertyChangeEvent evt) {
         if ("FetchedGimbalPose".equals(evt.getPropertyName())) {
             float[] newFOVPose = (float[]) evt.getNewValue();
             setPose(newFOVPose[0], newFOVPose[1], newFOVPose[2] );
-            // update the FOV proxy, so that those who use the proxy will have their coords updated.
-            fovutils.setPose(newFOVPose[0], newFOVPose[1], newFOVPose[2] );
-            log.info("**********  Received evt FetchedGimbalPose  azi {}, ele {}", newFOVPose[0], newFOVPose[2]);
+            
 //            setAxialYaw(newFOVPose[0]);
 //            setAxialRoll(newFOVPose[1]);
 //            setAxialPitch(newFOVPose[2]);
 
-    
+     //        AgentLogger.logAgentEvent(EventType.MOVE,  getKey(), getAzimuth(), getElevation(), getClusterKeys() );
         }
     }
     
-    // ******* TO remove  - this is a temp hack to test logging of  FOV to json output
-    // Helper method to get cluster keys as a list of strings
-    public List<String> getClusterKeys() {
-        return clusters.stream().map(EventCluster::getKey).collect(Collectors.toList());
-    }
-    
-    
-    
-    @Override
-    public void onTransformChanged(float azimuthScale, float elevationScale, float azimuthHeading, float elevationHeading, int centerX, int centerY) {
-        this.azimuthScale = azimuthScale;
-        this.elevationScale = elevationScale;
-        this.azimuthHeading = azimuthHeading;
-        this.elevationHeading = elevationHeading;
-        this.centerX = centerX;
-        this.centerY = centerY;
-    }
-
-
     
     public void setPose( float yaw, float roll, float pitch) {
         setAxialYaw(yaw);
         setAxialRoll(roll);
         setAxialPitch(pitch);
-         AgentLogger.logAgentEvent(EventType.MOVE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
     } 
     
      public float[] getPose( ) {
         return  new float[] { axialYaw, axialRoll, axialPitch };   
      } 
     
-    
-    // Methods for adjusting and retrieving orientation
+     // Methods for adjusting and retrieving orientation
     // These methods get and set the FOV's  pose - 
    //   here called axis, since it is the reference for all otherframes of measurement of activity in the feild of view. 
    //
     // yaw, roll, pitch refer to the gimbals behavioral frame of reference.
     // azimuth amd elevation refer to the axis of the field of view in polar space
     
-    public void setAxialYaw(float axialYaw) {
+    private void setAxialYaw(float axialYaw) {
         this.axialYaw = axialYaw;
         setAzimuth(axialYaw);
     }
@@ -146,7 +107,7 @@ public class FieldOfView extends BasicDrawable implements Drawable, DrawableList
         return axialYaw;
     }
     
-     public void setAxialPitch(float axialPitch) {
+     private void setAxialPitch(float axialPitch) {
         this.axialPitch = axialPitch;
         setElevation(axialPitch);
     }
@@ -155,7 +116,7 @@ public class FieldOfView extends BasicDrawable implements Drawable, DrawableList
         return axialPitch;
     }
      
-      public void setAxialRoll(float axialRoll) {
+      private void setAxialRoll(float axialRoll) {
         this.axialRoll = axialRoll;
     }
       
@@ -163,53 +124,18 @@ public class FieldOfView extends BasicDrawable implements Drawable, DrawableList
         return axialRoll;
     }  
     
-    @Override
-    public void setAzimuth(float azimuth) {
+   
+    private void setAzimuth(float azimuth) {
         this.azimuth = azimuth;
         this.axialYaw = azimuth;
-        addCurrentPositionToPath();
     }
     
-    @Override
-    public void setElevation(float elevation) {
+    private void setElevation(float elevation) {
         this.elevation = elevation;
         this.axialPitch = elevation;
-        addCurrentPositionToPath();
     }
-
 
   
-      // Method to draw the Field of View in PolarSpace (azimuth and elevation)
-    
-    @Override
-    public void draw(Graphics g) {
-        Graphics2D g2d = (Graphics2D) g;
-
-   
-        // Calculate screen coordinates based on polar coordinates and the transform broadcast
-        int x = getCenterX() + (int) ((getAzimuth() - getAzimuthHeading()) * getAzimuthScale());
-        int y = getCenterY() - (int) ((getElevation() - getElevationHeading()) * getElevationScale());
-
-        // Calculate box dimensions based on FOV and scales
-        int boxWidth = (int) (getFOVX() * getAzimuthScale());
-        int boxHeight = (int) (getFOVY() * getElevationScale());
-
-        // Apply roll rotation and draw the FOV box
-        AffineTransform originalTransform = g2d.getTransform();
-        g2d.translate(x, y);
-        g2d.rotate(Math.toRadians(axialRoll));
-        g2d.setColor(getColor());
-        g2d.drawRect(-boxWidth / 2, -boxHeight / 2, boxWidth, boxHeight);
-        g2d.setTransform(originalTransform);
-    
-
-        // Draw path if enabled
-        if (isPathVisible()) {
-            drawPath(g2d);
-        }
-       
-    }
-    
      // pan and tilt are legacy dimensions from Tobi's pan tilt system. 
     // Both range 0-1, with 0,0 at bottom left. 0-1 normalizes the chip dimentsion (chip_width, chip height) 
     // Field of View-specific calculations

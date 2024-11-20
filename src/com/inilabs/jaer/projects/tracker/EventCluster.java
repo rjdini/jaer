@@ -27,6 +27,8 @@ import  com.inilabs.jaer.gimbal.FieldOfView;
 import com.inilabs.jaer.projects.gui.AgentDrawable;
 import com.inilabs.jaer.projects.gui.Drawable;
 import com.inilabs.jaer.projects.gui.DrawableListener;
+import com.inilabs.jaer.projects.logging.AgentLogger;
+import com.inilabs.jaer.projects.logging.EventType;
 import com.inilabs.jaer.projects.tracker.ClusterAdapter;
 import net.sf.jaer.eventprocessing.tracking.RectangularClusterTracker;
 import org.slf4j.Logger;
@@ -69,9 +71,12 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter) {
 }
     public EventCluster() {
         super();
+     //    AgentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
     
-    
+    public void close() {
+      //   AgentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
+    }
  
     // Constructors
     public EventCluster(ClusterAdapter clusterAdapter, TrackerAgentDrawable agent) {
@@ -186,44 +191,32 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter) {
    // @Override
     public void draw(Graphics g) {
         Graphics2D g2d = (Graphics2D) g;
-   
+        
+         int myX =  centerX + (int) ((getAzimuth() - getAzimuthHeading()) * getAzimuthScale());
+          int myY =  centerY - (int) ((getElevation() - getElevationHeading()) * getElevationScale());  
+           int pixelSizeX = (int) (size * azimuthScale);
+            int pixelSizeY = (int) (size * elevationScale);
         // Calculate the cluster's location in relation to the enclosing agent
-     // if (enclosingAgent != null) {      
-             if (false) {         
+     if (enclosingAgent != null) {      
               g2d.setColor(enclosingAgent.getColor());
         //      g2d.setColor(Color.GREEN);
   
             int xAgent = enclosingAgent.getCenterX() + (int) ((enclosingAgent.getAzimuth() - getAzimuthHeading()) * getAzimuthScale());
             int yAgent= enclosingAgent.getCenterY() - (int) ((enclosingAgent.getElevation() - getElevationHeading()) * getElevationScale());
-       
-            
-// Draw a circle for the cluster
-            int pixelSizeX = (int) (size * enclosingAgent.getAzimuthScale());
-            int pixelSizeY = (int) (size * enclosingAgent.getElevationScale());
-            g2d.fillOval(xAgent - pixelSizeX / 2, yAgent - pixelSizeY / 2, pixelSizeX, pixelSizeY);
-            g2d.drawString(getKey(), xAgent, yAgent - pixelSizeY/2);
-            // Draw a line connecting the cluster to its enclosing agent
-            int myX =  centerX + (int) ((getAzimuth() - getAzimuthHeading()) * getAzimuthScale());
-            int myY =  centerY - (int) ((getElevation() - getElevationHeading()) * getElevationScale());  
-         //   g2d.drawLine(myX, myY, xAgent, yAgent); //not working TODO
-        } 
-        else {  //roll your own...
-             g2d.setColor(getColor());         
-             
-     //        int x = getCenterX() + (int) ((getAzimuth() - getAzimuthHeading()) * getAzimuthScale());
-      //       int y = getCenterY() - (int) ((getElevation() - getElevationHeading()) * getElevationScale());
-     
-                 int x = centerX + (int) ((getAzimuth() - azimuthHeading) * azimuthScale);
-               int y = centerY - (int) ((getElevation() - elevationHeading) * elevationScale);
-
-             
-// Draw a circle for the cluster
-            int pixelSizeX = (int) (size * azimuthScale);
-            int pixelSizeY = (int) (size * elevationScale);
-            g2d.fillOval(x - pixelSizeX / 2, y - pixelSizeY / 2, pixelSizeX, pixelSizeY);
-            g2d.drawString(getKey(), x, y - pixelSizeY/2);
-        }
+            // Draw a circle for the cluster
+        //    int pixelSizeX = (int) (size * enclosingAgent.getAzimuthScale());
+        //    int pixelSizeY = (int) (size * enclosingAgent.getElevationScale());
         
-        }
+            g2d.fillOval(myX - pixelSizeX / 2, myY - pixelSizeY / 2, pixelSizeX, pixelSizeY);
+            g2d.drawString(getKey(), myX, myY - pixelSizeY/2);
+             // Draw a line connecting the cluster to its enclosing agent
+            g2d.drawLine(myX, myY, xAgent, yAgent); 
+     }
+     else {  
+           g2d.setColor(getColor());                   
+            g2d.fillOval(myX - pixelSizeX / 2, myY - pixelSizeY / 2, pixelSizeX, pixelSizeY);
+            g2d.drawString(getKey(), myX, myY - pixelSizeY/2);
+     }
+        
     }
-    
+}

@@ -45,7 +45,7 @@ public class PolarSpaceGUI extends JFrame {
     setLayout(new BorderLayout());
 
     // Initialize the PolarSpaceDisplay at the center
-    polarDisplay = PolarSpaceDisplay.getInstance();
+    polarDisplay = new PolarSpaceDisplay();
     polarDisplay.setPreferredSize(new Dimension(1200, 800)); // Ensure broader width
     polarDisplay.setMinimumSize(new Dimension(1000, 800));   // Minimum size constraints
     polarDisplay.setMaximumSize(new Dimension(1500, 1000));   // Maximum size constraints

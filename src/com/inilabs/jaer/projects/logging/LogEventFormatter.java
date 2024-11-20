@@ -22,6 +22,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class LogEventFormatter {
+       private static boolean isSystemTimestamp = true ;
+       
+       
+
 
     /**
      * Formats agent-specific log events as JSON.
@@ -38,10 +42,10 @@ public class LogEventFormatter {
         String clustersList = clusters.stream().map(String::valueOf).collect(Collectors.joining(", "));
         return String.format(
             "{\"jaerts\": \"%d\", \"event\": \"%s\", \"key\": \"%s\", \"azim\": %.2f, \"elev\": %.2f, \"clust\": [%s]}",
-            timestamp, eventType.name().toLowerCase(), key, azimuth, elevation, clustersList
-        );
+            timestamp, eventType.name().toLowerCase(), key, azimuth, elevation, clustersList);
     }
 
+ 
     /**
      * Formats a general system log event as JSON.
      *
@@ -71,7 +75,19 @@ public class LogEventFormatter {
             timestamp, datetime, eventType.name().toLowerCase(), sessionNumber, filename
         );
     }
-    
-    
+
+    /**
+     * @return the isSystemTimestamp
+     */
+    public static boolean isIsSystemTimestamp() {
+        return isSystemTimestamp;
+    }
+
+    /**
+     * @param aIsSystemTimestamp the isSystemTimestamp to set
+     */
+    public static void setIsSystemTimestamp(boolean aIsSystemTimestamp) {
+        isSystemTimestamp = aIsSystemTimestamp;
+    } 
 }
 
