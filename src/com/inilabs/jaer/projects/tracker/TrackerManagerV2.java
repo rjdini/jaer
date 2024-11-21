@@ -67,7 +67,7 @@ import java.util.stream.Collectors;
  * @author tobi, rjd
  */
 @DevelopmentStatus(DevelopmentStatus.Status.Experimental)
-@Description("Rev 12Nov24:  Steers RS4 gimbal pose,  FOV and tracked target on PolarSpaceGUI")
+@Description("Rev 21Nov24: Rev 0.0.1  RS4Ronin tracks real and synthtic targets in PolarSpace")
 public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements FrameAnnotater {
 
     private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(TrackerManagerV2.class);
