@@ -181,13 +181,14 @@ public EventPacket<? extends BasicEvent> filterPacket(EventPacket<? extends Basi
                 .collect(Collectors.toList());
 
         // Encapsulate clusters into RCTClusterAdapter for visualization
+       
         List<RCTClusterAdapter> adaptedClusters = limitedClusters.stream()
     .map(cluster -> new RCTClusterAdapter(cluster, fov))
     .collect(Collectors.toList());
 
         
         // Update the TME engine with these clusters
-       engine.updateRCTClusterList(limitedClusters, fov); 
+         engine.updateRCTClusterList(limitedClusters); 
         engine.updateBestTrackerAgentList();
           }
      return in;

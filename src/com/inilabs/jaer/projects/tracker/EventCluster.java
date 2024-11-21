@@ -23,7 +23,7 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import com.inilabs.jaer.projects.gui.BasicDrawable;
-import  com.inilabs.jaer.gimbal.FieldOfView;
+import  com.inilabs.jaer.projects.tracker.FieldOfView;
 import com.inilabs.jaer.projects.gui.AgentDrawable;
 import com.inilabs.jaer.projects.gui.Drawable;
 import com.inilabs.jaer.projects.gui.DrawableListener;
@@ -34,13 +34,14 @@ import net.sf.jaer.eventprocessing.tracking.RectangularClusterTracker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class EventCluster extends AgentDrawable implements Runnable, Drawable, DrawableListener{
+public class EventCluster extends AgentDrawable implements Expirable, Runnable, Drawable, DrawableListener{
    private static final Logger log = LoggerFactory.getLogger(EventCluster.class);
    public ClusterAdapter enclosedCluster;
     private TrackerAgentDrawable enclosingAgent; // Reference to the enclosing agent
     private Color color = Color.BLACK; // Default color for visualization
     private float size = 2.0f; // Default size for drawing
-   
+    private final long startTime = System.currentTimeMillis(); // Creation time
+    private long expirationTime; // Time at which the cluster expires
     
   //  private static final FieldOfView fov = FieldOfView.getInstance(); // Shared FieldOfView instance
 
@@ -58,22 +59,41 @@ public class EventCluster extends AgentDrawable implements Runnable, Drawable, D
  * @param cluster The Cluster object to adapt.
  * @return A new EventCluster instance based on the Cluster data.
  */
-public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter) {
+public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter,  FieldOfView fov, long lifetimeMillis) {
     // Optionally include transformation logic
-    EventCluster eventCluster = new EventCluster();
+    EventCluster eventCluster = new EventCluster(clusterAdapter, fov, lifetimeMillis);
     eventCluster.enclosedCluster = clusterAdapter; 
     eventCluster.setKey(clusterAdapter.getKey());
     eventCluster.azimuth = clusterAdapter.getAzimuth();
     eventCluster.elevation = clusterAdapter.getElevation();
     eventCluster.color=Color.BLACK;
     eventCluster.size = 1f;
-    eventCluster.setMaxLifeTime(1000);
     return eventCluster;
 }
-    public EventCluster() {
-        super();
-     //    AgentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
+
+   public EventCluster(ClusterAdapter adapter, FieldOfView fov, long lifetimeMillis) {
+     // super();    
+// Initialize using adapter and fov
+    this.azimuth =  adapter.getAzimuth();
+    this.elevation = adapter.getElevation();
+    this.expirationTime = startTime + lifetimeMillis; // 
+    // Other initialization
+}
+    
+    
+    
+     @Override
+    public boolean isExpired() {
+        return System.currentTimeMillis() > expirationTime;
     }
+
+    @Override
+    public void extendLifetime(long incrementMillis) {
+        expirationTime += incrementMillis; // Add reward time
+    }
+    
+    
+    
     
     public void close() {
       //   AgentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
@@ -137,7 +157,7 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter) {
         }
     }
 
-    public void run() {
+    public synchronized void run() {
          updateLifeTime();
          if((getTimestamp() - lifetime0) >= maxLifeTime){  setIsExpired(true);  } // kill ourselves 
     }
@@ -208,7 +228,7 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter) {
     
 //    // Drawing the cluster
    // @Override
-    public void draw(Graphics g) {
+    public synchronized void draw(Graphics g) {
         Graphics2D g2d = (Graphics2D) g;
         
          int myX =  centerX + (int) ((getAzimuth() - getAzimuthHeading()) * getAzimuthScale());

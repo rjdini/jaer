@@ -29,7 +29,7 @@ public class RCTClusterAdapter implements ClusterAdapter {
     //  a dummy for testing
     private Point2D.Float testLocation = new Point2D.Float(0, 0);
     private FieldOfView fov;
-
+  
     // Must pass the same fov used in the TrackerManagerEngine, else Polar coords will not be correct
     public RCTClusterAdapter(RectangularClusterTracker.Cluster cluster, FieldOfView fov) {
         this.cluster = cluster;
