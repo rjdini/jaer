@@ -18,6 +18,8 @@
  */
 package com.inilabs.jaer.projects.gui;
 
+import com.inilabs.jaer.gimbal.GimbalBase;
+import com.inilabs.jaer.projects.cog.SpatialAttention;
 import javax.swing.*;
 import java.awt.*;
 
@@ -41,27 +43,55 @@ public class PolarSpaceGUI extends JFrame {
 
     private void initializeGUI() {
         // Frame settings    
-    setSize(1500, 1000); // Adjust overall frame size
-    setLayout(new BorderLayout());
+        setSize(1500, 1000); // Adjust overall frame size
+        setLayout(new BorderLayout());
 
-    // Initialize the PolarSpaceDisplay at the center
-    polarDisplay = new PolarSpaceDisplay();
-    polarDisplay.setPreferredSize(new Dimension(1200, 800)); // Ensure broader width
-    polarDisplay.setMinimumSize(new Dimension(1000, 800));   // Minimum size constraints
-    polarDisplay.setMaximumSize(new Dimension(1500, 1000));   // Maximum size constraints
-    add(polarDisplay, BorderLayout.CENTER);
+        // Initialize the PolarSpaceDisplay at the center
+        polarDisplay = new PolarSpaceDisplay();
+        polarDisplay.setPreferredSize(new Dimension(1200, 800)); // Ensure broader width
+        polarDisplay.setMinimumSize(new Dimension(1000, 800));   // Minimum size constraints
+        polarDisplay.setMaximumSize(new Dimension(1500, 1000));   // Maximum size constraints
+        add(polarDisplay, BorderLayout.CENTER);
 
-    
-    
-    // Initialize the control panel at the bottom
-    controlPanel = new PolarSpaceControlPanel(polarDisplay, e -> dispose());
-    add(controlPanel, BorderLayout.SOUTH);
+        // Create SpatialAttention instance
+        GimbalBase gimbalBase = new GimbalBase(); // Replace with your actual GimbalBase instance
+        SpatialAttention spatialAttention = new SpatialAttention(gimbalBase);
 
-    // Initialize the DrawableDisplayPanel at the left
-    drawableDisplayPanel = new DrawableDisplayPanel(polarDisplay);
-    drawableDisplayPanel.setPreferredSize(new Dimension(200, 800)); // Adjust width if needed
-    add(drawableDisplayPanel, BorderLayout.WEST);
-    
+        // Register SpatialAttention as a KeyListener
+        polarDisplay.setFocusable(true); // Ensure polarDisplay can receive focus
+        polarDisplay.requestFocusInWindow(); // Request focus for polarDisplay
+        polarDisplay.addKeyListener(spatialAttention);
+
+        // Add toggle button for keyboard control
+        // Add toggle button for keyboard control
+        JButton keyboardControlButton = new JButton("Keyboard Control OFF");
+        keyboardControlButton.setBackground(Color.RED);
+        keyboardControlButton.setOpaque(true);
+        keyboardControlButton.addActionListener(e -> {
+            spatialAttention.toggleKeyboardControl();
+            if (spatialAttention.isKeyboardControlEnabled()) {
+                keyboardControlButton.setText("Keyboard Control ON");
+                keyboardControlButton.setBackground(Color.GREEN);
+                polarDisplay.setFocusable(true);
+                polarDisplay.requestFocusInWindow(); // Ensure focus for keyboard input
+            } else {
+                keyboardControlButton.setText("Keyboard Control OFF");
+                keyboardControlButton.setBackground(Color.RED);
+            }
+        });
+        JPanel eastPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
+        eastPanel.add(keyboardControlButton);
+
+        // Initialize the control panel at the bottom
+        controlPanel = new PolarSpaceControlPanel(polarDisplay, e -> dispose());
+        add(controlPanel, BorderLayout.SOUTH);
+
+        // Initialize the DrawableDisplayPanel at the left
+        drawableDisplayPanel = new DrawableDisplayPanel(polarDisplay);
+        drawableDisplayPanel.setPreferredSize(new Dimension(200, 800)); // Adjust width if needed
+        add(drawableDisplayPanel, BorderLayout.WEST);
+        controlPanel.add(eastPanel);
+
         // Set up a timer to refresh the display at regular intervals
         int refreshRate = 30; // Refresh every 30 ms (~33 FPS)
         updateTimer = new Timer(refreshRate, e -> {
@@ -128,4 +158,3 @@ public class PolarSpaceGUI extends JFrame {
         return drawableDisplayPanel;
     }
 }
-

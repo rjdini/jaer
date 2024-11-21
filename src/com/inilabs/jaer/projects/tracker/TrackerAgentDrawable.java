@@ -29,6 +29,7 @@ import java.awt.Graphics2D;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,8 +41,9 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
    private float optimizationCost = 0f;
    private final long startTime = System.currentTimeMillis(); // Creation time
     private long expirationTime; // Time at which the agent expires
-    private final List<EventCluster> clusters = new ArrayList<>(); // Assigned clusters
-
+   
+    private final CopyOnWriteArrayList<EventCluster> clusters = new CopyOnWriteArrayList<>();
+    
     private float lastAzimuth;
     private float lastElevation;
     private long lastMovementTime;
@@ -278,7 +280,7 @@ private void moveToCentroid() {
             if (cluster != null) {
             cluster.draw(g);}
         }
-
+        
         if (showPath) {
             drawPath(g2d);
         }

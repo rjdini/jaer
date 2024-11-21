@@ -16,14 +16,14 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
-
 /**
  *
  * @author rjd
  */
-
 package com.inilabs.jaer.projects.gui;
 
+import com.inilabs.jaer.gimbal.GimbalBase;
+import com.inilabs.jaer.projects.cog.SpatialAttention;
 import javax.swing.*;
 import javax.swing.event.ChangeListener;
 import java.awt.*;
@@ -44,15 +44,15 @@ public class PolarSpaceControlPanel extends JPanel {
     private final JButton stopLoggingButton;
     private final PolarSpaceDisplay polarDisplay;
     private boolean slidersLinked = true;
-    
 
     public PolarSpaceControlPanel(PolarSpaceDisplay polarDisplay, ActionListener closeAction) {
         this.polarDisplay = polarDisplay;
         setLayout(new BorderLayout(10, 10)); // Use BorderLayout for WEST and EAST sections
-          AgentLogger.initialize();
+        AgentLogger.initialize();
         // Settings panel for sliders and heading fields
         JPanel settingsPanel = new JPanel(new GridLayout(0, 2, 10, 5));
-
+        
+  
         // Azimuth heading
         settingsPanel.add(new JLabel("Azimuth Heading:", SwingConstants.RIGHT));
         azimuthHeadingField = new JTextField("0", 5);
@@ -110,6 +110,7 @@ public class PolarSpaceControlPanel extends JPanel {
         stopLoggingButton.addActionListener(e -> stopLogging());
         loggingPanel.add(stopLoggingButton);
 
+    
         add(loggingPanel, BorderLayout.EAST);
 
         // Synchronize sliders if linked
@@ -117,7 +118,7 @@ public class PolarSpaceControlPanel extends JPanel {
             if (slidersLinked) {
                 elevationRangeSlider.setValue(azimuthRangeSlider.getValue());
             }
-         updateAzimuthRange();
+            updateAzimuthRange();
         });
         elevationRangeSlider.addChangeListener(e -> {
             if (slidersLinked) {
@@ -175,17 +176,18 @@ public class PolarSpaceControlPanel extends JPanel {
 
     private void stopLogging() {
         // Implement logging stop logic
-         AgentLogger.setGUILoggingEnabled(false);
+        AgentLogger.setGUILoggingEnabled(false);
     }
 
     private class PathToggleListener implements ActionListener {
+
         @Override
         public void actionPerformed(ActionEvent e) {
             polarDisplay.showPaths(pathToggleButton.isSelected());
         }
     }
-    
-   public void shutdown() {
-       AgentLogger.shutdown();
-   }
+
+    public void shutdown() {
+        AgentLogger.shutdown();
+    }
 }

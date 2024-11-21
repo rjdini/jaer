@@ -325,45 +325,51 @@ public synchronized boolean containsDrawable(Drawable drawable) {
         drawables.clear();
         repaint();
     }  
-    
-    @Override
-    protected synchronized void paintComponent(Graphics g) {
-        super.paintComponent(g);
-        Graphics2D g2d = (Graphics2D) g;
+     
+     @Override
+protected synchronized void paintComponent(Graphics g) {
+    super.paintComponent(g);
+    Graphics2D g2d = (Graphics2D) g;
 
-        int width = getWidth();
-        int height = getHeight();
-        int centerX = width / 2;
-        int centerY = height / 2;
+    int width = getWidth();
+    int height = getHeight();
+    int centerY = height / 2;
 
-        // Draw red dot at the heading point
-        g2d.setColor(Color.RED);
-        g2d.fillOval(centerX - 3, centerY - 3, 6, 6);
+    // Paint the upper half pale blue
+    g2d.setColor(new Color(173, 216, 230, 100)); // Pale blue with alpha for translucency
+    g2d.fillRect(0, 0, width, centerY);
 
-        // Draw azimuth and elevation scale bars centered at the heading point
-        ScaleBar azimuthScaleBar = new ScaleBar(true, (int) azimuthRange, getAzimuthScale(), azimuthHeading);
-        azimuthScaleBar.draw(g2d, centerX, centerY);
+    // Paint the lower half pale green
+    g2d.setColor(new Color(144, 238, 144, 100)); // Pale green with alpha for translucency
+    g2d.fillRect(0, centerY, width, height - centerY);
 
-        ScaleBar elevationScaleBar = new ScaleBar(false, (int) elevationRange, getElevationScale(), elevationHeading);
-        elevationScaleBar.draw(g2d, centerX, centerY);
+    // Draw red dot at the heading point
+    g2d.setColor(Color.RED);
+    g2d.fillOval(getWidth() / 2 - 3, centerY - 3, 6, 6);
 
-        // Simply call draw() on each Drawable, letting each one handle its position based on scaling
-        synchronized (drawables) {
-            for (Drawable drawable : drawables.values()) {
-                try {
-                    drawable.draw(g2d);
-                } catch (Exception e) {
-                    log.error("Error drawing drawable with key: {}", drawable.getKey(), e);
-                }
+    // Draw azimuth and elevation scale bars centered at the heading point
+    ScaleBar azimuthScaleBar = new ScaleBar(true, (int) azimuthRange, getAzimuthScale(), azimuthHeading);
+    azimuthScaleBar.draw(g2d, getWidth() / 2, centerY);
+
+    ScaleBar elevationScaleBar = new ScaleBar(false, (int) elevationRange, getElevationScale(), elevationHeading);
+    elevationScaleBar.draw(g2d, getWidth() / 2, centerY);
+
+    // Draw all drawables
+    synchronized (drawables) {
+        for (Drawable drawable : drawables.values()) {
+            try {
+                drawable.draw(g2d);
+            } catch (Exception e) {
+                log.error("Error drawing drawable with key: {}", drawable.getKey(), e);
             }
-               //   log.info("drawing drawables --- size of drawables = {} ", drawables.size());
         }
-        
-        // Draw crosshairs or grid if needed
-        g.setColor(Color.GRAY);
-        g.drawLine(getWidth() / 2, 0, getWidth() / 2, getHeight()); // Vertical line
-        g.drawLine(0, getHeight() / 2, getWidth(), getHeight() / 2); // Horizontal line
-  
     }
+
+    // Draw crosshairs or grid if needed
+    g2d.setColor(Color.GRAY);
+    g2d.drawLine(getWidth() / 2, 0, getWidth() / 2, getHeight()); // Vertical line
+    g2d.drawLine(0, centerY, getWidth(), centerY); // Horizontal line
+}
+
 }
 

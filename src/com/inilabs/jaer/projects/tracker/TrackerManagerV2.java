@@ -33,6 +33,7 @@ import net.sf.jaer.util.filter.LowpassFilter;
 import com.inilabs.jaer.gimbal.GimbalAimer;
 import com.inilabs.jaer.gimbal.GimbalAimerGUI;
 import com.inilabs.jaer.gimbal.GimbalBase;
+import com.inilabs.jaer.projects.cog.SpatialAttention;
 import java.awt.Color;
 import java.awt.Point;
 import java.awt.event.MouseEvent;
@@ -91,6 +92,7 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
     private LoggingStatePropertyChangeFilter loggingStateFilter;
    private TrackerManagerEngine engine; 
    private FieldOfView fov;
+   private SpatialAttention spatialAttention;
    
     private int numberClustersAdded = 5 ; // sets the number of clusters generated for testing
     private TMExerciser exerciser = new TMExerciser();
@@ -124,10 +126,11 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
          Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
          
          fov = new FieldOfView();
+         spatialAttention = new SpatialAttention(gimbalBase);
          polarSpaceGUI = getPolarSpaceGUI();
          polarSpaceGUI.getPolarSpaceDisplay().addDrawable(fov);
          getGimbalBase().addPropertyChangeListener(fov);
-         engine = new TrackerManagerEngine(fov);
+         engine = new TrackerManagerEngine(fov, spatialAttention);
          engine.setPolarSpaceDisplay(polarSpaceGUI.getPolarSpaceDisplay());
         AgentLogger.initialize();
          polarSpaceGUI.getPolarSpaceDisplay().setHeading(0, 0);
@@ -139,8 +142,16 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
        log.info("Shutting down TargetManager...");
 } 
    
+   private GimbalBase getGimbalBase() {
+    return gimbalBase;
+} 
+   
    private FieldOfView getFOV() {
        return fov;
+   }
+   
+   private SpatialAttention getSpatialAttention() {
+       return spatialAttention;
    }
    
     /**
@@ -199,10 +210,7 @@ public EventPacket<? extends BasicEvent> filterPacket(EventPacket<? extends Basi
 private void updateTrackerManagerEngineTests() {    
     if(isEnableTestClusters) {
         engine.updateTestClusterList(exerciser.getTestClustersHorizontal() ); 
-       // engine.updateBestTrackerAgentList(); // this is done by TME
-     } else {
-    engine.updateBestTrackerAgentList(); // this is done by TME
-}
+     } 
 }
 
 private void setPrimaryTrackerAgent( TrackerAgentDrawable agent ) {
@@ -214,24 +222,10 @@ return primaryTrackerAgent ;
 
 
 private void updateGimbal() {
-TrackerAgentDrawable trackerAgentDrawable = engine.getBestTrackerAgentDrawable();
-        if (trackerAgentDrawable != null) {
-            // Update gimbal pose directly using azimuth and elevation
-            float azimuth = trackerAgentDrawable.getAzimuth();
-            float elevation = trackerAgentDrawable.getElevation();
-            getGimbalBase().setGimbalPoseDirect(azimuth, 0f, elevation);
-            log.info("**************** setGimbalPoseDirect azi {} ele {} ", azimuth, elevation );
-        } else {
-            // Default behavior if no TrackerAgentDrawable exists
-        //    getGimbalBase().setGimbalPoseDirect(0f, 0f, 0f); // Default pose
-       //      log.info("@@@@@@  Deafult setting setGimbalPoseDirect azi {} ele {} ", 0, 0, 0           
-         //    );
-        }
+//    getSpatialAttention().updateGimbalPose();
 }
 
-private GimbalBase getGimbalBase() {
-    return gimbalBase;
-} 
+
 
 
     

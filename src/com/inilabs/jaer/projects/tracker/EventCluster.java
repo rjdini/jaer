@@ -157,7 +157,14 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter,  Fi
         }
     }
 
+    private void move() {
+   if ( enclosedCluster != null ) {
+    setAzimuth(enclosedCluster.getAzimuth());
+    setElevation(enclosedCluster.getElevation());
+    }
+}
     public synchronized void run() {
+        
          updateLifeTime();
          if((getTimestamp() - lifetime0) >= maxLifeTime){  setIsExpired(true);  } // kill ourselves 
     }

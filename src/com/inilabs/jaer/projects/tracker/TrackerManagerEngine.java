@@ -1,5 +1,6 @@
 package com.inilabs.jaer.projects.tracker;
 
+import com.inilabs.jaer.projects.cog.SpatialAttention;
 import com.inilabs.jaer.projects.gui.Drawable;
 import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
 import java.awt.Color;
@@ -9,14 +10,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import org.slf4j.LoggerFactory;
 
 
 public class TrackerManagerEngine {
     private static final int MAX_TRACKER_AGENTS = 3;
     private static final int MAX_CLUSTERS_PER_AGENT = 5; // Limit on clusters per agent
-    private final Map<String, TrackerAgentDrawable> agents = new HashMap<>();
-    private final LinkedList<EventCluster> eventClusters = new LinkedList<>();
     private PolarSpaceDisplay polarSpaceDisplay;
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private TrackerAgentDrawable currentBestAgent = null;
@@ -30,18 +31,30 @@ public class TrackerManagerEngine {
     private final List<TrackerAgentDrawable> trackerAgentDrawables = new ArrayList<>();
     private final Map<String, Color> originalColors = new HashMap<>(); // Track original colors
    
+ private final ConcurrentHashMap<String, TrackerAgentDrawable> agents = new ConcurrentHashMap<>();
+private final CopyOnWriteArrayList<EventCluster> eventClusters = new CopyOnWriteArrayList<>();
+    
+    
     private Color bestAgentColor = Color.RED; // Define the color for the best agents
 
     private volatile boolean freshDataAvailable = false;
-
+    private final SpatialAttention spatialAttention;
+    
     private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(TrackerManagerEngine.class);
 
-    public TrackerManagerEngine(FieldOfView fov) {
+    public TrackerManagerEngine(FieldOfView fov, SpatialAttention spatialAttention) {
         this.fov = fov;
+        this.spatialAttention = spatialAttention;
          // Start periodic processing task (10 Hz)
         scheduler.scheduleAtFixedRate(this::processPeriodically, 0, 100, TimeUnit.MILLISECONDS);
     }
 
+    
+    private SpatialAttention getSpatialAttention() {
+        return spatialAttention;
+    }
+
+    
     public void setPolarSpaceDisplay(PolarSpaceDisplay display) {
         this.polarSpaceDisplay = display;
     }
@@ -92,36 +105,36 @@ public class TrackerManagerEngine {
      * @param clusters List of RectangularClusterTracker.ClusterAdapter objects.
      */
     private void processClustersForRCT(List<? extends ClusterAdapter> clusters) {
-        // Remove expired EventClusters and their drawables
-        eventClusters.removeIf(cluster -> {
-            cluster.run(); // Update the cluster
-            if (cluster.isExpired()) {
-                if (polarSpaceDisplay != null) {
-                    polarSpaceDisplay.removeDrawable(cluster.getKey());
-                }
-                return true; // Remove expired cluster
-            }
-            return false; // Retain non-expired clusters
-        });
-
-        // Add new RCT clusters
-        for (ClusterAdapter adapter : clusters) {
-            if (adapter == null) {
-                log.warn("Encountered a null ClusterAdapter, skipping.");
-                continue;
-            }
-
-            EventCluster eventCluster = EventCluster.fromClusterAdapter(adapter, fov, defaultEventClusterLifeTimeMillis);
-            eventClusters.add(eventCluster);
-
+    // Step 1: Remove expired clusters
+    eventClusters.removeIf(cluster -> {
+        cluster.run(); // Update the cluster
+        if (cluster.isExpired()) {
             if (polarSpaceDisplay != null) {
-                polarSpaceDisplay.addDrawable(eventCluster);
+                polarSpaceDisplay.removeDrawable(cluster.getKey());
             }
-
-            TrackerAgentDrawable agent = findOrCreateAgent(eventCluster);
-            agent.addCluster(eventCluster);
+            return true; // Remove expired cluster
         }
+        return false; // Retain non-expired clusters
+    });
+
+    // Step 2: Add new clusters
+    for (ClusterAdapter adapter : clusters) {
+        if (adapter == null) {
+            log.warn("Encountered a null ClusterAdapter, skipping.");
+            continue;
+        }
+
+        EventCluster eventCluster = EventCluster.fromClusterAdapter(adapter, fov, defaultEventClusterLifeTimeMillis);
+        eventClusters.add(eventCluster);
+
+        if (polarSpaceDisplay != null) {
+            polarSpaceDisplay.addDrawable(eventCluster);
+        }
+
+        TrackerAgentDrawable agent = findOrCreateAgent(eventCluster);
+        agent.addCluster(eventCluster);
     }
+}
 
     /**
      * Generic method to process clusters and encapsulate them as EventClusters.
@@ -161,6 +174,7 @@ public class TrackerManagerEngine {
     }
 
     private void processTrackers() {
+    // Step 1: Assign clusters to agents
     for (EventCluster cluster : eventClusters) {
         TrackerAgentDrawable nearestAgent = findNearestAgent(cluster);
 
@@ -175,48 +189,41 @@ public class TrackerManagerEngine {
         }
     }
 
+    // Step 2: Process agents
+    List<String> agentsToRemove = new ArrayList<>();
     for (TrackerAgentDrawable agent : agents.values()) {
         agent.run(); // Update clusters and centroids
 
         // Check if agent is static (not moving) and remove if static for too long
         if (agent.isStatic() && agent.getClusters().isEmpty()) {
             log.info("Removing static tracker agent: {}", agent.getKey());
-            agents.remove(agent.getKey());
             removeDrawableFromDisplay(agent);
+            agentsToRemove.add(agent.getKey());
         }
     }
 
     // Remove expired agents
-    agents.entrySet().removeIf(entry -> {
-        TrackerAgentDrawable agent = entry.getValue();
-        if (agent.isExpired() && agent.getClusters().isEmpty()) {
-            log.info("Removing expired tracker agent: {}", agent.getKey());
-            removeDrawableFromDisplay(agent);
-            return true;
-        }
-        return false;
-    });
+    for (String key : agentsToRemove) {
+        agents.remove(key);
+    }
 
+    // Step 3: Update best tracker agent
     updateBestTrackerAgent();
 }
 
-    private void updateBestTrackerAgent() {
-    // Find the new best agent
+private void updateBestTrackerAgent() {
     TrackerAgentDrawable newBestAgent = agents.values().stream()
-        .max(Comparator.comparingDouble(TrackerAgentDrawable::getSupportQuality)) // Replace with a relevant metric
+        .max(Comparator.comparingDouble(TrackerAgentDrawable::getSupportQuality))
         .orElse(null);
 
-    // Revert color of the last best tracker
     if (lastBestAgent != null && lastBestAgent != newBestAgent) {
-        lastBestAgent.revertColor(); // Revert to the original color
+        lastBestAgent.revertColor(); // Revert color of the previous best tracker
     }
 
-    // Highlight the new best tracker
     if (newBestAgent != null) {
         newBestAgent.setColor(Color.RED); // Highlight the new best tracker
     }
 
-    // Update the reference to the last best tracker
     lastBestAgent = newBestAgent;
     currentBestAgent = newBestAgent;
 
@@ -224,19 +231,21 @@ public class TrackerManagerEngine {
         log.info("Updated BestAgent: {}", newBestAgent.getKey());
     }
 }
-
+    
     
     public void shutdown() {
         scheduler.shutdownNow(); // Stop periodic processing
     }
 
     private TrackerAgentDrawable findOrCreateAgent(EventCluster cluster) {
-        TrackerAgentDrawable nearestAgent = findNearestAgent(cluster);
-        if (nearestAgent == null) {
-            nearestAgent = createNewAgent(cluster);
-        }
-        return nearestAgent;
+    TrackerAgentDrawable nearestAgent = findNearestAgent(cluster);
+    if (nearestAgent == null) {
+        TrackerAgentDrawable newAgent = createNewAgent(cluster);
+        agents.put(newAgent.getKey(), newAgent);
+        return newAgent;
     }
+    return nearestAgent;
+}
 
     private TrackerAgentDrawable findNearestAgent(EventCluster cluster) {
     return agents.values().stream()
@@ -343,7 +352,9 @@ public class TrackerManagerEngine {
         // Update the bestTrackerAgentList
         bestTrackerAgentList.clear();
         bestTrackerAgentList.addAll(bestAgents);
-
+        if(getBestTrackerAgentDrawable() != null) {
+        getSpatialAttention().setBestTrackerAgent(getBestTrackerAgentDrawable());
+        }
         // Enforce the limit on the number of TrackerAgentDrawables
         enforceAgentLimit();
     }
@@ -382,14 +393,10 @@ public class TrackerManagerEngine {
  *
  * @return The TrackerAgentDrawable with the highest support quality, or null if no agents exist.
  */
-public TrackerAgentDrawable getBestTrackerAgentDrawable() {
+public synchronized TrackerAgentDrawable getBestTrackerAgentDrawable() {
     return agents.values().stream()
             .max(Comparator.comparingDouble(TrackerAgentDrawable::getSupportQuality))
             .orElse(null);
 }
-
-    
-    
-    
     
 }
