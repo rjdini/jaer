@@ -80,7 +80,13 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter,  Fi
     // Other initialization
 }
     
+    protected long getTimestamp() {
+        return System.currentTimeMillis();
+    }
     
+    public long getLifeTime() {
+        return( getTimestamp() -  startTime);
+    }
     
      @Override
     public boolean isExpired() {

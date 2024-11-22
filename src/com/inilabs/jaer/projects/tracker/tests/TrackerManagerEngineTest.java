@@ -19,17 +19,23 @@
 
 package com.inilabs.jaer.projects.tracker.tests;
 
+import com.inilabs.jaer.gimbal.GimbalBase;
+import com.inilabs.jaer.projects.cog.SpatialAttention;
 import com.inilabs.jaer.projects.gui.PolarSpaceGUI;
 import com.inilabs.jaer.projects.logging.AgentLogger;
+import com.inilabs.jaer.projects.tracker.FieldOfView;
 import com.inilabs.jaer.projects.tracker.TrackerManagerEngine;
 import java.awt.Dimension;
 import javax.swing.Timer;
 
 public class TrackerManagerEngineTest {
-     
+    private static FieldOfView fov  = new FieldOfView() ;
+    private static GimbalBase gimbalBase = new GimbalBase();
+    private static SpatialAttention spatialAttention = new SpatialAttention(gimbalBase);
+    
     public static void main(String[] args) {
          // Create an instance of TrackerManagerEngine
-        TrackerManagerEngine engine = new TrackerManagerEngine();
+        TrackerManagerEngine engine = new TrackerManagerEngine(fov, spatialAttention);
            // Create an instance of TrackerManagerEngineTestPanel
          TrackerManagerEngineTestPanel testPanel = new TrackerManagerEngineTestPanel(engine);
          

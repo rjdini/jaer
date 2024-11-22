@@ -26,24 +26,47 @@ public class TestClusterAdapter implements ClusterAdapter {
     private float elevation;
     private boolean visible;
     private String key;
+    private long startTime;
 
+   
     public TestClusterAdapter(String key, float azimuth, float elevation) {
         this.key = key;
         this.azimuth = azimuth;
         this.elevation = elevation;
         this.visible = true; // Default visibility
+        this.startTime = getTimestamp();
     }
 
+    public long getLifeTime() {
+        return( getTimestamp() -  startTime);
+    }
+    
+    public float getSize() {
+        return 0.5f;
+    }
+    
     @Override
     public float getAzimuth() {
         return azimuth;
     }
 
+    public void resetLifeTime() {
+        startTime = getTimestamp();
+    }
    
+    protected long getTimestamp() {
+        return System.currentTimeMillis();
+    }
+    
     public void setAzimuth(float azimuth) {
         this.azimuth = azimuth;
     }
 
+   public boolean isRCTCluster() {
+       return false ;
+   }
+    
+    
     @Override
     public float getElevation() {
         return elevation;
