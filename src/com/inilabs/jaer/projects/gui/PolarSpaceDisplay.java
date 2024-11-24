@@ -282,6 +282,16 @@ public float getElevationRange() {
      public synchronized List<String> getDrawableNames() {
         return new ArrayList<>(drawables.keySet());
     }
+     
+     /**
+ * Retrieves a drawable by its unique key.
+ * 
+ * @param key The key of the drawable to retrieve.
+ * @return The drawable if found, or null if no drawable exists with the given key.
+ */
+public synchronized Drawable getDrawableByKey(String key) {
+    return drawables.get(key);
+}
     
     /**
      * Updates all drawables with the latest scaling and translation offset.

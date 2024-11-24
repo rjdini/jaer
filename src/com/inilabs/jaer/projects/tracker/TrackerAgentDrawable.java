@@ -34,33 +34,31 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Runnable, Drawable, DrawableListener  {
+public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Runnable, Drawable, DrawableListener {
+
     // This logger logs class-specific performance issues, not the event logger
     private static final Logger logger = LoggerFactory.getLogger(TrackerAgentDrawable.class);
     private static final float QUALITY_THRESHOLD = 0.5f; // Threshold for cluster support quality
-   private float optimizationCost = 0f;
-   private final long startTime = System.currentTimeMillis(); // Creation time
+    private float optimizationCost = 0f;
+    private final long startTime = System.currentTimeMillis(); // Creation time
     private long expirationTime; // Time at which the agent expires
-   
+
     private final CopyOnWriteArrayList<EventCluster> clusters = new CopyOnWriteArrayList<>();
-    
+
     private float lastAzimuth;
     private float lastElevation;
     private long lastMovementTime;
-    
-  // private List<EventCluster> clusters = new ArrayList<>();
-  //  private float azimuth; // Current azimuth position
-  //  private float elevation; // Current elevation position
-    public static final int MAX_CLUSTERS = 4; 
-   
-   
-   
+
+    // private List<EventCluster> clusters = new ArrayList<>();
+    //  private float azimuth; // Current azimuth position
+    //  private float elevation; // Current elevation position
+    public static final int MAX_CLUSTERS = 4;
 
     public TrackerAgentDrawable(long lifetimeMillis) {
-       // super();
+        // super();
         this.setColor(Color.BLACK);
-         this.expirationTime = startTime + lifetimeMillis; // Set initial expiration
-         this.lastMovementTime = System.currentTimeMillis();
+        this.expirationTime = startTime + lifetimeMillis; // Set initial expiration
+        this.lastMovementTime = System.currentTimeMillis();
         logger.info("TrackerAgentDrawable created with key: {} at startTime: {}", this.getKey(), startTime);
         AgentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
@@ -74,9 +72,8 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
     public boolean isLoggingEnabled() {
         return loggingEnabled;
     }
- 
-    
-     // Example implementation for support quality calculation
+
+    // Example implementation for support quality calculation
     public synchronized double getSupportQuality() {
         // Aggregate the support quality of all associated clusters
         List<EventCluster> clusters = getClusters(); // Assuming getClusters() exists
@@ -90,7 +87,7 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
         // Replace with actual logic to return associated clusters
         return clusters; // Return an empty list for now
     }
-  
+
     public void revertColor() {
         setColor(Color.BLACK);
     }
@@ -99,34 +96,32 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
     public boolean isExpired() {
         return System.currentTimeMillis() > expirationTime;
     }
-  
-  
+
     @Override
     public void extendLifetime(long incrementMillis) {
         expirationTime += incrementMillis; // Add reward time
     }
-    
-    
+
     /**
-     * Adds a cluster to the agent's list. If the limit is exceeded, removes the farthest cluster.
+     * Adds a cluster to the agent's list. If the limit is exceeded, removes the
+     * farthest cluster.
      */
     public synchronized void addCluster(EventCluster cluster) {
         clusters.add(cluster);
-         // extendLifetime(500); // Reward: extend lifetime by 500ms for novel cluster
-    
+        // extendLifetime(500); // Reward: extend lifetime by 500ms for novel cluster
+
         if (clusters.size() > MAX_CLUSTERS) {
             // Remove the farthest cluster if the limit is exceeded
             removeFarthestCluster();
         }
-          logger.info("Cluster added to agent {}: Cluster ID = {}", getKey(), cluster.getId());
+        logger.info("Cluster added to agent {}: Cluster ID = {}", getKey(), cluster.getId());
     }
-   
-     public synchronized void removeCluster(EventCluster cluster) {
+
+    public synchronized void removeCluster(EventCluster cluster) {
         clusters.remove(cluster);
         logger.info("Cluster removed from agent {}: Cluster ID = {}", getKey(), cluster.getId());
     }
 
-  
     public void run() {
         clusters.removeIf(EventCluster::isExpired); // Remove expired clusters
         updateCentroid();
@@ -137,16 +132,14 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
         }
 
         moveToCentroid(); // Move the agent
-         AgentLogger.logAgentEvent(EventType.RUN, getKey(), getAzimuth(), getElevation(), getClusterKeys());
+        AgentLogger.logAgentEvent(EventType.RUN, getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
 
     public boolean isStatic() {
         long currentTime = System.currentTimeMillis();
         return (currentTime - lastMovementTime) > 5000; // Static if no movement for 5 seconds
     }
-   
-  
-    
+
     private void updateCentroid() {
         if (clusters.isEmpty()) {
             return; // No clusters to process
@@ -166,16 +159,13 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
         this.setAzimuth(sumAzimuth / clusterCount);
         this.setElevation(sumElevation / clusterCount);
     }
-    
-  
-private void moveToCentroid() {
-    // Update the agent's position (for visualization or further processing)
-    setAzimuth(this.azimuth);
-    setElevation(this.elevation);
-}
-    
 
-     
+    private void moveToCentroid() {
+        // Update the agent's position (for visualization or further processing)
+        setAzimuth(this.azimuth);
+        setElevation(this.elevation);
+    }
+
     /**
      * Removes the farthest cluster from the agent's cluster list.
      */
@@ -205,9 +195,6 @@ private void moveToCentroid() {
         return (float) Math.sqrt(deltaAzimuth * deltaAzimuth + deltaElevation * deltaElevation);
     }
 
-    
-    
-   
     /**
      * Updates the centroid based on the agent's assigned clusters.
      */
@@ -230,10 +217,10 @@ private void moveToCentroid() {
 //        this.azimuth = (float) (sumAzimuth / clusterCount);
 //        this.elevation = (float) (sumElevation / clusterCount);
 //    }
-
- 
     private void updatePosition() {
-        if (clusters.isEmpty()) return;
+        if (clusters.isEmpty()) {
+            return;
+        }
 
         float sumAzimuth = 0;
         float sumElevation = 0;
@@ -255,14 +242,14 @@ private void moveToCentroid() {
         AgentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
 
-    public void setOptimizationCost( float cost) {
+    public void setOptimizationCost(float cost) {
         optimizationCost = cost;
     }
-    
+
     public float getOptimizationCost() {
-        return optimizationCost ;
+        return optimizationCost;
     }
-    
+
     @Override
     public synchronized void draw(Graphics g) {
         Graphics2D g2d = (Graphics2D) g;
@@ -275,17 +262,17 @@ private void moveToCentroid() {
         int pixelSizeY = (int) (size * elevationScale);
         g2d.drawOval(x - pixelSizeX / 2, y - pixelSizeY / 2, pixelSizeX, pixelSizeY);
         g2d.drawString(getKey(), x, y - pixelSizeY / 2);
-      
+
         for (EventCluster cluster : clusters) {
             if (cluster != null) {
-            cluster.draw(g);}
+                cluster.draw(g);
+            }
         }
-        
+
         if (showPath) {
             drawPath(g2d);
         }
-        
-     logger.trace("Agent {} draw operation completed.", getKey());
+
+        logger.trace("Agent {} draw operation completed.", getKey());
     }
 }
-
