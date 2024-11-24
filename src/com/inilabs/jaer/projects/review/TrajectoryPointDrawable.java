@@ -63,7 +63,7 @@ public class TrajectoryPointDrawable extends BasicDrawable implements Drawable {
         g2d.fillOval(x - size / 2, y - size / 2, size, size);
 
         // Optionally annotate the point with its timestamp
-        g2d.drawString(String.format("%l", timestamp), x + 5, y - 5);
+        g2d.drawString(String.format("%d", timestamp), x + 5, y - 5);
     }
 
     @Override

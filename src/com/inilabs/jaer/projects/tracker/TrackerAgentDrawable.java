@@ -122,17 +122,22 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
         logger.info("Cluster removed from agent {}: Cluster ID = {}", getKey(), cluster.getId());
     }
 
-    public void run() {
-        clusters.removeIf(EventCluster::isExpired); // Remove expired clusters
-        updateCentroid();
-
-        // Check for movement
+    
+    public void move() {
+          updateCentroid();
+             // Check for movement
         if (Math.abs(lastAzimuth - getAzimuth()) > 0.1 || Math.abs(lastElevation - getElevation()) > 0.1) {
             lastMovementTime = System.currentTimeMillis(); // Update movement timestamp
         }
-
-        moveToCentroid(); // Move the agent
-        AgentLogger.logAgentEvent(EventType.RUN, getKey(), getAzimuth(), getElevation(), getClusterKeys());
+            moveToCentroid(); // Move the agent
+            AgentLogger.logAgentEvent(EventType.MOVE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
+    }
+    
+    public void run() {
+        clusters.removeIf(EventCluster::isExpired); // Remove expired clusters
+        move();
+        
+     // AgentLogger.logAgentEvent(EventType.RUN, getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
 
     public boolean isStatic() {

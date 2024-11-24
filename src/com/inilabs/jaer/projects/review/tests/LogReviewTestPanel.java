@@ -16,39 +16,38 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
+
+
 package com.inilabs.jaer.projects.review.tests;
 
 import com.inilabs.jaer.projects.gui.BasicTestPanel;
-import com.inilabs.jaer.projects.gui.PolarSpaceGUI;
 import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
-import com.inilabs.jaer.projects.review.LogParser;
-import com.inilabs.jaer.projects.review.LogVisualizerPanel;
-import com.inilabs.jaer.projects.review.TrajectoryManager;
-import com.inilabs.jaer.projects.review.TrajectoryPointDrawable;
-
 import javax.swing.*;
 import java.awt.*;
-import java.util.List;
 import java.util.Map;
+import com.inilabs.jaer.projects.review.*;
 
 public class LogReviewTestPanel extends BasicTestPanel {
+    private PolarSpaceDisplay display;
     private LogVisualizerPanel logVisualizerPanel;
 
     public LogReviewTestPanel(PolarSpaceDisplay display) {
+        this.display = display;
         setLayout(new BorderLayout());
-        setPreferredSize(new Dimension(300, 600)); // Ensure broader width
-        // Initialize LogVisualizerPanel
+
         TrajectoryManager manager = new TrajectoryManager(display);
         logVisualizerPanel = new LogVisualizerPanel(display, manager);
-        add(new JScrollPane(logVisualizerPanel), BorderLayout.CENTER);
 
-        // Add Load Button
-        JButton loadButton = new JButton("Load Log File");
-        loadButton.addActionListener(e -> loadLogFile());
+        add(new JScrollPane(logVisualizerPanel), BorderLayout.EAST);
+        add(display, BorderLayout.CENTER);
+
+        // Load button for testing
+        JButton loadButton = new JButton("Load Data");
+        loadButton.addActionListener(e -> loadData());
         add(loadButton, BorderLayout.SOUTH);
     }
 
-    private void loadLogFile() {
+    private void loadData() {
         JFileChooser fileChooser = new JFileChooser("./data");
         fileChooser.setDialogTitle("Select Log File");
 
@@ -57,7 +56,8 @@ public class LogReviewTestPanel extends BasicTestPanel {
             try {
                 String filePath = fileChooser.getSelectedFile().getAbsolutePath();
                 LogParser parser = new LogParser();
-                Map<String, Map<String, List<TrajectoryPointDrawable>>> sessions = parser.parseLogFile(filePath);
+                Map<String, Map<String, TrajectoryDrawable>> sessions = parser.parseLogFile(filePath);
+
                 logVisualizerPanel.loadSessions(sessions);
                 System.out.println("Log data loaded successfully.");
             } catch (Exception ex) {
@@ -68,4 +68,3 @@ public class LogReviewTestPanel extends BasicTestPanel {
         }
     }
 }
-

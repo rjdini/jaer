@@ -41,7 +41,7 @@
     </logger>
 
     <!-- Root Logger: logs to both Console and General File -->
-    <root level="info">
+    <root level="error">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="GENERAL_FILE"/>
     </root>

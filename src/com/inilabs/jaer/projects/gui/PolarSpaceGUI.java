@@ -157,4 +157,8 @@ public class PolarSpaceGUI extends JFrame {
     public DrawableDisplayPanel getDrawableDisplayPanel() {
         return drawableDisplayPanel;
     }
+
+    public PolarSpaceDisplay polarDisplay() {
+        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+    }
 }

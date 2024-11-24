@@ -19,43 +19,29 @@
 
 package com.inilabs.jaer.projects.review;
 
-import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
+import com.inilabs.jaer.projects.review.tests.LogReviewTestPanel;
 import javax.swing.*;
-import java.awt.*;
-import java.util.List;
 import java.util.Map;
 
 public class Main {
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            JFrame frame = new JFrame("Trajectory Visualization");
+            JFrame frame = new JFrame("Log Review Test");
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             frame.setSize(1200, 800);
 
-            // Create the PolarSpaceDisplay
-            PolarSpaceDisplay display = new PolarSpaceDisplay();
-            TrajectoryManager manager = new TrajectoryManager(display);
-            LogVisualizerPanel logVisualizerPanel = new LogVisualizerPanel(display, manager);
-
-            // Setup layout
-            frame.setLayout(new BorderLayout());
-            frame.add(logVisualizerPanel, BorderLayout.WEST);
-            frame.add(display, BorderLayout.CENTER);
-            frame.setVisible(true);
-
-            // Load test data
-            String testFilePath = "./data/AgentLogger_TEST.json"; // Adjust to your test file location
             try {
-                LogParser parser = new LogParser();
-                Map<String, Map<String, List<TrajectoryPointDrawable>>> sessions = parser.parseLogFile(testFilePath);
-
-                // Load sessions into the visualization panel
-                logVisualizerPanel.loadSessions(sessions);
-                System.out.println("Test data loaded successfully.");
+//                LogParser parser = new LogParser();
+//                Map<String, Map<String, TrajectoryDrawable>> sessions =
+//                        parser.parseLogFile("./data/AgentLogger_TEST.json");
+//
+//                LogReviewTestPanel panel = new LogReviewTestPanel(sessions);
+//                frame.add(panel);
+//                frame.setVisible(true);
             } catch (Exception e) {
-                JOptionPane.showMessageDialog(frame, "Failed to load test data: " + e.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
                 e.printStackTrace();
+                JOptionPane.showMessageDialog(frame, "Error loading log file: " + e.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
             }
         });
     }

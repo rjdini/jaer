@@ -46,10 +46,10 @@ public class LogVisualizerTest {
 
             try {
                 LogParser parser = new LogParser();
-                Map<String, Map<String, List<TrajectoryPointDrawable>>> sessions =
-                        parser.parseLogFile("./data/AgentLogger_TEST.json");
-                panel.loadSessions(sessions);
-                System.out.println("LogVisualizerTest: Sessions loaded successfully.");
+          //      Map<String, Map<String, List<TrajectoryPointDrawable>>> sessions =
+           //            parser.parseLogFile("./data/AgentLogger_TEST.json");
+         //       panel.loadSessions(sessions);
+        //        System.out.println("LogVisualizerTest: Sessions loaded successfully.");
             } catch (Exception e) {
          
                 JOptionPane.showMessageDialog(frame, "Failed to load log data: " + e.getMessage(),

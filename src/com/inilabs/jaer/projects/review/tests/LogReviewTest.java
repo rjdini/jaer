@@ -16,28 +16,37 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
-package com.inilabs.jaer.projects.review.tests;
 
-import com.inilabs.jaer.projects.gui.PolarSpaceGUI;
+package com.inilabs.jaer.projects.review;
+
 import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
-
+import com.inilabs.jaer.projects.gui.PolarSpaceGUI;
+import com.inilabs.jaer.projects.review.tests.LogReviewTestPanel;
+import com.inilabs.jaer.projects.tracker.tests.TrackerManagerEngineTestPanel;
 import java.awt.Dimension;
+import javax.swing.*;
 
 public class LogReviewTest {
+    
+    
     public static void main(String[] args) {
-        // Create PolarSpaceGUI
+        SwingUtilities.invokeLater(() -> {
+               // Create an instance of PolarSpaceGUI
         PolarSpaceGUI gui = new PolarSpaceGUI();
-        gui.getPolarSpaceDisplay().setPreferredSize(new Dimension(1500, 600));
-
-        // Create LogReviewTestPanel and integrate it with PolarSpaceGUI
-        LogReviewTestPanel logReviewTestPanel = new LogReviewTestPanel(gui.getPolarSpaceDisplay());
-        gui.setTestPanel(logReviewTestPanel);
-
-        // Show GUI
-        gui.setVisible(true);
-        gui.getPolarSpaceDisplay().repaint();
-
-        System.out.println("Logging Test initialized.");
+        gui.setName("Log Review Test");
+        gui.setSize(1500, 800);
+        gui.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+       
+       
+            PolarSpaceDisplay display = gui.getPolarSpaceDisplay();
+            display.initializeDisplay();
+         
+            LogReviewTestPanel logReviewTestPanel = new LogReviewTestPanel(display);
+           logReviewTestPanel.setPreferredSize(new Dimension(300, 600));
+            gui.add(logReviewTestPanel);
+            gui.setVisible(true);
+              gui.getPolarSpaceDisplay().repaint();
+   
+        });
     }
 }
-

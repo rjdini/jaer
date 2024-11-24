@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
-import com.inilabs.jaer.projects.review.TrajectoryPointDrawable;
 
 public class LogVisualizerPanel extends JPanel {
     private JTree sessionTree;
@@ -43,27 +42,31 @@ public class LogVisualizerPanel extends JPanel {
         sessionTree.addTreeSelectionListener(e -> {
             Object selectedNode = sessionTree.getLastSelectedPathComponent();
             if (selectedNode != null) {
-                manager.toggleTrajectoryVisibility(selectedNode.toString());
+                String key = selectedNode.toString();
+                manager.toggleTrajectoryVisibility(key);
             }
         });
 
         add(new JScrollPane(sessionTree), BorderLayout.CENTER);
     }
 
-    public void loadSessions(Map<String, Map<String, List<TrajectoryPointDrawable>>> sessions) {
+    public void loadSessions(Map<String, Map<String, TrajectoryDrawable>> sessions) {
         DefaultMutableTreeNode root = new DefaultMutableTreeNode("Sessions");
+
         for (String session : sessions.keySet()) {
             DefaultMutableTreeNode sessionNode = new DefaultMutableTreeNode(session);
-            Map<String, List<TrajectoryPointDrawable>> trackers = sessions.get(session);
+            Map<String, TrajectoryDrawable> trackers = sessions.get(session);
 
             for (String tracker : trackers.keySet()) {
                 DefaultMutableTreeNode trackerNode = new DefaultMutableTreeNode(tracker);
                 sessionNode.add(trackerNode);
 
-                manager.addTrajectory(tracker, trackers.get(tracker));
+                manager.addTrajectory(trackers.get(tracker));
             }
+
             root.add(sessionNode);
         }
+
         sessionTree.setModel(new DefaultTreeModel(root));
     }
 }

@@ -21,29 +21,33 @@
 package com.inilabs.jaer.projects.review.tests;
 
 import com.inilabs.jaer.projects.review.LogParser;
+import com.inilabs.jaer.projects.review.TrajectoryDrawable;
+import com.inilabs.jaer.projects.review.TrajectoryPointDrawable;
+
 import java.util.List;
 import java.util.Map;
-import com.inilabs.jaer.projects.review.TrajectoryPointDrawable;
 
 public class LogParserTest {
     public static void main(String[] args) {
+        String filePath = "./data/AgentLogger_TEST.json"; // Update to your file location if needed
+
         try {
             LogParser parser = new LogParser();
-            String filePath = "./data/AgentLogger_TEST.json";
+            Map<String, Map<String, TrajectoryDrawable>> sessions = parser.parseLogFile(filePath);
 
-            Map<String, Map<String, List<TrajectoryPointDrawable>>> sessions = parser.parseLogFile(filePath);
-
-            System.out.println("Parsed sessions:");
+            // Display parsed sessions and their trajectories
             for (String session : sessions.keySet()) {
                 System.out.println("Session: " + session);
-                Map<String, List<TrajectoryPointDrawable>> trackers = sessions.get(session);
+                Map<String, TrajectoryDrawable> trackers = sessions.get(session);
 
                 for (String tracker : trackers.keySet()) {
                     System.out.println("  Tracker: " + tracker);
-                    List<TrajectoryPointDrawable> points = trackers.get(tracker);
+                    List<TrajectoryPointDrawable> points = trackers.get(tracker).getPoints();
 
                     for (TrajectoryPointDrawable point : points) {
-                        System.out.println("    " + point);
+                        System.out.println("    Point: Azimuth=" + point.getAzimuth() +
+                                ", Elevation=" + point.getElevation() +
+                                ", Time=" + point.getTime());
                     }
                 }
             }
@@ -53,4 +57,3 @@ public class LogParserTest {
         }
     }
 }
-

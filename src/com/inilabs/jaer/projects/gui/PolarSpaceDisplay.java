@@ -75,7 +75,7 @@ public class PolarSpaceDisplay extends JPanel {
   
   
     
-    private void initializeDisplay() {
+    public void initializeDisplay() {
         setBackground(Color.WHITE);
         setPreferredSize(new Dimension(1000, 800));
     

@@ -20,26 +20,55 @@
 package com.inilabs.jaer.projects.review;
 
 import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 public class TrajectoryManager {
     private PolarSpaceDisplay display;
+    private Map<String, TrajectoryDrawable> loadedTrajectories;
 
     public TrajectoryManager(PolarSpaceDisplay display) {
         this.display = display;
+        this.loadedTrajectories = new HashMap<>();
     }
 
-    public void addTrajectory(String trackerName, List<TrajectoryPointDrawable> trajectoryPoints) {
-        TrajectoryDrawable drawable = new TrajectoryDrawable(trackerName, trajectoryPoints);
-        display.addDrawable(drawable);
-        display.repaint(); // Refresh the display
-    }
-
-    public void toggleTrajectoryVisibility(String key) {
-        TrajectoryDrawable drawable = (TrajectoryDrawable) display.getDrawableByKey(key);
-        if (drawable != null) {
-            drawable.setVisible(!drawable.isVisible());
+    /**
+     * Adds a trajectory by adding all its points to the display.
+     */
+    public void addTrajectory(TrajectoryDrawable trajectory) {
+        if (!loadedTrajectories.containsKey(trajectory.getTrackerName())) {
+            loadedTrajectories.put(trajectory.getTrackerName(), trajectory);
+            for (TrajectoryPointDrawable point : trajectory.getPoints()) {
+                display.addDrawable(point);
+            }
             display.repaint();
         }
     }
+
+    /**
+     * Removes a trajectory by removing all its points from the display.
+     */
+    public void removeTrajectory(String trackerName) {
+        TrajectoryDrawable trajectory = loadedTrajectories.get(trackerName);
+        if (trajectory != null) {
+            for (TrajectoryPointDrawable point : trajectory.getPoints()) {
+                display.removeDrawable(point.getKey());
+            }
+            loadedTrajectories.remove(trackerName);
+            display.repaint();
+        }
+    }
+
+    /**
+     * Toggles the visibility of a trajectory.
+     */
+    public void toggleTrajectoryVisibility(String trackerName) {
+        if (loadedTrajectories.containsKey(trackerName)) {
+            removeTrajectory(trackerName);
+        } else {
+            // Reload the trajectory if it was previously removed
+            // This requires a source to reload trajectories
+        }
+    }
 }
+
