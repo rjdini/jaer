@@ -22,31 +22,52 @@ package com.inilabs.jaer.projects.review.tests;
 
 import com.inilabs.jaer.projects.gui.BasicTestPanel;
 import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
+import com.inilabs.jaer.projects.gui.PolarSpaceGUI;
+import com.inilabs.jaer.projects.gui.TestPanel;
 import javax.swing.*;
 import java.awt.*;
 import java.util.Map;
 import com.inilabs.jaer.projects.review.*;
 
-public class LogReviewTestPanel extends BasicTestPanel {
-    private PolarSpaceDisplay display;
-    private LogVisualizerPanel logVisualizerPanel;
+public class LogReviewTestPanel extends BasicTestPanel implements TestPanel  {
+   
+    private LogVisualizerPanel logVisualizerPanel; 
+      private final PolarSpaceGUI gui;
+    private TrajectoryManager manager;
 
-    public LogReviewTestPanel(PolarSpaceDisplay display) {
-        this.display = display;
-        setLayout(new BorderLayout());
-
-        TrajectoryManager manager = new TrajectoryManager(display);
-        logVisualizerPanel = new LogVisualizerPanel(display, manager);
-
-        add(new JScrollPane(logVisualizerPanel), BorderLayout.EAST);
-        add(display, BorderLayout.CENTER);
-
-        // Load button for testing
-        JButton loadButton = new JButton("Load Data");
-        loadButton.addActionListener(e -> loadData());
-        add(loadButton, BorderLayout.SOUTH);
+    public LogReviewTestPanel( PolarSpaceGUI gui) {
+        this.gui = gui;
+         manager = new TrajectoryManager(gui.getPolarSpaceDisplay());
+        logVisualizerPanel = new LogVisualizerPanel(gui.getPolarSpaceDisplay(), manager); 
+        initUI();
     }
 
+    private void initUI() { 
+         setPreferredSize(new Dimension(300, 400));
+        setLayout(new BorderLayout());
+      
+        
+    //     JPanel mainPanel = new JPanel();
+         add(new JScrollPane(logVisualizerPanel), BorderLayout.NORTH);
+     //   mainPanel.add(display, BorderLayout.NORTH);
+     //   add(mainPanel, BorderLayout.NORTH);   
+        // Load button for testing
+       
+           // Load button for testing
+        JButton loadButton = new JButton("Load Data");
+        loadButton.addActionListener(e -> loadData());
+         add(loadButton, BorderLayout.SOUTH);   
+       
+    }
+    
+    
+    @Override
+    public void setGUICallBack(PolarSpaceGUI gui) {
+        super.setGUICallBack(gui);
+    }
+    
+    
+    
     private void loadData() {
         JFileChooser fileChooser = new JFileChooser("./data");
         fileChooser.setDialogTitle("Select Log File");

@@ -25,6 +25,10 @@ public class BasicTestPanel extends JPanel implements TestPanel {
 
     private PolarSpaceGUI guiCallback;
 
+    public BasicTestPanel() {
+    } 
+    
+    
     @Override
     public void setGUICallBack(PolarSpaceGUI gui) {
         this.guiCallback = gui;

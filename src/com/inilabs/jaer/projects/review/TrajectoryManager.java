@@ -38,6 +38,7 @@ public class TrajectoryManager {
     public void addTrajectory(TrajectoryDrawable trajectory) {
         if (!loadedTrajectories.containsKey(trajectory.getTrackerName())) {
             loadedTrajectories.put(trajectory.getTrackerName(), trajectory);
+            display.addDrawable(trajectory);
             for (TrajectoryPointDrawable point : trajectory.getPoints()) {
                 display.addDrawable(point);
             }

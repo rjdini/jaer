@@ -19,12 +19,16 @@
 
 package com.inilabs.jaer.projects.review;
 
+import com.inilabs.jaer.projects.gui.BasicDrawable;
+import com.inilabs.jaer.projects.gui.Drawable;
+import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class TrajectoryDrawable {
+public class TrajectoryDrawable extends BasicDrawable implements Drawable {
     private final String trackerName;
     private final List<TrajectoryPointDrawable> points;
 
@@ -46,8 +50,37 @@ public class TrajectoryDrawable {
     }
 
     public void draw(Graphics g) {
-        for (TrajectoryPointDrawable point : points) {
-            point.draw(g);
+        if (points.isEmpty()) return;
+
+        Graphics2D g2d = (Graphics2D) g;
+
+        TrajectoryPointDrawable previousPoint = null;
+        for (int i = 0; i < points.size(); i++) {
+            TrajectoryPointDrawable currentPoint = points.get(i);
+
+            // Draw a line connecting to the previous point
+            if (previousPoint != null) {
+                int x1 = centerX + (int) ((previousPoint.getAzimuth() - azimuthHeading) * azimuthScale);
+                int y1 = centerY - (int) ((previousPoint.getElevation() - elevationHeading) * elevationScale);
+
+                int x2 = centerX + (int) ((currentPoint.getAzimuth() - azimuthHeading) * azimuthScale);
+                int y2 = centerY - (int) ((currentPoint.getElevation() - elevationHeading) * elevationScale);
+
+                g2d.drawLine(x1, y1, x2, y2);
+            }
+
+            // Draw the first point with the tracker name as a label
+            if (i == 0) {
+                int x = centerX + (int) ((currentPoint.getAzimuth() - azimuthHeading) * azimuthScale);
+                int y = centerY - (int) ((currentPoint.getElevation() - elevationHeading) * elevationScale);
+
+                g2d.drawString(trackerName, x + 5, y - 5); // Label with the tracker name
+            }
+
+            // Draw the current point itself
+            currentPoint.draw(g);
+
+            previousPoint = currentPoint;
         }
     }
 }
