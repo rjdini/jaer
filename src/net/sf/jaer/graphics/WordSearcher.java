@@ -33,8 +33,8 @@ public class WordSearcher {
      */
     public WordSearcher(JTextComponent comp) {
         this.comp = comp;
-        this.painter = new UnderlineHighlighter.UnderlineHighlightPainter(
-                Color.blue);
+     //   this.painter = new UnderlineHighlighter.UnderlineHighlightPainter(
+    //            Color.blue);
     }
 
     private int search(String word, int offset, boolean forwards) {

@@ -51,8 +51,7 @@ private JSlider elevationHeadingSlider;
 
 // Reset button
 private JButton resetHeadingButton;
-private GimbalBase gimbalBase; // Replace with your actual GimbalBase instance
-private   SpatialAttention spatialAttention;
+private  static SpatialAttention spatialAttention  = SpatialAttention.getInstance();
 
 
 
@@ -61,15 +60,11 @@ public PolarSpaceControlPanel(PolarSpaceDisplay polarDisplay, ActionListener clo
     setLayout(new BorderLayout(10, 10)); // Use BorderLayout for main layout
     AgentLogger.initialize();
 
-     // Create SpatialAttention instance
-        gimbalBase = GimbalBase.getInstance() ; // Replace with your actual GimbalBase instance
-        spatialAttention = new SpatialAttention(gimbalBase);
      // Register SpatialAttention as a KeyListener
         polarDisplay.setFocusable(true); // Ensure polarDisplay can receive focus
         polarDisplay.requestFocusInWindow(); // Request focus for polarDisplay
         polarDisplay.addKeyListener(spatialAttention);
-    
-    
+        
     // Center Panel: Heading Controls (Sliders and Reset Button)
     JPanel headingGroupPanel = createHeadingGroupPanel();
 
@@ -167,18 +162,18 @@ private JPanel createGimbalControlPanel() {
     JPanel gimbalPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
 
     // Keyboard Control Toggle Button
-    JButton gimbalControlButton = new JButton("Gimbal Tracking OFF");
-    gimbalControlButton.setBackground(Color.RED);
+    JButton gimbalControlButton = new JButton("Gimbal Tracking ON");
+    gimbalControlButton.setBackground(Color.GREEN);
     gimbalControlButton.setOpaque(true);
+    spatialAttention.setEnableGimbalPose(true);
     gimbalControlButton.addActionListener(e -> {
-    spatialAttention.toggleKeyboardControl();
-        if (spatialAttention.isKeyboardControlEnabled()) {
+        if (!spatialAttention.isEnableGimbalPose()) {
+            spatialAttention.setEnableGimbalPose(true);
             gimbalControlButton.setText("Gimbal Tracking ON");
             gimbalControlButton.setBackground(Color.GREEN);
-            polarDisplay.setFocusable(true);
-            polarDisplay.requestFocusInWindow(); // Ensure focus for gimbal input
         } else {
-            gimbalControlButton.setText("Keyboard Control OFF");
+            spatialAttention.setEnableGimbalPose(false);
+            gimbalControlButton.setText("Gimbal Tracking OFF");
             gimbalControlButton.setBackground(Color.RED);
         }
     });
@@ -195,14 +190,17 @@ private JPanel createKeyboardControlPanel() {
     JButton keyboardControlButton = new JButton("Keyboard Control OFF");
     keyboardControlButton.setBackground(Color.RED);
     keyboardControlButton.setOpaque(true);
+    spatialAttention.setEnableKeyboardControl(false);
     keyboardControlButton.addActionListener(e -> {
-    spatialAttention.toggleKeyboardControl();
-        if (spatialAttention.isKeyboardControlEnabled()) {
+   
+        if (!spatialAttention.isEnableKeyboardControl()) {
+            spatialAttention.setEnableKeyboardControl(true);
             keyboardControlButton.setText("Keyboard Control ON");
             keyboardControlButton.setBackground(Color.GREEN);
             polarDisplay.setFocusable(true);
             polarDisplay.requestFocusInWindow(); // Ensure focus for keyboard input
         } else {
+            spatialAttention.setEnableKeyboardControl(false);
             keyboardControlButton.setText("Keyboard Control OFF");
             keyboardControlButton.setBackground(Color.RED);
         }

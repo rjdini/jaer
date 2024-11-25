@@ -38,13 +38,12 @@ private final CopyOnWriteArrayList<EventCluster> eventClusters = new CopyOnWrite
     private Color bestAgentColor = Color.RED; // Define the color for the best agents
 
     private volatile boolean freshDataAvailable = false;
-    private final SpatialAttention spatialAttention;
+    private final SpatialAttention spatialAttention = SpatialAttention.getInstance();
     
     private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(TrackerManagerEngine.class);
 
-    public TrackerManagerEngine(FieldOfView fov, SpatialAttention spatialAttention) {
+    public TrackerManagerEngine(FieldOfView fov) {
         this.fov = fov;
-        this.spatialAttention = spatialAttention;
          // Start periodic processing task (10 Hz)
         scheduler.scheduleAtFixedRate(this::processPeriodically, 0, 100, TimeUnit.MILLISECONDS);
     }
@@ -63,10 +62,10 @@ private final CopyOnWriteArrayList<EventCluster> eventClusters = new CopyOnWrite
      * Periodically processes clusters and trackers.
      */
     private synchronized void processPeriodically() {
-        if (!freshDataAvailable && eventClusters.isEmpty()) {
-            return; // Skip processing if no fresh data and no clusters to process
-        }
-        freshDataAvailable = false; // Reset the flag
+//        if (!freshDataAvailable && eventClusters.isEmpty()) {
+//            return; // Skip processing if no fresh data and no clusters to process
+//        }
+//        freshDataAvailable = false; // Reset the flag
         processClusters(Collections.emptyList()); // Process existing clusters
         processTrackers();
     }

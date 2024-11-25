@@ -63,7 +63,7 @@ public class LogParser {
                 String key = event.get("key").asText();
                 float azim = event.get("azim").floatValue();
                 float elev = event.get("elev").floatValue();
-                float time = event.get("time").floatValue();
+                long time = event.get("time").longValue();
                 TrajectoryPointDrawable point = new TrajectoryPointDrawable(azim, elev, time);
 
                 sessions.get(session).putIfAbsent(key, new ArrayList<>());

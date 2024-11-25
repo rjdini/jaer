@@ -30,8 +30,7 @@ import javax.swing.Timer;
 
 public class TrackerManagerEngineTest {
     private static FieldOfView fov  = new FieldOfView() ;
-    private static GimbalBase gimbalBase = new GimbalBase();
-    private static SpatialAttention spatialAttention = new SpatialAttention(gimbalBase);
+    private static SpatialAttention spatialAttention = new SpatialAttention();
     
     public static void main(String[] args) {
          // Create an instance of TrackerManagerEngine

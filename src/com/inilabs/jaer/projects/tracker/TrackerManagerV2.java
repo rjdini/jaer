@@ -112,7 +112,7 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
         tracker.getSupport().addPropertyChangeListener(this);
         filterChain.add(loggingStateFilter);
         filterChain.add(tracker);
-         gimbalBase = new GimbalBase();
+        gimbalBase = new GimbalBase();
         setEnclosedFilterChain(filterChain);
 
         who = "TargetManager";
@@ -126,15 +126,13 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
          Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
          
          fov = new FieldOfView();
-         spatialAttention = new SpatialAttention(gimbalBase);
          polarSpaceGUI = getPolarSpaceGUI();
          polarSpaceGUI.getPolarSpaceDisplay().addDrawable(fov);
          getGimbalBase().addPropertyChangeListener(fov);
-         engine = new TrackerManagerEngine(fov, spatialAttention);
+         engine = new TrackerManagerEngine(fov);
          engine.setPolarSpaceDisplay(polarSpaceGUI.getPolarSpaceDisplay());
         AgentLogger.initialize();
          polarSpaceGUI.getPolarSpaceDisplay().setHeading(0, 0);
- //        getGimbalBase().setGimbalPoseDirect(0f, 0f, 0f); 
     }
     
    private void shutdown() {
@@ -242,28 +240,7 @@ private void updateGimbal() {
             isEnableTestClusters = false;
         }
     }
-    // </editor-fold>      
-    // <editor-fold defaultstate="collapsed" desc="GUI button --Aim--">
-    /**
-     * Invokes the calibration GUI Calibration values are stored persistently as
-     * preferences. Built automatically into filter parameter panel as an
-     * action.
-     */
-    public void doEnableGimbal() {
-       getGimbalBase().enableGimbal(true);
-    }
-    // </editor-fold>      
 
-    // <editor-fold defaultstate="collapsed" desc="GUI button --Aim--">
-    /**
-     * Invokes the calibration GUI Calibration values are stored persistently as
-     * preferences. Built automatically into filter parameter panel as an
-     * action.
-     */
-    public void doDisableGimbal() {
-         getGimbalBase().enableGimbal(false);
-    }
-    // </editor-fold>      
 
      // <editor-fold defaultstate="collapsed" desc="GUI button --PolarGUI--">
     /**
