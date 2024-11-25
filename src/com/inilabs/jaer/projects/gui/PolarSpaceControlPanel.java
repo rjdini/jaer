@@ -83,6 +83,7 @@ public PolarSpaceControlPanel(PolarSpaceDisplay polarDisplay, ActionListener clo
      // East Panel: Logging Controls and Keyboard Control
     JPanel eastPanel = new JPanel(new BorderLayout(5, 5)); // Use BorderLayout for better organization
     eastPanel.add(createLoggingPanel(), BorderLayout.NORTH); // Logging controls at the top
+    eastPanel.add(createGimbalControlPanel(), BorderLayout.CENTER); // Logging controls at the top
     eastPanel.add(createKeyboardControlPanel(), BorderLayout.SOUTH); // Keyboard control at the bottom
 
     // Add panels to the layout
@@ -161,6 +162,32 @@ private JPanel createButtonPanel(ActionListener closeAction) {
     return buttonPanel;
 }
 
+
+private JPanel createGimbalControlPanel() {
+    JPanel gimbalPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
+
+    // Keyboard Control Toggle Button
+    JButton gimbalControlButton = new JButton("Gimbal Tracking OFF");
+    gimbalControlButton.setBackground(Color.RED);
+    gimbalControlButton.setOpaque(true);
+    gimbalControlButton.addActionListener(e -> {
+    spatialAttention.toggleKeyboardControl();
+        if (spatialAttention.isKeyboardControlEnabled()) {
+            gimbalControlButton.setText("Gimbal Tracking ON");
+            gimbalControlButton.setBackground(Color.GREEN);
+            polarDisplay.setFocusable(true);
+            polarDisplay.requestFocusInWindow(); // Ensure focus for gimbal input
+        } else {
+            gimbalControlButton.setText("Keyboard Control OFF");
+            gimbalControlButton.setBackground(Color.RED);
+        }
+    });
+
+    gimbalPanel.add(gimbalControlButton);
+    return gimbalPanel;
+}
+
+
 private JPanel createKeyboardControlPanel() {
     JPanel keyboardPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
 
@@ -184,6 +211,23 @@ private JPanel createKeyboardControlPanel() {
     keyboardPanel.add(keyboardControlButton);
     return keyboardPanel;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 private JPanel createLoggingPanel() {
