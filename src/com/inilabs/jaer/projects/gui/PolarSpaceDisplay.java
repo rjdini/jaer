@@ -214,6 +214,17 @@ public class PolarSpaceDisplay extends JPanel {
     public void shutdown() {
         
     }
+    
+    public void setAzimuthHeading(float azimuth) {
+          this.azimuthHeading = azimuth;
+           notifyTransformListeners();
+    }
+    
+       public void setElevationHeading(float elevation) {
+          this.elevationHeading = elevation;
+           notifyTransformListeners();
+    }
+    
 
     public void setHeading(float azimuth, float elevation) {
         this.azimuthHeading = azimuth;

@@ -33,12 +33,12 @@ public class TrajectoryManager {
     }
 
     /**
-     * Adds a trajectory by adding all its points to the display.
+     * Adds the specified trajectory to the display.
      */
     public void addTrajectory(TrajectoryDrawable trajectory) {
         if (!loadedTrajectories.containsKey(trajectory.getTrackerName())) {
             loadedTrajectories.put(trajectory.getTrackerName(), trajectory);
-            display.addDrawable(trajectory);
+            display.addDrawable(trajectory); // must add the trajectory drawable, so that lines etc can be painted
             for (TrajectoryPointDrawable point : trajectory.getPoints()) {
                 display.addDrawable(point);
             }
@@ -47,7 +47,7 @@ public class TrajectoryManager {
     }
 
     /**
-     * Removes a trajectory by removing all its points from the display.
+     * Removes the specified trajectory from the display.
      */
     public void removeTrajectory(String trackerName) {
         TrajectoryDrawable trajectory = loadedTrajectories.get(trackerName);
@@ -55,21 +55,23 @@ public class TrajectoryManager {
             for (TrajectoryPointDrawable point : trajectory.getPoints()) {
                 display.removeDrawable(point.getKey());
             }
+            display.removeDrawable(trajectory.getKey());
             loadedTrajectories.remove(trackerName);
             display.repaint();
         }
     }
 
     /**
-     * Toggles the visibility of a trajectory.
+     * Toggles the visibility of the specified trajectory.
+     * @return true if the trajectory is now visible, false otherwise.
      */
-    public void toggleTrajectoryVisibility(String trackerName) {
+    public boolean toggleTrajectoryVisibility(String trackerName, TrajectoryDrawable trajectory) {
         if (loadedTrajectories.containsKey(trackerName)) {
             removeTrajectory(trackerName);
+            return false; // Indicates the trajectory was removed
         } else {
-            // Reload the trajectory if it was previously removed
-            // This requires a source to reload trajectories
+            addTrajectory(trajectory);
+            return true; // Indicates the trajectory was added
         }
     }
 }
-

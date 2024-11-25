@@ -53,35 +53,8 @@ public class PolarSpaceGUI extends JFrame {
         polarDisplay.setMaximumSize(new Dimension(1500, 1000));   // Maximum size constraints
         add(polarDisplay, BorderLayout.CENTER);
 
-        // Create SpatialAttention instance
-        GimbalBase gimbalBase = new GimbalBase(); // Replace with your actual GimbalBase instance
-        SpatialAttention spatialAttention = new SpatialAttention(gimbalBase);
-
-        // Register SpatialAttention as a KeyListener
-        polarDisplay.setFocusable(true); // Ensure polarDisplay can receive focus
-        polarDisplay.requestFocusInWindow(); // Request focus for polarDisplay
-        polarDisplay.addKeyListener(spatialAttention);
-
-        // Add toggle button for keyboard control
-        // Add toggle button for keyboard control
-        JButton keyboardControlButton = new JButton("Keyboard Control OFF");
-        keyboardControlButton.setBackground(Color.RED);
-        keyboardControlButton.setOpaque(true);
-        keyboardControlButton.addActionListener(e -> {
-            spatialAttention.toggleKeyboardControl();
-            if (spatialAttention.isKeyboardControlEnabled()) {
-                keyboardControlButton.setText("Keyboard Control ON");
-                keyboardControlButton.setBackground(Color.GREEN);
-                polarDisplay.setFocusable(true);
-                polarDisplay.requestFocusInWindow(); // Ensure focus for keyboard input
-            } else {
-                keyboardControlButton.setText("Keyboard Control OFF");
-                keyboardControlButton.setBackground(Color.RED);
-            }
-        });
         JPanel eastPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
-        eastPanel.add(keyboardControlButton);
-
+        
         // Initialize the control panel at the bottom
         controlPanel = new PolarSpaceControlPanel(polarDisplay, e -> dispose());
         add(controlPanel, BorderLayout.SOUTH);

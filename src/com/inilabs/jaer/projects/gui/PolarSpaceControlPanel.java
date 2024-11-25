@@ -33,101 +33,215 @@ import com.inilabs.jaer.projects.logging.AgentLogger;
 
 public class PolarSpaceControlPanel extends JPanel {
 
-    private final JTextField azimuthHeadingField;
-    private final JTextField elevationHeadingField;
-    private final JSlider azimuthRangeSlider;
-    private final JSlider elevationRangeSlider;
-    private final JToggleButton linkSlidersButton;
-    private final JToggleButton pathToggleButton;
-    private final JButton closeButton;
-    private final JButton startLoggingButton;
-    private final JButton stopLoggingButton;
+    private JTextField azimuthHeadingField;
+    private JTextField elevationHeadingField;
+    private JSlider azimuthRangeSlider;
+    private JSlider elevationRangeSlider;
+    private JToggleButton linkSlidersButton;
+    private JToggleButton pathToggleButton;
+    private JButton closeButton;
+    private JButton startLoggingButton;
+    private JButton stopLoggingButton;
     private final PolarSpaceDisplay polarDisplay;
     private boolean slidersLinked = true;
+    
+    // Sliders for azimuth and elevation headings
+private JSlider azimuthHeadingSlider;
+private JSlider elevationHeadingSlider;
 
-    public PolarSpaceControlPanel(PolarSpaceDisplay polarDisplay, ActionListener closeAction) {
-        this.polarDisplay = polarDisplay;
-        setLayout(new BorderLayout(10, 10)); // Use BorderLayout for WEST and EAST sections
-        AgentLogger.initialize();
-        // Settings panel for sliders and heading fields
-        JPanel settingsPanel = new JPanel(new GridLayout(0, 2, 10, 5));
-        
-  
-        // Azimuth heading
-        settingsPanel.add(new JLabel("Azimuth Heading:", SwingConstants.RIGHT));
-        azimuthHeadingField = new JTextField("0", 5);
-        azimuthHeadingField.addActionListener(e -> updateHeadingFromField());
-        settingsPanel.add(azimuthHeadingField);
+// Reset button
+private JButton resetHeadingButton;
+private GimbalBase gimbalBase; // Replace with your actual GimbalBase instance
+private   SpatialAttention spatialAttention;
 
-        // Elevation heading
-        settingsPanel.add(new JLabel("Elevation Heading:", SwingConstants.RIGHT));
-        elevationHeadingField = new JTextField("0", 5);
-        elevationHeadingField.addActionListener(e -> updateHeadingFromField());
-        settingsPanel.add(elevationHeadingField);
 
-        // Azimuth range slider
-        settingsPanel.add(new JLabel("Azimuth Range:", SwingConstants.RIGHT));
-        azimuthRangeSlider = createSlider(0, 150, 30, e -> updateAzimuthRange());
-        settingsPanel.add(azimuthRangeSlider);
 
-        // Elevation range slider
-        settingsPanel.add(new JLabel("Elevation Range:", SwingConstants.RIGHT));
-        elevationRangeSlider = createSlider(0, 90, 30, e -> updateElevationRange());
-        settingsPanel.add(elevationRangeSlider);
+public PolarSpaceControlPanel(PolarSpaceDisplay polarDisplay, ActionListener closeAction) {
+    this.polarDisplay = polarDisplay;
+    setLayout(new BorderLayout(10, 10)); // Use BorderLayout for main layout
+    AgentLogger.initialize();
 
-        // Place settings panel on the WEST side
-        add(settingsPanel, BorderLayout.WEST);
+     // Create SpatialAttention instance
+        gimbalBase = GimbalBase.getInstance() ; // Replace with your actual GimbalBase instance
+        spatialAttention = new SpatialAttention(gimbalBase);
+     // Register SpatialAttention as a KeyListener
+        polarDisplay.setFocusable(true); // Ensure polarDisplay can receive focus
+        polarDisplay.requestFocusInWindow(); // Request focus for polarDisplay
+        polarDisplay.addKeyListener(spatialAttention);
+    
+    
+    // Center Panel: Heading Controls (Sliders and Reset Button)
+    JPanel headingGroupPanel = createHeadingGroupPanel();
 
-        // Button panel with smaller buttons
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
+    // West Panel: Azimuth and Elevation Range Sliders
+    JPanel rangeSettingsPanel = createRangeSettingsPanel();
 
-        // Link sliders button
-        linkSlidersButton = createToggleButton("Link Sliders", 120, 25);
-        linkSlidersButton.addActionListener(e -> slidersLinked = linkSlidersButton.isSelected());
-        buttonPanel.add(linkSlidersButton);
-
-        // Path toggle button
-        pathToggleButton = createToggleButton("Show Paths", 120, 25);
-        pathToggleButton.addActionListener(new PathToggleListener());
-        buttonPanel.add(pathToggleButton);
-
-        // Close button
-        closeButton = new JButton("Close");
-        closeButton.setPreferredSize(new Dimension(80, 25));
-        closeButton.addActionListener(closeAction);
-        buttonPanel.add(closeButton);
-
-        add(buttonPanel, BorderLayout.SOUTH);
-
-        // Logging control panel on the EAST side
-        JPanel loggingPanel = new JPanel(new GridLayout(2, 1, 5, 5));
-
-        startLoggingButton = new JButton("Start Logging");
-        startLoggingButton.addActionListener(e -> startLogging());
-        loggingPanel.add(startLoggingButton);
-
-        stopLoggingButton = new JButton("Stop Logging");
-        stopLoggingButton.addActionListener(e -> stopLogging());
-        loggingPanel.add(stopLoggingButton);
+    // South Panel: Control Buttons
+    JPanel buttonPanel = createButtonPanel(closeAction);
 
     
-        add(loggingPanel, BorderLayout.EAST);
+     // East Panel: Logging Controls and Keyboard Control
+    JPanel eastPanel = new JPanel(new BorderLayout(5, 5)); // Use BorderLayout for better organization
+    eastPanel.add(createLoggingPanel(), BorderLayout.NORTH); // Logging controls at the top
+    eastPanel.add(createKeyboardControlPanel(), BorderLayout.SOUTH); // Keyboard control at the bottom
 
-        // Synchronize sliders if linked
-        azimuthRangeSlider.addChangeListener(e -> {
-            if (slidersLinked) {
-                elevationRangeSlider.setValue(azimuthRangeSlider.getValue());
-            }
-            updateAzimuthRange();
-        });
-        elevationRangeSlider.addChangeListener(e -> {
-            if (slidersLinked) {
-                azimuthRangeSlider.setValue(elevationRangeSlider.getValue());
-            }
-            updateElevationRange();
-        });
-    }
+    // Add panels to the layout
+    add(headingGroupPanel, BorderLayout.NORTH); // Center: Heading group panel
+    add(rangeSettingsPanel, BorderLayout.WEST);  // West: Range sliders
+    add(buttonPanel, BorderLayout.SOUTH);        // South: Control buttons
+    add(eastPanel, BorderLayout.EAST);        // East: Logging controls
 
+    // Synchronize sliders if linked
+    synchronizeSliders();
+}
+
+
+private JPanel createHeadingGroupPanel() {
+    JPanel headingGroupPanel = new JPanel(new GridLayout(0, 2, 10, 5));
+    headingGroupPanel.setBorder(BorderFactory.createTitledBorder("Heading Controls"));
+
+    // Azimuth Heading Slider
+    JLabel azimuthHeadingLabel = new JLabel("Azimuth:", SwingConstants.RIGHT);
+    azimuthHeadingSlider = createSlider(-180, 180, 0, e -> updateAzimuthHeading());
+
+    // Elevation Heading Slider
+    JLabel elevationHeadingLabel = new JLabel("Elevation:", SwingConstants.RIGHT);
+    elevationHeadingSlider = createSlider(-90, 90, 0, e -> updateElevationHeading());
+
+    // Reset Button
+    resetHeadingButton = new JButton("Reset Azimuth/Elevation");
+    resetHeadingButton.addActionListener(e -> resetAzimuthElevation());
+
+    // Add components to panel
+    headingGroupPanel.add(azimuthHeadingLabel);
+    headingGroupPanel.add(azimuthHeadingSlider);
+    headingGroupPanel.add(elevationHeadingLabel);
+    headingGroupPanel.add(elevationHeadingSlider);
+    headingGroupPanel.add(new JLabel()); // Placeholder for alignment
+    headingGroupPanel.add(resetHeadingButton);
+
+    return headingGroupPanel;
+}
+
+private JPanel createRangeSettingsPanel() {
+    JPanel settingsPanel = new JPanel(new GridLayout(0, 2, 10, 5));
+
+    // Azimuth Range Slider
+    settingsPanel.add(new JLabel("Azimuth Range:", SwingConstants.RIGHT));
+    azimuthRangeSlider = createSlider(0, 150, 30, e -> updateAzimuthRange());
+    settingsPanel.add(azimuthRangeSlider);
+
+    // Elevation Range Slider
+    settingsPanel.add(new JLabel("Elevation Range:", SwingConstants.RIGHT));
+    elevationRangeSlider = createSlider(0, 90, 30, e -> updateElevationRange());
+    settingsPanel.add(elevationRangeSlider);
+
+    return settingsPanel;
+}
+
+private JPanel createButtonPanel(ActionListener closeAction) {
+    JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
+
+    // Link Sliders Button
+    linkSlidersButton = createToggleButton("Link Sliders", 120, 25);
+    linkSlidersButton.addActionListener(e -> slidersLinked = linkSlidersButton.isSelected());
+    buttonPanel.add(linkSlidersButton);
+
+    // Path Toggle Button
+    pathToggleButton = createToggleButton("Show Paths", 120, 25);
+    pathToggleButton.addActionListener(new PathToggleListener());
+    buttonPanel.add(pathToggleButton);
+
+    // Close Button
+    closeButton = new JButton("Close");
+    closeButton.setPreferredSize(new Dimension(80, 25));
+    closeButton.addActionListener(closeAction);
+    buttonPanel.add(closeButton);
+
+    return buttonPanel;
+}
+
+private JPanel createKeyboardControlPanel() {
+    JPanel keyboardPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
+
+    // Keyboard Control Toggle Button
+    JButton keyboardControlButton = new JButton("Keyboard Control OFF");
+    keyboardControlButton.setBackground(Color.RED);
+    keyboardControlButton.setOpaque(true);
+    keyboardControlButton.addActionListener(e -> {
+    spatialAttention.toggleKeyboardControl();
+        if (spatialAttention.isKeyboardControlEnabled()) {
+            keyboardControlButton.setText("Keyboard Control ON");
+            keyboardControlButton.setBackground(Color.GREEN);
+            polarDisplay.setFocusable(true);
+            polarDisplay.requestFocusInWindow(); // Ensure focus for keyboard input
+        } else {
+            keyboardControlButton.setText("Keyboard Control OFF");
+            keyboardControlButton.setBackground(Color.RED);
+        }
+    });
+
+    keyboardPanel.add(keyboardControlButton);
+    return keyboardPanel;
+}
+
+
+private JPanel createLoggingPanel() {
+    JPanel loggingPanel = new JPanel(new GridLayout(2, 1, 5, 5));
+
+    // Start Logging Button
+    startLoggingButton = new JButton("Start Logging");
+    startLoggingButton.addActionListener(e -> startLogging());
+    loggingPanel.add(startLoggingButton);
+
+    // Stop Logging Button
+    stopLoggingButton = new JButton("Stop Logging");
+    stopLoggingButton.addActionListener(e -> stopLogging());
+    loggingPanel.add(stopLoggingButton);
+
+    return loggingPanel;
+}
+
+private void synchronizeSliders() {
+    azimuthRangeSlider.addChangeListener(e -> {
+        if (slidersLinked) {
+            elevationRangeSlider.setValue(azimuthRangeSlider.getValue());
+        }
+        updateAzimuthRange();
+    });
+    elevationRangeSlider.addChangeListener(e -> {
+        if (slidersLinked) {
+            azimuthRangeSlider.setValue(elevationRangeSlider.getValue());
+        }
+        updateElevationRange();
+    });
+}
+
+
+
+    
+    // New methods to update headings
+private void updateAzimuthHeading() {
+    float azimuth = (float)azimuthHeadingSlider.getValue()   ;
+    polarDisplay.setAzimuthHeading(azimuth); // Update display
+}
+
+private void updateElevationHeading() {
+    float elevation = (float)elevationHeadingSlider.getValue();
+    polarDisplay.setElevationHeading(elevation); // Update display
+}
+
+// Method to reset azimuth and elevation to 0
+private void resetAzimuthElevation() {
+    azimuthHeadingSlider.setValue(0);
+    elevationHeadingSlider.setValue(0);
+    polarDisplay.setHeading(0, 0); // Reset heading in the display
+}
+
+    
+    
+    
+    
     private JSlider createSlider(int min, int max, int initial, ChangeListener listener) {
         JSlider slider = new JSlider(min, max, initial);
         slider.setPaintLabels(true);
