@@ -21,6 +21,7 @@ package com.inilabs.jaer.projects.cog;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 
 public class JoystickReader {
@@ -51,41 +52,48 @@ public class JoystickReader {
             try (FileInputStream fis = new FileInputStream(JOYSTICK_DEVICE);
                  FileChannel channel = fis.getChannel()) {
 
-                ByteBuffer buffer = ByteBuffer.allocate(8);
+                ByteBuffer buffer = ByteBuffer.allocate(8); // Joystick events are always 8 bytes
+                buffer.order(ByteOrder.LITTLE_ENDIAN);      // Adjust for little-endian order
+
+                System.out.println("Listening for joystick inputs...");
 
                 while (true) {
                     buffer.clear();
                     int bytesRead = channel.read(buffer);
-                    if (bytesRead != 8) continue;
+                    if (bytesRead != 8) {
+                        continue; // Skip incomplete reads
+                    }
 
                     buffer.flip();
 
-                    int time = buffer.getInt();      // Timestamp (4 bytes)
-                    short value = buffer.getShort(); // Value (2 bytes)
-                    byte type = buffer.get();        // Type (1 byte)
-                    byte number = buffer.get();      // Axis or button number (1 byte)
+                    // Decode the packet
+                    long timestamp = Integer.toUnsignedLong(buffer.getInt()); // First 4 bytes as timestamp
+                    short signalValue = buffer.getShort();                   // Next 2 bytes as data
+                    byte signalType = buffer.get();                          // 7th byte as signal type
+                    byte signalChannel = buffer.get();                       // 8th byte as channel number
 
-                    if ((type & 0x02) != 0) { // Axis event
-                        float normalizedValue = value / 32767f; // Normalize to [-1.0, 1.0]
-                        switch (number) {
+                    // Process input based on signal type
+                    if ((signalType & 0x02) != 0) { // Axis event
+                        float normalizedValue = signalValue / 32767.0f; // Normalize to [-1.0, 1.0]
+                        switch (signalChannel) {
                             case 0 -> listener.onAxisChange(Axis.ROLL, normalizedValue);
                             case 1 -> listener.onAxisChange(Axis.PITCH, normalizedValue);
                             case 2 -> listener.onAxisChange(Axis.THROTTLE, normalizedValue);
                             case 3 -> listener.onAxisChange(Axis.YAW, normalizedValue);
-                            default -> System.err.println("Unknown axis number: " + number);
+                            default -> System.err.println("Unknown axis channel: " + signalChannel);
                         }
-                    } else if ((type & 0x01) != 0) { // Button event
-                        boolean pressed = value != 0;
-                        switch (number) {
+                    } else if ((signalType & 0x01) != 0) { // Button event
+                        boolean pressed = signalValue != 0;
+                        switch (signalChannel) {
                             case 0 -> listener.onButtonPress(Button.BUTTON1, pressed);
                             case 1 -> listener.onButtonPress(Button.BUTTON2, pressed);
-                            default -> System.err.println("Unknown button number: " + number);
+                            default -> System.err.println("Unknown button channel: " + signalChannel);
                         }
                     }
                 }
             } catch (IOException e) {
-                System.err.println("Error reading joystick device: " + JOYSTICK_DEVICE);
                 e.printStackTrace();
+                System.err.println("Failed to read from joystick device: " + JOYSTICK_DEVICE);
             }
         }).start();
     }
@@ -114,4 +122,3 @@ public class JoystickReader {
         }
     }
 }
-
