@@ -23,7 +23,7 @@ public class TrackerManagerEngine {
     private TrackerAgentDrawable currentBestAgent = null;
     private FieldOfView fov;
     private long defaultAgentLifeTimeMillis = 10000; // 10 secs
-     private long defaultEventClusterLifeTimeMillis =5000; // 2 secs
+     private long defaultEventClusterLifeTimeMillis =2000; // 2 secs
      private long lifeTimeExtensionMillis = 0; // reward for good agent taking on new cluster
      private TrackerAgentDrawable lastBestAgent = null; // Reference to the previous best tracker
      private List<TrackerAgentDrawable> bestTrackerAgentList = new ArrayList<>();  
@@ -193,6 +193,13 @@ private final CopyOnWriteArrayList<EventCluster> eventClusters = new CopyOnWrite
     for (TrackerAgentDrawable agent : agents.values()) {
         agent.run(); // Update clusters and centroids
 
+         // Check if agent is expired 
+        if (agent.isExpired()) {
+            log.info("Removing expired tracker agent: {}", agent.getKey());
+            removeDrawableFromDisplay(agent);
+            agentsToRemove.add(agent.getKey());
+        }
+        
         // Check if agent is static (not moving) and remove if static for too long
         if (agent.isStatic() && agent.getClusters().isEmpty()) {
             log.info("Removing static tracker agent: {}", agent.getKey());

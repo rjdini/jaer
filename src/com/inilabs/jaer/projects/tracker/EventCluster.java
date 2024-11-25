@@ -40,8 +40,8 @@ public class EventCluster extends AgentDrawable implements Expirable, Runnable, 
     private TrackerAgentDrawable enclosingAgent; // Reference to the enclosing agent
     private Color color = Color.BLACK; // Default color for visualization
     private float size = 2.0f; // Default size for drawing
-    private final long startTime = System.currentTimeMillis(); // Creation time
-    private long expirationTime; // Time at which the cluster expires
+  //  private final long startTime = System.currentTimeMillis(); // Creation time
+   // private long expirationTime; // Time at which the cluster expires
     
   //  private static final FieldOfView fov = FieldOfView.getInstance(); // Shared FieldOfView instance
 
@@ -76,30 +76,9 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter,  Fi
 // Initialize using adapter and fov
     this.azimuth =  adapter.getAzimuth();
     this.elevation = adapter.getElevation();
-    this.expirationTime = startTime + lifetimeMillis; // 
+    this.maxLifetime = startTime + lifetimeMillis; // 
     // Other initialization
 }
-    
-    protected long getTimestamp() {
-        return System.currentTimeMillis();
-    }
-    
-    public long getLifeTime() {
-        return( getTimestamp() -  startTime);
-    }
-    
-     @Override
-    public boolean isExpired() {
-        return System.currentTimeMillis() > expirationTime;
-    }
-
-    @Override
-    public void extendLifetime(long incrementMillis) {
-        expirationTime += incrementMillis; // Add reward time
-    }
-    
-    
-    
     
     public void close() {
       //   AgentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
@@ -169,10 +148,18 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter,  Fi
     setElevation(enclosedCluster.getElevation());
     }
 }
+    
+    private void checkEventClusterExpired() {
+ //    if ((getLifetime() > maxLifetime) && ( getAdapter() == null ) ) {
+          if (getLifetime() > maxLifetime ) {
+            setExpired(true);
+        }
+    }
+    
     public synchronized void run() {
         
-         updateLifeTime();
-         if((getTimestamp() - lifetime0) >= maxLifeTime){  setIsExpired(true);  } // kill ourselves 
+       checkEventClusterExpired();
+     
     }
     
     public ClusterAdapter getEnclosedCluster() {

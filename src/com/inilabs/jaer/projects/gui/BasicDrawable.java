@@ -55,8 +55,7 @@ public class BasicDrawable implements Drawable, DrawableListener {
     protected float elevationHeading = 0f;
     protected long startTime; // agent created
     protected long lastTime; // agent closed
-    protected long lifetime0; // temp value used for extending lifetime.
-    protected long maxLifeTime = 100 ; //millisec
+    protected long maxLifetime = 100 ; //millisec
     protected boolean isOrphaned = false;
     protected boolean isExpired = false;
     protected static FieldOfView fov = new FieldOfView();
@@ -67,7 +66,6 @@ public class BasicDrawable implements Drawable, DrawableListener {
         this.id = ++idCounter;
         this.key = getClass().getSimpleName() + "_" + id;
          this.startTime = getTimestamp();
-         this.lifetime0 = this.startTime;
     }
 
     // Constructor with specific azimuth and elevation, and optional key
@@ -88,6 +86,12 @@ public class BasicDrawable implements Drawable, DrawableListener {
     protected long getTimestamp() {
         return System.currentTimeMillis();
     }
+    
+   
+    public void extendLifetime(long incrementMillis) {
+        maxLifetime += incrementMillis; // Add reward time
+    }
+    
     
     @Override
     public int getId() {
@@ -112,24 +116,16 @@ public class BasicDrawable implements Drawable, DrawableListener {
         isOrphaned = yes;
     }
     
-     
 
-   /**
-     * Resets the lifetime of the agent.
-     */ 
-  public void resetLifeTime() {
-    this.lifetime0 = getTimestamp();
-}
-
- public long getLifeTime()  {
-     return getTimestamp() - lifetime0;
+ public long getLifetime()  {
+     return getTimestamp() - startTime;
  }
          
   
-public boolean isTerminated() {
+//public boolean isTerminated() {
   //  return this.getLifeTime() >= maxLifeTime; // Check if lifetime has expired
-     return true; // Check if lifetime has expired
-}
+ //    return true; // Check if lifetime has expired
+//}
     
      /**
      * Clears the assigned clusters.
@@ -145,22 +141,17 @@ public boolean isTerminated() {
         return new Point2D.Float(x, y) ;        
     }
     
+    protected void setExpired(boolean yes) {
+        isExpired = true;
+    }
     
     @Override
     public boolean isExpired() {
-        return isOrphaned;
-    }
-    
-    public void setIsExpired(boolean yes) {
-        isOrphaned = yes;
-    }
-    
-     protected void updateLifeTime() {
-        lifetime0 = getTimestamp();
+      return isExpired;
     }
     
      protected void setMaxLifeTime(long max) {
-         maxLifeTime = max;
+         maxLifetime = max;
      }
      
     

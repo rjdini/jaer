@@ -16,7 +16,6 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
-
 package com.inilabs.jaer.projects.cog;
 
 import com.inilabs.jaer.gimbal.GimbalBase;
@@ -82,12 +81,6 @@ public class SpatialAttention implements KeyListener {
     }
     return instance;
 }
-
-    
-    
-    
-    
-    
     
 private void init() {
               
@@ -104,14 +97,14 @@ private void init() {
                 case YAW -> setAzimuth(Math.max(-180.0f, Math.min(180.0f, getAzimuth() + value * 10.0f)));
                 case ROLL -> setRoll(Math.max(-90.0f, Math.min(90.0f, getElevation() + value * 10.0f)));
                 case PITCH -> setElevation(Math.max(-90.0f, Math.min(90.0f, getElevation() + value * 10.0f)));
-                default -> System.err.println("Unhandled axis: " + axis);
+                default -> log.debug("Unhandled axis: {}", axis);
             }
         }
         
         // Schedule a task to mark joystick as inactive after a delay
         scheduler.schedule(() -> {
             joystickActive = false;
-            System.out.println("Joystick inactive");
+            log.debug("Joystick inactive");
         }, JOYSTICK_TIMEOUT, TimeUnit.MILLISECONDS);
          
     }

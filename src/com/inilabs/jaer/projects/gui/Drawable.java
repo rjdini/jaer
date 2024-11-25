@@ -62,7 +62,9 @@ public interface Drawable extends DrawableListener {
     // Set a callback 
     void setParentCallback(BiConsumer<ActionType, String> parentCallback) ;
     
-    boolean isExpired(); // Checks if the drawable has killed itself
+    long getLifetime();  // get the elapsed lifetime
+    
+    boolean isExpired(); // Checks if the drawable has reached end of life
       
     boolean isOrphaned(); // Checks if the drawable is still valid
     

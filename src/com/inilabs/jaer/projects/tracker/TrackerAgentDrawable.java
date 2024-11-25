@@ -40,8 +40,8 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
     private static final Logger logger = LoggerFactory.getLogger(TrackerAgentDrawable.class);
     private static final float QUALITY_THRESHOLD = 0.5f; // Threshold for cluster support quality
     private float optimizationCost = 0f;
-    private final long startTime = System.currentTimeMillis(); // Creation time
-    private long expirationTime; // Time at which the agent expires
+  //  private final long startTime = System.currentTimeMillis(); // Creation time
+  //  private long expirationTime; // Time at which the agent expires
 
     private final CopyOnWriteArrayList<EventCluster> clusters = new CopyOnWriteArrayList<>();
 
@@ -55,9 +55,9 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
     public static final int MAX_CLUSTERS = 4;
 
     public TrackerAgentDrawable(long lifetimeMillis) {
-        // super();
-        this.setColor(Color.BLACK);
-        this.expirationTime = startTime + lifetimeMillis; // Set initial expiration
+        super();
+        setColor(Color.BLACK);
+        maxLifetime = startTime + lifetimeMillis; // Set initial expiration
         this.lastMovementTime = System.currentTimeMillis();
         logger.info("TrackerAgentDrawable created with key: {} at startTime: {}", this.getKey(), startTime);
         AgentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
@@ -92,16 +92,6 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
         setColor(Color.BLACK);
     }
 
-    @Override
-    public boolean isExpired() {
-        return System.currentTimeMillis() > expirationTime;
-    }
-
-    @Override
-    public void extendLifetime(long incrementMillis) {
-        expirationTime += incrementMillis; // Add reward time
-    }
-
     /**
      * Adds a cluster to the agent's list. If the limit is exceeded, removes the
      * farthest cluster.
@@ -133,9 +123,19 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
             AgentLogger.logAgentEvent(EventType.MOVE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
     
+     private void checkTrackerAgentExpired() {
+     if ((getLifetime() > maxLifetime) && getClusters().isEmpty() ) {
+            setExpired(true);
+        }
+    }
+    
+    
     public void run() {
         clusters.removeIf(EventCluster::isExpired); // Remove expired clusters
         move();
+        checkTrackerAgentExpired();
+        if(isExpired()){
+            setColor(Color.BLUE); }
         
      // AgentLogger.logAgentEvent(EventType.RUN, getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
