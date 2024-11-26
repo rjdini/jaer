@@ -30,12 +30,15 @@ import com.inilabs.jaer.projects.gui.DrawableListener;
 import com.inilabs.jaer.projects.logging.AgentLogger;
 import com.inilabs.jaer.projects.logging.EventType;
 import com.inilabs.jaer.projects.tracker.ClusterAdapter;
+import java.util.ArrayList;
+import java.util.List;
 import net.sf.jaer.eventprocessing.tracking.RectangularClusterTracker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class EventCluster extends AgentDrawable implements Expirable, Runnable, Drawable, DrawableListener{
    private static final Logger log = LoggerFactory.getLogger(EventCluster.class);
+   private static final AgentLogger agentLogger = AgentLogger.getInstance();
    public ClusterAdapter enclosedCluster;
     private TrackerAgentDrawable enclosingAgent; // Reference to the enclosing agent
     private Color color = Color.BLACK; // Default color for visualization
@@ -76,7 +79,8 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter,  Fi
 
  public EventCluster() {
     super();    
-    System.out.println(" constructor key: " + getKey() + " ID: " + getId() );
+     agentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), getEnclosedClusterKeyAsList());
+  //  System.out.println(" constructor key: " + getKey() + " ID: " + getId() );
 }
 
 //
@@ -91,7 +95,7 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter,  Fi
 //}
     
     public void close() {
-      //   AgentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
+      agentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(), getEnclosedClusterKeyAsList());
     }
  
     // Constructors
@@ -131,7 +135,7 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter,  Fi
     @Override
     public float getAzimuth() {
         if (this.enclosedCluster == null) {
-            throw new IllegalStateException("Enclosed cluster is not set");
+            return  azimuth;
         }
         return enclosedCluster.getAzimuth();
     }
@@ -139,7 +143,7 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter,  Fi
     @Override
     public float getElevation() {
        if (enclosedCluster == null) {
-            throw new IllegalStateException("Enclosed cluster is not set");
+             return elevation;
         }        return enclosedCluster.getElevation();
     }
 
@@ -156,12 +160,19 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter,  Fi
         }
     }
     
+    // conveninece for logging
+    private List getEnclosedClusterKeyAsList() {
+        List <String> list = new ArrayList();
+        list.add(getEnclosedClusterKey());
+        return list;
+    }
     
     
     private void move() {
    if ( enclosedCluster != null ) {
     setAzimuth(enclosedCluster.getAzimuth());
     setElevation(enclosedCluster.getElevation());
+    this.agentLogger.logAgentEvent(EventType.MOVE, getKey(), getAzimuth(), getElevation(), getEnclosedClusterKeyAsList());
     }
 }
     

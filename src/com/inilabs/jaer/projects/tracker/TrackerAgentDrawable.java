@@ -38,7 +38,7 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
 
     // This logger logs class-specific performance issues, not the event logger
     private static final Logger logger = LoggerFactory.getLogger(TrackerAgentDrawable.class);
-    private static AgentLogger agentLogger = AgentLogger.getInstance();
+    private static final AgentLogger agentLogger = AgentLogger.getInstance();
     private static final float QUALITY_THRESHOLD = 0.5f; // Threshold for cluster support quality
     private float optimizationCost = 0f;
   //  private final long startTime = System.currentTimeMillis(); // Creation time
@@ -123,7 +123,7 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
         logger.info("Cluster removed from agent {}: Cluster ID = {}", getKey(), cluster.getId());
     }
 
-    
+ 
     public void move() {
           updateCentroid();
              // Check for movement
@@ -131,7 +131,7 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
             lastMovementTime = System.currentTimeMillis(); // Update movement timestamp
         }
             moveToCentroid(); // Move the agent
-            AgentLogger.logAgentEvent(EventType.MOVE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
+            agentLogger.logAgentEvent(EventType.MOVE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
     
      private void checkTrackerAgentExpired() {
@@ -145,6 +145,7 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
      return getTimestamp() - startTime;
  }
     
+    @Override
     public synchronized void run() {
         clusters.removeIf(EventCluster::isExpired); // Remove expired clusters
         move();
@@ -153,9 +154,16 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
             setColor(Color.BLUE); }
         
         
-     // AgentLogger.logAgentEvent(EventType.RUN, getKey(), getAzimuth(), getElevation(), getClusterKeys());
+     // agentLogger.logAgentEvent(EventType.RUN, getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
 
+       // the cluster management shouldnt be down here in BasicDrawable!  TODO
+       // Helper method to get cluster keys as a list of strings
+    @Override
+    public List<String> getClusterKeys() {
+        return clusters.stream().map(EventCluster::getKey).collect(Collectors.toList());
+    }
+    
     public boolean isStatic() {
         long currentTime = System.currentTimeMillis();
         return (currentTime - lastMovementTime) > 5000; // Static if no movement for 5 seconds
@@ -260,8 +268,9 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
         lastTime = getTimestamp();
         clusters.clear();
         logger.info("Agent {} closed at lastTime: {}", getKey(), lastTime);
-        AgentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
+        agentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
+    
 
     public void setOptimizationCost(float cost) {
         optimizationCost = cost;

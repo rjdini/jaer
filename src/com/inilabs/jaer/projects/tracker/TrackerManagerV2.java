@@ -298,7 +298,8 @@ private void updateGimbal() {
     }
 
  
-/**
+    
+    /**
  * Draws the target location with text annotations.
  *
  * @param gl the OpenGL context.
@@ -321,7 +322,7 @@ synchronized public void annotate(GLAutoDrawable drawable) {
     try {
         gl.glPushMatrix();
         gl.glPushAttrib(GL2.GL_CURRENT_BIT | GL2.GL_LINE_BIT | GL2.GL_ENABLE_BIT);
- //       drawTargetLocation(gl);  // Target location with matrix and state managed inside
+        drawTargetLocation(gl);  // Target location with matrix and state managed inside
     } catch (java.util.ConcurrentModificationException e) {
         log.warn("Concurrent modification of target list while drawing");
     } finally {
@@ -366,16 +367,18 @@ private GL2 drawGimbalPoseCrossHair(GL2 gl) {
 }
 
 private GL2 drawTargetLocation(GL2 gl) {
-    float sx = chip.getSizeX() / 32;
-  //  float[] target = getGimbalBase().getTarget();
-     float pixelX = engine.getBestTrackerAgentDrawable().getChipLocation().x;
-     float pixelY = engine.getBestTrackerAgentDrawable().getChipLocation().y;        
+      float sx = chip.getSizeX() / 32;
+      TrackerAgentDrawable agent =  engine.getBestTrackerAgentDrawable(); 
+      if (agent != null) {
+  //  float[] target = getGimbalBase().getTarget()
+     float pixelX = agent.getChipLocation().x;
+     float pixelY = agent.getChipLocation().y;        
 //    float [] target ={targetX, targetY};
 //    log.info("GimbalPose (y,p) " + target[0] + ", " + target[1]);
 //    
 //    float pixelX = getGimbalBase().getFOV().getPixelsAtPan(target[0]);
 //    float pixelY = getGimbalBase().getFOV().getPixelsAtTilt(target[1]);
-    log.info("Target pixels received from FOV (p,t) " + pixelX + ", " + pixelY);
+    log.debug("Target pixels received from FOV (p,t) " + pixelX + ", " + pixelY);
     
     gl.glPushMatrix();
     gl.glPushAttrib(GL2.GL_CURRENT_BIT | GL2.GL_ENABLE_BIT);
@@ -395,9 +398,12 @@ private GL2 drawTargetLocation(GL2 gl) {
         gl.glPopAttrib();
         gl.glPopMatrix();
     }
+      } else {
+      log.warn("Draw target best agent = null");
+      }
     return gl;
 }
-
+    
 
     /**
      * @return the loggingStateFilter

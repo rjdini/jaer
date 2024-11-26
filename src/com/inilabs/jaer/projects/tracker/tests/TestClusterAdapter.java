@@ -19,6 +19,7 @@
 package com.inilabs.jaer.projects.tracker.tests;
 
 import com.inilabs.jaer.projects.tracker.ClusterAdapter;
+import java.awt.Color;
 import java.awt.geom.Point2D;
 
 public class TestClusterAdapter implements ClusterAdapter {
@@ -27,7 +28,7 @@ public class TestClusterAdapter implements ClusterAdapter {
     private boolean visible;
     private String key;
     private long startTime;
-
+    private Color color = Color.magenta;
    
     public TestClusterAdapter(String key, float azimuth, float elevation) {
         this.key = key;
@@ -43,6 +44,10 @@ public class TestClusterAdapter implements ClusterAdapter {
     
     public float getSize() {
         return 0.5f;
+    }
+    
+    public Color getColor() {
+        return color;
     }
     
     @Override
