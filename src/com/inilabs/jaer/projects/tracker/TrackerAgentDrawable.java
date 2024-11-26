@@ -38,6 +38,7 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
 
     // This logger logs class-specific performance issues, not the event logger
     private static final Logger logger = LoggerFactory.getLogger(TrackerAgentDrawable.class);
+    private static AgentLogger agentLogger = AgentLogger.getInstance();
     private static final float QUALITY_THRESHOLD = 0.5f; // Threshold for cluster support quality
     private float optimizationCost = 0f;
   //  private final long startTime = System.currentTimeMillis(); // Creation time
@@ -48,6 +49,8 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
     private float lastAzimuth;
     private float lastElevation;
     private long lastMovementTime;
+    private long startTime;
+    private long maxLifetime;
 
     // private List<EventCluster> clusters = new ArrayList<>();
     //  private float azimuth; // Current azimuth position
@@ -55,13 +58,21 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
     public static final int MAX_CLUSTERS = 4;
 
     public TrackerAgentDrawable(long lifetimeMillis) {
-        super();
-        setColor(Color.BLACK);
-        maxLifetime = startTime + lifetimeMillis; // Set initial expiration
-        this.lastMovementTime = System.currentTimeMillis();
-        logger.info("TrackerAgentDrawable created with key: {} at startTime: {}", this.getKey(), startTime);
-        AgentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
+        new TrackerAgentDrawable();   
+        this.startTime = getTimestamp();
+        this.setColor(Color.BLACK);
+        this.maxLifetime = lifetimeMillis; // Set initial expiration
+        this. lastMovementTime = getTimestamp();
+      
+        this.logger.info("TrackerAgentDrawable created with key: {} at startTime: {}", getKey(), startTime);
+        this.agentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
+    
+    public TrackerAgentDrawable() {
+    super();    
+    System.out.println(" TAD constructor key: " + getKey() + " ID: " + getId() );
+}
+    
 
     private boolean loggingEnabled = true;
 
@@ -129,13 +140,18 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
         }
     }
     
+     @Override
+    public long getLifetime()  {
+     return getTimestamp() - startTime;
+ }
     
-    public void run() {
+    public synchronized void run() {
         clusters.removeIf(EventCluster::isExpired); // Remove expired clusters
         move();
         checkTrackerAgentExpired();
         if(isExpired()){
             setColor(Color.BLUE); }
+        
         
      // AgentLogger.logAgentEvent(EventType.RUN, getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
@@ -268,11 +284,11 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
         g2d.drawOval(x - pixelSizeX / 2, y - pixelSizeY / 2, pixelSizeX, pixelSizeY);
         g2d.drawString(getKey(), x, y - pixelSizeY / 2);
 
-        for (EventCluster cluster : clusters) {
-            if (cluster != null) {
-                cluster.draw(g);
-            }
-        }
+   //     for (EventCluster cluster : clusters) {
+    //        if (cluster != null) {
+    //            cluster.draw(g);
+    //        }
+    //    }
 
         if (showPath) {
             drawPath(g2d);
@@ -280,4 +296,6 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
 
         logger.trace("Agent {} draw operation completed.", getKey());
     }
+
+    
 }

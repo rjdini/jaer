@@ -19,6 +19,8 @@
 
 package com.inilabs.jaer.projects.logging;
 
+import com.inilabs.jaer.gimbal.GimbalBase;
+import com.inilabs.jaer.projects.cog.SpatialAttention;
 import java.beans.PropertyChangeEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +44,26 @@ public class AgentLogger {
     private static int aerLoggingSessionNumber = 0;
     private static int guiLoggingSessionNumber = 0;
     private static boolean isSystemTimestamp = false;
+    
+    private static AgentLogger instance ;
+    
+    public AgentLogger() {
+    }
+    
+    public static AgentLogger getInstance() {
+    if (instance == null) {
+        synchronized (AgentLogger.class) {
+            if (instance == null) {
+                instance = new AgentLogger();
+            }
+        }
+    }
+    return instance;
+}
+    
+    
+    
+    
     
     /**
      * 

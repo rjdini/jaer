@@ -18,6 +18,7 @@
  */
 package com.inilabs.jaer.projects.tracker;
 
+import java.awt.Color;
 import java.awt.geom.Point2D;
 
 public interface ClusterAdapter {
@@ -29,6 +30,7 @@ public interface ClusterAdapter {
     void setIsVisible(boolean yes);
     long getLifeTime();  // has the lifetiem of this cluster expired?
     float getSize();
+    Color getColor();
     boolean isRCTCluster();
     void resetLifeTime();
 }

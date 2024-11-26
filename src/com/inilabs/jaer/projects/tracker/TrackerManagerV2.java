@@ -174,7 +174,8 @@ public EventPacket<? extends BasicEvent> filterPacket(EventPacket<? extends Basi
     }
 
     // Log the timestamp for debugging purposes
-    AgentLogger.setJAERTimestamp(in.getLastTimestamp());
+    if(in != null) {
+    AgentLogger.setJAERTimestamp(in.getLastTimestamp());}
     
     // Apply any preceding filters in the chain
     getEnclosedFilterChain().filterPacket(in);
@@ -207,7 +208,7 @@ public EventPacket<? extends BasicEvent> filterPacket(EventPacket<? extends Basi
 
 private void updateTrackerManagerEngineTests() {    
     if(isEnableTestClusters) {
-        engine.updateTestClusterList(exerciser.getTestClustersHorizontal() ); 
+        engine.updateTestClusterList(exerciser.getTestClusters(10, 38) ); 
      } 
 }
 

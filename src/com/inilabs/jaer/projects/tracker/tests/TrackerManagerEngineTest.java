@@ -30,11 +30,11 @@ import javax.swing.Timer;
 
 public class TrackerManagerEngineTest {
     private static FieldOfView fov  = new FieldOfView() ;
-    private static SpatialAttention spatialAttention = new SpatialAttention();
+    private static SpatialAttention spatialAttention = SpatialAttention.getInstance();
     
     public static void main(String[] args) {
          // Create an instance of TrackerManagerEngine
-        TrackerManagerEngine engine = new TrackerManagerEngine(fov, spatialAttention);
+        TrackerManagerEngine engine = new TrackerManagerEngine(fov);
            // Create an instance of TrackerManagerEngineTestPanel
          TrackerManagerEngineTestPanel testPanel = new TrackerManagerEngineTestPanel(engine);
          

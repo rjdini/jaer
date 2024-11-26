@@ -40,6 +40,8 @@ public class EventCluster extends AgentDrawable implements Expirable, Runnable, 
     private TrackerAgentDrawable enclosingAgent; // Reference to the enclosing agent
     private Color color = Color.BLACK; // Default color for visualization
     private float size = 2.0f; // Default size for drawing
+    private long startTime;
+    private long maxLifetime = 2000 ; // 2sec default
   //  private final long startTime = System.currentTimeMillis(); // Creation time
    // private long expirationTime; // Time at which the cluster expires
     
@@ -61,24 +63,32 @@ public class EventCluster extends AgentDrawable implements Expirable, Runnable, 
  */
 public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter,  FieldOfView fov, long lifetimeMillis) {
     // Optionally include transformation logic
-    EventCluster eventCluster = new EventCluster(clusterAdapter, fov, lifetimeMillis);
+    EventCluster eventCluster = new EventCluster();
     eventCluster.enclosedCluster = clusterAdapter; 
-    eventCluster.setKey(clusterAdapter.getKey());
     eventCluster.azimuth = clusterAdapter.getAzimuth();
     eventCluster.elevation = clusterAdapter.getElevation();
+    eventCluster.startTime = eventCluster.getTimestamp();
+    eventCluster.maxLifetime = lifetimeMillis ; 
     eventCluster.color=Color.BLACK;
-    eventCluster.size = 1f;
+    eventCluster.size = 2f;
     return eventCluster;
 }
 
-   public EventCluster(ClusterAdapter adapter, FieldOfView fov, long lifetimeMillis) {
-     // super();    
-// Initialize using adapter and fov
-    this.azimuth =  adapter.getAzimuth();
-    this.elevation = adapter.getElevation();
-    this.maxLifetime = startTime + lifetimeMillis; // 
-    // Other initialization
+ public EventCluster() {
+    super();    
+    System.out.println(" constructor key: " + getKey() + " ID: " + getId() );
 }
+
+//
+//   public EventCluster(ClusterAdapter adapter, FieldOfView fov, long lifetimeMillis) {
+//    super();    
+//// Initialize using adapter and fov
+//    this.startTime = getTimestamp();
+//    this.azimuth =  adapter.getAzimuth();
+//    this.elevation = adapter.getElevation();
+//    this.maxLifetime = startTime + lifetimeMillis; // 
+//    // Other initialization
+//}
     
     public void close() {
       //   AgentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
@@ -135,13 +145,19 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter,  Fi
 
     @Override
     public String getKey() {
-        if (enclosedCluster != null) { 
-        return enclosedCluster.getKey(); }  
-        else {
             return this.key;
-        }
     }
 
+    public String getEnclosedClusterKey() {
+         if (enclosedCluster != null) { 
+        return enclosedCluster.getKey(); }  
+        else {
+            return "null";
+        }
+    }
+    
+    
+    
     private void move() {
    if ( enclosedCluster != null ) {
     setAzimuth(enclosedCluster.getAzimuth());
@@ -156,10 +172,17 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter,  Fi
         }
     }
     
+    @Override
+    public long getLifetime()  {
+     return getTimestamp() - startTime;
+ }
+    
     public synchronized void run() {
         
        checkEventClusterExpired();
-     
+     // System.out.println("@@  key:" + getKey() + "  lifetime: " + getLifetime() +" maxLifetime: " + maxLifetime + " expired: " +  isExpired() +" enclosed clust key: " + getEnclosedClusterKey() );
+      move();
+    
     }
     
     public ClusterAdapter getEnclosedCluster() {
@@ -230,16 +253,22 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter,  Fi
    // @Override
     public synchronized void draw(Graphics g) {
         Graphics2D g2d = (Graphics2D) g;
-        
-         int myX =  centerX + (int) ((getAzimuth() - getAzimuthHeading()) * getAzimuthScale());
+           // deafult location and size for plotting
+          int myX =  centerX + (int) ((getAzimuth() - getAzimuthHeading()) * getAzimuthScale());
           int myY =  centerY - (int) ((getElevation() - getElevationHeading()) * getElevationScale());  
            int pixelSizeX = (int) (size * azimuthScale);
-            int pixelSizeY = (int) (size * elevationScale);
+           int pixelSizeY = (int) (size * elevationScale);
+        
+           // if we have an enclosed cluster - we use its coords (should have been updated on move() in anycase.
+        if(getEnclosedCluster() != null ) { // use the enclsoed cluster's coords.
+         myX =  centerX + (int) ((getEnclosedCluster().getAzimuth() - getAzimuthHeading()) * getAzimuthScale());
+          myY =  centerY - (int) ((getEnclosedCluster().getElevation() - getElevationHeading()) * getElevationScale());  
+          setColor(getEnclosedCluster().getColor());
+        } 
+      
         // Calculate the cluster's location in relation to the enclosing agent
      if (enclosingAgent != null) {      
-              g2d.setColor(enclosingAgent.getColor());
-        //      g2d.setColor(Color.GREEN);
-  
+           g2d.setColor(enclosingAgent.getColor());
             int xAgent = enclosingAgent.getCenterX() + (int) ((enclosingAgent.getAzimuth() - getAzimuthHeading()) * getAzimuthScale());
             int yAgent= enclosingAgent.getCenterY() - (int) ((enclosingAgent.getElevation() - getElevationHeading()) * getElevationScale());
             // Draw a circle for the cluster

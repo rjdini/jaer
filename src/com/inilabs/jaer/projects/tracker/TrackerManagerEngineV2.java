@@ -1,3 +1,22 @@
+/*
+ * Copyright (C) 2024 rjd.
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1301  USA
+ */
+
 package com.inilabs.jaer.projects.tracker;
 
 import com.inilabs.jaer.projects.cog.SpatialAttention;
@@ -15,16 +34,16 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import org.slf4j.LoggerFactory;
 
 
-public class TrackerManagerEngine {
+public class TrackerManagerEngineV2 {
     private static final int MAX_TRACKER_AGENTS = 3;
     private static final int MAX_CLUSTERS_PER_AGENT = 5; // Limit on clusters per agent
     private PolarSpaceDisplay polarSpaceDisplay;
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private TrackerAgentDrawable currentBestAgent = null;
     private FieldOfView fov;
-    private long defaultAgentLifeTimeMillis = 10000; // 10 secs
-     private long defaultEventClusterLifeTimeMillis =5000; // 2 secs
-     private long lifeTimeExtensionMillis = 0; // reward for good agent taking on new cluster
+    private long defaultAgentLifeTimeMillis = 20000; // 20 secs
+     private long defaultEventClusterLifeTimeMillis = 10000; // 10 secs
+     private long lifeTimeExtensionMillis = 10000; // reward for good agent taking on new cluster
      private TrackerAgentDrawable lastBestAgent = null; // Reference to the previous best tracker
      private List<TrackerAgentDrawable> bestTrackerAgentList = new ArrayList<>();  
 
@@ -42,7 +61,7 @@ private final CopyOnWriteArrayList<EventCluster> eventClusters = new CopyOnWrite
     
     private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(TrackerManagerEngine.class);
 
-    public TrackerManagerEngine(FieldOfView fov) {
+    public TrackerManagerEngineV2(FieldOfView fov) {
         this.fov = fov;
          // Start periodic processing task (10 Hz)
         scheduler.scheduleAtFixedRate(this::processPeriodically, 0, 100, TimeUnit.MILLISECONDS);
@@ -62,17 +81,16 @@ private final CopyOnWriteArrayList<EventCluster> eventClusters = new CopyOnWrite
      * Periodically processes clusters and trackers.
      */
     private synchronized void processPeriodically() {
-//        if (!freshDataAvailable && eventClusters.isEmpty()) {
-//            return; // Skip processing if no fresh data and no clusters to process
-//        }
-//        freshDataAvailable = false; // Reset the flag
+        if (!freshDataAvailable && eventClusters.isEmpty()) {
+            return; // Skip processing if no fresh data and no clusters to process
+        }
+        freshDataAvailable = false; // Reset the flag
         processClusters(Collections.emptyList()); // Process existing clusters
         processTrackers();
     }
-
+  
     
-    
-     /**
+    /**
      * Adapt RCT  (real sensor data) Clusters to generic cluster processing stream.
      *
      * @param clusters List of input clusters (real or test).
@@ -103,73 +121,69 @@ public synchronized void updateTestClusterList(List<TestCluster> clusters) {
     processClusters(clusters);
 }
 
-
-
+    
+  
     /**
      * Generic method to process clusters and encapsulate them as EventClusters.
      *
      * @param clusters List of input clusters (real or test).
+     * 
+     *  newest bestest single streamin' process 22nov24
      */
-
-private void processClusters(List<? extends ClusterAdapter> clusters) {
-    // Step 1: Remove expired EventClusters
-    eventClusters.removeIf(cluster -> {
-        cluster.run(); // Update the cluster
-        if (cluster.isExpired()) {
-            if (polarSpaceDisplay != null) {
-                polarSpaceDisplay.removeDrawable(cluster.getKey());
-            }
-            return true; // Remove expired cluster
-        }
-        return false; // Retain non-expired clusters
-    });
-
-    // Step 2: Process new clusters
+    
+    public void processClusters(List<? extends ClusterAdapter> clusters) {
     for (ClusterAdapter adapter : clusters) {
         if (adapter == null) {
             log.warn("Encountered a null ClusterAdapter, skipping.");
             continue;
         }
+        // Check if the cluster already exists
+        EventCluster existingCluster = eventClusters.stream()
+            .filter(cluster -> cluster.getKey().equals(adapter.getKey()))
+            .findFirst()
+            .orElse(null);
 
-        String freshClusterKey = adapter.getKey(); // Get the key of the fresh cluster
-        boolean clusterReplaced = false;
-
-        // Check if the fresh cluster's key is already present in existing EventClusters
-        for (EventCluster eventCluster : eventClusters) {
-            if (eventCluster.getEnclosedCluster().getKey().equals(freshClusterKey)) {
-                // Replace the old cluster with the fresh one
-                eventCluster.setEnclosedCluster(adapter);
-                clusterReplaced = true;
-
-                log.info("Replaced existing cluster in EventCluster with key: {}", freshClusterKey);
-                break;
-            }
-            
-        }
-
-        // If the fresh cluster's key was not found, create a new EventCluster
-        if (!clusterReplaced) {
-            EventCluster newEventCluster = EventCluster.fromClusterAdapter(adapter, fov, defaultEventClusterLifeTimeMillis);
-            eventClusters.add(newEventCluster);
+        if (existingCluster != null) {
+                 // Update existing cluster and reset lifetime
+            existingCluster.updateFromAdapter(adapter);
+            existingCluster.extendLifetime(2000);
+            log.info("Reset lifetime for existing cluster: {}", existingCluster.getKey());
+            existingCluster.updateFromAdapter(adapter);
+            log.info("Updated existing cluster: {}", existingCluster.getKey());
+        } else {
+            // Add a new cluster
+            EventCluster newCluster = EventCluster.fromClusterAdapter(adapter, fov, defaultEventClusterLifeTimeMillis );
+            eventClusters.add(newCluster);
 
             if (polarSpaceDisplay != null) {
-                polarSpaceDisplay.addDrawable(newEventCluster);
+                polarSpaceDisplay.addDrawable(newCluster);
             }
 
-            //TrackerAgentDrawable agent = findOrCreateAgent(newEventCluster);
-           // agent.addCluster(newEventCluster);
-
-            log.info("Created new EventCluster for cluster with key: {}", freshClusterKey);
+            // Assign the cluster to an agent
+            TrackerAgentDrawable agent = findOrCreateAgent(newCluster);
+            agent.addCluster(newCluster);
+            log.info("Added new cluster: {}", newCluster.getKey());
         }
     }
-         // Step 3: Run all EventClusters to update their locations derived  their new enclosed clusters
-          for (EventCluster eventCluster : eventClusters) {
-        eventCluster.run();
-    }
+
+    // Remove stale clusters
+    eventClusters.removeIf(cluster -> {
+        if (clusters.stream().noneMatch(adapter -> adapter.getKey().equals(cluster.getKey()))) {
+            TrackerAgentDrawable agent = cluster.getEnclosingAgent();
+            if (agent != null) {
+                agent.removeCluster(cluster);
+            }
+            if (polarSpaceDisplay != null) {
+                polarSpaceDisplay.removeDrawable(cluster.getKey());
+            }
+            log.info("Removed stale cluster: {}", cluster.getKey());
+            return true;
+        }
+        return false;
+    });
 }
 
-
-
+    
     private void processTrackers() {
     // Step 1: Assign clusters to agents
     for (EventCluster cluster : eventClusters) {
@@ -191,16 +205,9 @@ private void processClusters(List<? extends ClusterAdapter> clusters) {
     for (TrackerAgentDrawable agent : agents.values()) {
         agent.run(); // Update clusters and centroids
 
-         // Check if agent is expired 
-        if (agent.isExpired()) {
-            log.info("Removing expired tracker agent: {}", agent.getKey());
-            removeDrawableFromDisplay(agent);
-            agentsToRemove.add(agent.getKey());
-        }
-        
         // Check if agent is static (not moving) and remove if static for too long
         if (agent.isStatic() && agent.getClusters().isEmpty()) {
-            log.info("Removing static tracker agent: {}", agent.getKey());
+            log.debug("Removing static tracker agent: {}", agent.getKey());
             removeDrawableFromDisplay(agent);
             agentsToRemove.add(agent.getKey());
         }
@@ -215,8 +222,6 @@ private void processClusters(List<? extends ClusterAdapter> clusters) {
     updateBestTrackerAgent();
 }
 
-    
-    
 private void updateBestTrackerAgent() {
     TrackerAgentDrawable newBestAgent = agents.values().stream()
         .max(Comparator.comparingDouble(TrackerAgentDrawable::getSupportQuality))
@@ -234,7 +239,7 @@ private void updateBestTrackerAgent() {
     currentBestAgent = newBestAgent;
 
     if (newBestAgent != null) {
-        log.info("Updated BestAgent: {}", newBestAgent.getKey());
+        log.debug("Updated BestAgent: {}", newBestAgent.getKey());
     }
 }
     
@@ -358,9 +363,9 @@ private void updateBestTrackerAgent() {
         // Update the bestTrackerAgentList
         bestTrackerAgentList.clear();
         bestTrackerAgentList.addAll(bestAgents);
-  //      if(getBestTrackerAgentDrawable() != null) {
+        if(getBestTrackerAgentDrawable() != null) {
         getSpatialAttention().setBestTrackerAgent(getBestTrackerAgentDrawable());
-   //     }
+        }
         // Enforce the limit on the number of TrackerAgentDrawables
         enforceAgentLimit();
     }
@@ -406,3 +411,4 @@ public synchronized TrackerAgentDrawable getBestTrackerAgentDrawable() {
 }
     
 }
+

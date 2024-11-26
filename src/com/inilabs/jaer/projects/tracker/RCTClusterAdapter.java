@@ -19,6 +19,7 @@
 package com.inilabs.jaer.projects.tracker;
 
 import com.inilabs.jaer.projects.tracker.ClusterAdapter;
+import java.awt.Color;
 import java.awt.geom.Point2D;
 import net.sf.jaer.eventprocessing.tracking.RectangularClusterTracker;
 
@@ -58,6 +59,10 @@ public class RCTClusterAdapter implements ClusterAdapter {
     }
   
   
+  public Color getColor() {
+      return this.cluster.getColor();
+  }
+  
     // dummy constructor for testing
     public RCTClusterAdapter() {
         this.cluster = null;
@@ -96,11 +101,12 @@ public class RCTClusterAdapter implements ClusterAdapter {
     public void setLocation(Point2D.Float loc) {
         testLocation = loc;
     }
-    
-    @Override
+      
+     @Override
     public String getKey() {
-        return "Cluster-" + cluster.hashCode();
+        return "RCTCluster_" + cluster.getClusterNumber();
     }
+    
     
     @Override
     public void setIsVisible(boolean yes) {
