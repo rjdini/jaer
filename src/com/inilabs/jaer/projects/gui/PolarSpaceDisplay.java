@@ -356,13 +356,17 @@ protected synchronized void paintComponent(Graphics g) {
     int height = getHeight();
     int centerY = height / 2;
 
+    
+    int horizonX =  centerX + (int) ((0 - azimuthHeading * getAzimuthScale()));
+    int horizonY =  centerY - (int) ((0 - elevationHeading * getElevationScale()));  
+    
     // Paint the upper half pale blue
     g2d.setColor(new Color(173, 216, 230, 100)); // Pale blue with alpha for translucency
-    g2d.fillRect(0, 0, width, centerY);
+    g2d.fillRect(0, 0, width, horizonY);
 
     // Paint the lower half pale green
     g2d.setColor(new Color(144, 238, 144, 100)); // Pale green with alpha for translucency
-    g2d.fillRect(0, centerY, width, height - centerY);
+    g2d.fillRect(0, horizonY, width, height - horizonY);
 
     // Draw red dot at the heading point
     g2d.setColor(Color.RED);

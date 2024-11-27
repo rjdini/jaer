@@ -54,14 +54,15 @@ public class SpatialAttention implements KeyListener {
     private boolean enableKeyboardControl = false; // Tracks if keyboard control is active
     private boolean enableJoystickControl = true;
     private boolean enableGimbalPose = true ; 
-    private double supportQualityThreshold = 15000.0;
+    private double supportQualityThreshold = 2000.0;
     
     
     private TrackerAgentDrawable bestTrackerAgent = null; // Reference to the best tracker agent
     private JoystickReader joystickReader;
 
-     private ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-     private static final ScheduledExecutorService saccadeScheduler = Executors.newSingleThreadScheduledExecutor();
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4);
+     
+   // private static final ScheduledExecutorService saccadeScheduler = Executors.newSingleThreadScheduledExecutor();
     
      private volatile boolean joystickActive = false;
     private final long JOYSTICK_TIMEOUT = 3000; // Timeout in milliseconds
@@ -73,12 +74,14 @@ public class SpatialAttention implements KeyListener {
     
    private SpatialAttention() {
        // Timer for periodic updates
-        this.updateTimer = new Timer(100, e -> updateGimbalPose());
+        this.updateTimer = new Timer(200, e -> updateGimbalPose());
         this.updateTimer.start();
          Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
      
         init();
+    //   startTasks();        
 }
+
 
     public static SpatialAttention getInstance() {
     if (instance == null) {
@@ -90,11 +93,25 @@ public class SpatialAttention implements KeyListener {
     }
     return instance;
 }
+
+private void startTasks() {
+        // Schedule a task to periodically request data
+        // Schedule the 100ms timer thread
+        try {
+        scheduler.scheduleAtFixedRate(this::updateGimbalPose, 200, 200, TimeUnit.MILLISECONDS);    
+     //   scheduler.scheduleAtFixedRate(this::fetchGimbalPose, poseFetchInterval, poseFetchInterval, TimeUnit.MILLISECONDS);
+        log.info("Scheduled tasks started....");
+        } catch(Exception e ) { 
+            log.error("Error starting scheduled tasks : {}", e.getMessage(), e);
+        }
+    }
+
+
+
     
 private void shutdown() {
   
  shutdownScheduler();
- shutdownSaccadeScheduler();
  
 }    
 
@@ -102,10 +119,6 @@ private void shutdown() {
     public void shutdownScheduler() {
         scheduler.shutdown();
 }
-// Clean up the scheduler when no longer needed
-    public void shutdownSaccadeScheduler() {
-        saccadeScheduler.shutdown();
-}    
 
 
 
@@ -200,7 +213,7 @@ private void init() {
 //            gimbalBase.setGimbalPoseDirect(getAzimuth(), 0f, getElevation()); // Send manual pose
 //           }
          else if (getBestTrackerAgent() != null && (getBestTrackerAgent().getSupportQuality() > supportQualityThreshold)) {
-            getBestTrackerAgent().run(); // update location
+            //getBestTrackerAgent().run(); // update location
             log.warn("bestTrackerAgent supportQuality threshold:  {}, current: {} ",  supportQualityThreshold,  getBestTrackerAgent().getSupportQuality());
             gimbalBase.setGimbalPoseDirect(getBestTrackerAgent().getAzimuth(), 0f, getBestTrackerAgent().getElevation()); // Send best tracker agent pose
         } else if (getBestTrackerAgent() == null) {      
@@ -211,16 +224,16 @@ private void init() {
     
    private void goToWaypoint( float azimuth, float elevation) {
         // only move if we are no already there!
-       if ( azimuth != gimbalBase.getGimbalPose()[0] && elevation != gimbalBase.getGimbalPose()[2]) {
+   //    if ( azimuth != gimbalBase.getGimbalPose()[0] && elevation != gimbalBase.getGimbalPose()[2]) {
            log.warn("waypoit desired : {} {}  actual: {} {}", azimuth, elevation,gimbalBase.getGimbalPose()[0], gimbalBase.getGimbalPose()[2] );
            TrackerManagerEngine.setIsSaccade(true);
                 gimbalBase.setGimbalPoseDirect(azimuth, 0f, elevation); // Send to waiting position
                 // Schedule the next action after a delay
-             saccadeScheduler.schedule(() -> {
+             scheduler.schedule(() -> {
             TrackerManagerEngine.setIsSaccade(false);
             System.out.println("Delay completed, isSaccade set to false.");
              }, 200, TimeUnit.MILLISECONDS); // Delay
-       }
+  //     }
    }
     
     

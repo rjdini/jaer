@@ -22,8 +22,8 @@ public class TrackerManagerEngine {
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private TrackerAgentDrawable currentBestAgent = null;
     private FieldOfView fov = FieldOfView.getInstance();
-    private long defaultAgentLifeTimeMillis = 10000; // 10 secs
-     private long defaultEventClusterLifeTimeMillis =5000; // 2 secs
+    private long defaultAgentLifeTimeMillis = 5000; // 10 secs
+     private long defaultEventClusterLifeTimeMillis =2000; // 2 secs
      private long lifeTimeExtensionMillis = 0; // reward for good agent taking on new cluster
      private TrackerAgentDrawable lastBestAgent = null; // Reference to the previous best tracker
      private List<TrackerAgentDrawable> bestTrackerAgentList = new ArrayList<>();  
@@ -220,7 +220,7 @@ private void processClusters(List<? extends ClusterAdapter> clusters) {
     }
 
     // Step 3: Update best tracker agent
-    updateBestTrackerAgent();
+    updateBestTrackerAgentList();
 }
 
     

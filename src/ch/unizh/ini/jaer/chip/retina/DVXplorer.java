@@ -921,7 +921,7 @@ public class DVXplorer extends AETemporalConstastRetina {
     
     final public class ToggleIMU extends DVXMenuAction {
         
-        public boolean isImuEnabled = true;
+        public boolean isImuEnabled = false;
 
         public ToggleIMU() {
             super("Toggle IMU",

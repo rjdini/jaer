@@ -31,7 +31,8 @@ public class TMExerciser {
  private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(TMExerciser.class);    
 private int numberClustersAdded = 5 ;
 // Class-level variables to track the azimuth and direction
-private float currentAzimuth = 0.0f;
+private float currentAzimuth = 10.0f;
+private float currentElevation= -20.0f;
 private boolean movingTowardsNegative = true;
 private LinkedList<TestCluster> clusterList = null; // Persistent list to store clusters
     private final Random random = new Random(); // Random number generator
@@ -125,7 +126,7 @@ public  LinkedList<TestCluster> getTestClustersHorizontal() {
         float elevation = (float)(Math.random() * 20 - 10); // Range: [-10, 10]
 
         // Create random testCluster around current azimuth
-        TestCluster testCluster = new TestCluster(currentAzimuth+azimuth, elevation);
+        TestCluster testCluster = new TestCluster(currentAzimuth+azimuth, currentElevation+elevation);
         
         log.info("Test cluster: ID={}, Azimuth={}, Elevation={}",
                  testCluster.getKey(), testCluster.getAzimuth(), testCluster.getElevation());

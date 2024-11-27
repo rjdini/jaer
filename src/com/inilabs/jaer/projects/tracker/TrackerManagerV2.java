@@ -206,7 +206,8 @@ public EventPacket<? extends BasicEvent> filterPacket(EventPacket<? extends Basi
 
 private void updateTrackerManagerEngineTests() {    
     if(isEnableTestClusters) {
-        engine.updateTestClusterList(exerciser.getTestClusters(10, 38) ); 
+      //  engine.updateTestClusterList(exerciser.getTestClusters(10, -30) ); 
+         engine.updateTestClusterList(exerciser.getTestClustersHorizontal() ); 
      } 
 }
 
