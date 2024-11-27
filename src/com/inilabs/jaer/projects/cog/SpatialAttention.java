@@ -51,13 +51,16 @@ public class SpatialAttention implements KeyListener {
     private boolean enableKeyboardControl = false; // Tracks if keyboard control is active
     private boolean enableJoystickControl = true;
     private boolean enableGimbalPose = true ; 
+    private double supportQualityThreshold = 20000.0;
     
     
     private TrackerAgentDrawable bestTrackerAgent = null; // Reference to the best tracker agent
     private JoystickReader joystickReader;
 
      private ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-    private volatile boolean joystickActive = false;
+     private static final ScheduledExecutorService saccadeScheduler = Executors.newSingleThreadScheduledExecutor();
+    
+     private volatile boolean joystickActive = false;
     private final long JOYSTICK_TIMEOUT = 3000; // Timeout in milliseconds
 
     private static GimbalBase gimbalBase = GimbalBase.getInstance();
@@ -69,6 +72,7 @@ public class SpatialAttention implements KeyListener {
        // Timer for periodic updates
         this.updateTimer = new Timer(100, e -> updateGimbalPose());
         this.updateTimer.start();
+         Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
      
         init();
 }
@@ -83,6 +87,25 @@ public class SpatialAttention implements KeyListener {
     }
     return instance;
 }
+    
+private void shutdown() {
+  
+ shutdownScheduler();
+ shutdownSaccadeScheduler();
+ 
+}    
+
+  // Clean up the scheduler when no longer needed
+    public void shutdownScheduler() {
+        scheduler.shutdown();
+}
+// Clean up the scheduler when no longer needed
+    public void shutdownSaccadeScheduler() {
+        saccadeScheduler.shutdown();
+}    
+
+
+
     
 private void init() {
               
@@ -170,19 +193,34 @@ private void init() {
         
         } else if (isEnableKeyboardControl()) {
             updateAzimuthAndElevation();
-            gimbalBase.setGimbalPoseDirect(getAzimuth(), 0, getElevation()); // Send manual pose
+            gimbalBase.setGimbalPoseDirect(getAzimuth(), 0f, getElevation()); // Send manual pose
         
-        } else if (bestTrackerAgent != null && (bestTrackerAgent.getSupportQuality() > 15000.0)) {
-            log.warn("bestTrackerAgent quality:  {} ", bestTrackerAgent.getSupportQuality());
-            gimbalBase.setGimbalPoseDirect(bestTrackerAgent.getAzimuth(), 0, bestTrackerAgent.getElevation()); // Send best tracker agent pose
+        } else if (getBestTrackerAgent() != null && (getBestTrackerAgent().getSupportQuality() > supportQualityThreshold)) {
+            log.warn("bestTrackerAgent supportQuality threshold:  {}, current: {} ",  supportQualityThreshold,  getBestTrackerAgent().getSupportQuality());
+            gimbalBase.setGimbalPoseDirect(getBestTrackerAgent().getAzimuth(), 0, getBestTrackerAgent().getElevation()); // Send best tracker agent pose
         } else {
-              gimbalBase.setGimbalPoseDirect(20.0f, 0f, -30.0f); // Send to waiting position
+         
+              goToWaypoint(20.0f, -30.0f); // Send to waiting position
+      
         }
    
         }
     }
     
-   
+   private void goToWaypoint( float azimuth, float elevation) {
+        // only move if we are no already there!
+       if ( azimuth != gimbalBase.getGimbalPose()[0] && elevation != gimbalBase.getGimbalPose()[2]) {
+           TrackerManagerEngine.setIsSaccade(true);
+                gimbalBase.setGimbalPoseDirect(azimuth, 0f, elevation); // Send to waiting position
+                // Schedule the next action after a delay
+             saccadeScheduler.schedule(() -> {
+            TrackerManagerEngine.setIsSaccade(false);
+            System.out.println("Delay completed, isSaccade set to false.");
+             }, 1, TimeUnit.SECONDS); // Delay of 1 second
+       }
+       
+   }
+    
     
  
     public boolean isEnableKeyboardControl() {
@@ -292,6 +330,13 @@ private void init() {
      */
     public void setEnableGimbalPose(boolean yes) {
         this.enableGimbalPose = yes;
+    }
+
+    /**
+     * @return the bestTrackerAgent
+     */
+    public TrackerAgentDrawable getBestTrackerAgent() {
+        return bestTrackerAgent;
     }
 }
 

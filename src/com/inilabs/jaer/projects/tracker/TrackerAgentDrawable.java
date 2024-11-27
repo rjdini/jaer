@@ -331,7 +331,7 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
         int pixelSizeX = (int) (size * azimuthScale);
         int pixelSizeY = (int) (size * elevationScale);
         g2d.drawOval(x - pixelSizeX / 2, y - pixelSizeY / 2, pixelSizeX, pixelSizeY);
-        g2d.drawString(getKey(), x, y - pixelSizeY / 2);
+        g2d.drawString(getKey()+"qual: "+getSupportQuality() , x, y - pixelSizeY / 2);
 
    //     for (EventCluster cluster : clusters) {
     //        if (cluster != null) {

@@ -92,7 +92,7 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
     private LoggingStatePropertyChangeFilter loggingStateFilter;
    private TrackerManagerEngine engine; 
    private FieldOfView fov;
-   private SpatialAttention spatialAttention;
+   private SpatialAttention spatialAttention = SpatialAttention.getInstance();
    
     private int numberClustersAdded = 5 ; // sets the number of clusters generated for testing
     private TMExerciser exerciser = new TMExerciser();
@@ -368,7 +368,7 @@ private GL2 drawGimbalPoseCrossHair(GL2 gl) {
 
 private GL2 drawTargetLocation(GL2 gl) {
       float sx = chip.getSizeX() / 32;
-      TrackerAgentDrawable agent =  engine.getBestTrackerAgentDrawable(); 
+      TrackerAgentDrawable agent =  spatialAttention.getBestTrackerAgent(); 
       if (agent != null) {
   //  float[] target = getGimbalBase().getTarget()
      float pixelX = agent.getChipLocation().x;
