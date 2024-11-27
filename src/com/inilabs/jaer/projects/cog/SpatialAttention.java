@@ -22,6 +22,7 @@ import com.inilabs.jaer.gimbal.GimbalBase;
 import com.inilabs.jaer.projects.cog.JoystickReader;
 import static com.inilabs.jaer.projects.cog.JoystickReader.Axis.PITCH;
 import com.inilabs.jaer.projects.tracker.TrackerAgentDrawable;
+import com.inilabs.jaer.projects.tracker.TrackerManagerEngine;
 import com.inilabs.jaer.projects.tracker.TrackerManagerV2;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
@@ -60,7 +61,8 @@ public class SpatialAttention implements KeyListener {
     private final long JOYSTICK_TIMEOUT = 3000; // Timeout in milliseconds
 
     private static GimbalBase gimbalBase = GimbalBase.getInstance();
-    
+//    private TrackerManagerEngine engine = new TrackerManagerEngine();
+  
     private static SpatialAttention instance;
     
    private SpatialAttention() {
@@ -152,7 +154,13 @@ private void init() {
     * 
     */
     public void updateGimbalPose() {
+        // under normal operation SA simply sends the coordinates of current best trackeragent to the gimbal.
+        // However - large moves of the gimbal would lead to generation false trackers, so these moveets occur within a saccade.
+        // when TrackerManagerEngine has isSaccade true,  it does not process incomming clusters (both RCT and Test).
+        // In future we could make this more sophisticated - eg continue to attend to 'imagined' test targets.
         
+        
+        // make meovements on y if gimbal is enabled
         if(isEnableGimbalPose()) {
        
          //joystick is enabled by default, isJoystickActive provides saccadic suppression window 
@@ -164,8 +172,11 @@ private void init() {
             updateAzimuthAndElevation();
             gimbalBase.setGimbalPoseDirect(getAzimuth(), 0, getElevation()); // Send manual pose
         
-        } else if (bestTrackerAgent != null) {
+        } else if (bestTrackerAgent != null && (bestTrackerAgent.getSupportQuality() > 15000.0)) {
+            log.warn("bestTrackerAgent quality:  {} ", bestTrackerAgent.getSupportQuality());
             gimbalBase.setGimbalPoseDirect(bestTrackerAgent.getAzimuth(), 0, bestTrackerAgent.getElevation()); // Send best tracker agent pose
+        } else {
+              gimbalBase.setGimbalPoseDirect(20.0f, 0f, -30.0f); // Send to waiting position
         }
    
         }

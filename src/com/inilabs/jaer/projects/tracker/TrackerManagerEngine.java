@@ -41,12 +41,18 @@ private final CopyOnWriteArrayList<EventCluster> eventClusters = new CopyOnWrite
     private final SpatialAttention spatialAttention = SpatialAttention.getInstance();
     
     private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(TrackerManagerEngine.class);
-
+    private static boolean isSaccade = false;
+    
+    
     public TrackerManagerEngine(FieldOfView fov) {
         this.fov = fov;
          // Start periodic processing task (10 Hz)
         scheduler.scheduleAtFixedRate(this::processPeriodically, 0, 100, TimeUnit.MILLISECONDS);
     }
+
+//    public TrackerManagerEngine() {
+//       // throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+//    }
 
     
     private SpatialAttention getSpatialAttention() {
@@ -81,14 +87,16 @@ private final CopyOnWriteArrayList<EventCluster> eventClusters = new CopyOnWrite
      */
     
 public synchronized void updateRCTClusterList(List<RectangularClusterTracker.Cluster> clusters) {
-    freshDataAvailable = true;
-
+   
+    if (!isIsSaccade()) { 
     // Convert RectangularClusterTracker.Cluster to RCTClusterAdapter
     List<RCTClusterAdapter> adaptedClusters = clusters.stream()
         .map(cluster -> new RCTClusterAdapter(cluster, fov))
         .collect(Collectors.toList());
-
+    freshDataAvailable = true;
     processClusters(adaptedClusters);
+    
+    }
 }
 
  /**
@@ -99,8 +107,10 @@ public synchronized void updateRCTClusterList(List<RectangularClusterTracker.Clu
      *  newest bestest single streamin' process 22nov24
      */   
 public synchronized void updateTestClusterList(List<TestCluster> clusters) {
+    if(!isIsSaccade()) {
     freshDataAvailable = true;
     processClusters(clusters);
+    }
 }
 
 
@@ -172,16 +182,16 @@ private void processClusters(List<? extends ClusterAdapter> clusters) {
 
     private void processTrackers() {
     // Step 1: Assign clusters to agents
-    for (EventCluster cluster : eventClusters) {
-        TrackerAgentDrawable nearestAgent = findNearestAgent(cluster);
+    for (EventCluster eventCluster: eventClusters) {
+        TrackerAgentDrawable nearestAgent = findNearestAgent(eventCluster);
 
-        if (nearestAgent != null && calculateDistance(nearestAgent, cluster) <= 0.4 * fov.getFOVX()) {
-            nearestAgent.addCluster(cluster);
+        if (nearestAgent != null && calculateDistance(nearestAgent, eventCluster) <= 0.4 * fov.getFOVX()) {
+            nearestAgent.addCluster(eventCluster);
             nearestAgent.extendLifetime(lifeTimeExtensionMillis); // Reward active agents
         } else {
             // Create a new agent for clusters with no nearby agent
-            TrackerAgentDrawable newAgent = createNewAgent(cluster);
-            newAgent.addCluster(cluster);
+            TrackerAgentDrawable newAgent = createNewAgent(eventCluster);
+            newAgent.addCluster(eventCluster);
             agents.put(newAgent.getKey(), newAgent);
         }
     }
@@ -205,7 +215,6 @@ private void processClusters(List<? extends ClusterAdapter> clusters) {
             agentsToRemove.add(agent.getKey());
         }
     }
-
     // Remove expired agents
     for (String key : agentsToRemove) {
         agents.remove(key);
@@ -404,5 +413,19 @@ public synchronized TrackerAgentDrawable getBestTrackerAgentDrawable() {
             .max(Comparator.comparingDouble(TrackerAgentDrawable::getSupportQuality))
             .orElse(null);
 }
+
+    /**
+     * @return the isSaccade
+     */
+    public static boolean isIsSaccade() {
+        return isSaccade;
+    }
+
+    /**
+     * @param aIsSaccade the isSaccade to set
+     */
+    public static void setIsSaccade(boolean aIsSaccade) {
+        isSaccade = aIsSaccade;
+    }
     
 }

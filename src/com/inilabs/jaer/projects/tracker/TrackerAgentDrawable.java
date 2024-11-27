@@ -86,12 +86,41 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
 
     // Example implementation for support quality calculation
     public synchronized double getSupportQuality() {
-        // Aggregate the support quality of all associated clusters
-        List<EventCluster> clusters = getClusters(); // Assuming getClusters() exists
-        return clusters.stream()
-                .mapToDouble(EventCluster::getSupportQuality)
-                .sum();
+    List<EventCluster> clusters = getClusters(); // Assuming getClusters() exists
+
+    // If no clusters are associated, the quality score is zero
+    if (clusters.isEmpty()) {
+        return 0.0;
     }
+
+    double elapsedLifeTimeFactor = getLifetime(); // Assume this method provides elapsed life time
+    int numberOfClusters = clusters.size();
+    
+    // Aggregate the contribution of each cluster
+    double clusterContribution = clusters.stream()
+            .mapToDouble(cluster -> {
+                double clusterLifeTime = cluster.getLifetime(); // Lifetime of the cluster
+                double clusterDistance = getClusterDistance(cluster); // Distance of the cluster
+                double distanceFactor = clusterDistance > 0 ? 1.0 / clusterDistance : 1.0; // Inverse relationship
+                return clusterLifeTime * distanceFactor; // Contribution scales with lifetime and inversely with distance
+            })
+            .sum();
+
+    // Calculate overall quality
+    double qualityScore = elapsedLifeTimeFactor 
+                        + numberOfClusters 
+                        + clusterContribution;
+
+    return qualityScore;
+}
+
+       private float getClusterDistance(EventCluster cluster) {
+        float deltaAzimuth = getAzimuth() - cluster.getAzimuth();
+        float deltaElevation = getElevation() - cluster.getElevation();
+        return (float) Math.sqrt(deltaAzimuth * deltaAzimuth + deltaElevation * deltaElevation);
+           }
+    
+    
 
     // Stub for `getClusters()` - ensure this method exists to retrieve associated clusters
     public List<EventCluster> getClusters() {
@@ -107,20 +136,31 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
      * Adds a cluster to the agent's list. If the limit is exceeded, removes the
      * farthest cluster.
      */
-    public synchronized void addCluster(EventCluster cluster) {
-        clusters.add(cluster);
-        // extendLifetime(500); // Reward: extend lifetime by 500ms for novel cluster
-
-        if (clusters.size() > MAX_CLUSTERS) {
-            // Remove the farthest cluster if the limit is exceeded
-            removeFarthestCluster();
+    public synchronized void addCluster(EventCluster eventCluster) {
+    // Check if the cluster already exists in the list
+    for (EventCluster existingCluster : clusters) {
+        if (existingCluster.getKey().equals(eventCluster.getKey())) {
+            logger.debug("Cluster with key {} already exists in agent {}. Skipping addition.", 
+                        eventCluster.getKey(), getKey());
+            return; // Cluster already exists, so do not add it again
         }
-        logger.info("Cluster added to agent {}: Cluster ID = {}", getKey(), cluster.getId());
     }
 
-    public synchronized void removeCluster(EventCluster cluster) {
-        clusters.remove(cluster);
-        logger.info("Cluster removed from agent {}: Cluster ID = {}", getKey(), cluster.getId());
+    // Add the cluster as it's novel
+    clusters.add(eventCluster);
+    // extendLifetime(500); // Reward: extend lifetime by 500ms for novel cluster
+
+    if (clusters.size() > MAX_CLUSTERS) {
+        // Remove the farthest cluster if the limit is exceeded
+        removeFarthestCluster();
+    }
+
+    logger.debug("Agent: {} added eventCluster: {}", getKey(), eventCluster);
+}
+    
+    public synchronized void removeCluster(EventCluster eventCluster) {
+        clusters.remove(eventCluster);
+        logger.debug("Cluster removed from agent {}: eventCluster: {}", getKey(), eventCluster.getKey());
     }
 
  
