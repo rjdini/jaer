@@ -26,7 +26,6 @@ import com.inilabs.jaer.projects.gui.BasicTestPanel;
 import com.inilabs.jaer.projects.gui.PolarSpaceGUI;
 import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
 import com.inilabs.jaer.projects.logging.AgentLogger;
-import com.inilabs.jaer.projects.tracker.FOVUtils;
 import com.inilabs.jaer.projects.tracker.FieldOfView;
 import com.inilabs.jaer.projects.tracker.TrackerManagerEngine;
 import com.inilabs.jaer.projects.tracker.TrackerAgentDrawable;
@@ -59,7 +58,7 @@ public class TrackerManagerEngineTestPanel extends BasicTestPanel {
      
     private final TrackerManagerEngine trackerManagerEngine;
     private int numberClustersAdded = 5; // Default number of test clusters to add
-    private  FieldOfView fov = new FieldOfView();
+    private  FieldOfView fov = FieldOfView.getInstance();
   //  private FOVUtils fovutils = new FOVUtils();
     private PolarSpaceDisplay polarDisplay;
     private PolarSpaceGUI gui = getGUICallBack();
@@ -154,7 +153,7 @@ public class TrackerManagerEngineTestPanel extends BasicTestPanel {
         PolarSpaceGUI gui = getGUICallBack();
         if (gui != null) {
             PolarSpaceDisplay display = gui.getPolarSpaceDisplay();
-            FieldOfView fov = new FieldOfView();
+            FieldOfView fov = FieldOfView.getInstance();
             gui.polarDisplay.addDrawable(fov);
             gui.polarDisplay.repaint(); 
             gui.polarDisplay.setVisible(true);

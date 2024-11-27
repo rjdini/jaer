@@ -8,11 +8,11 @@ public class TestCluster implements ClusterAdapter {
     private float azimuth = 0;
     private float elevation = 0;
     private Point2D.Float location = new Point2D.Float(0,0); 
-    private FOVUtils fov = new FOVUtils();
     protected long startTime;
     private float clusterSize = 0.5f;   // nominal 0.5 deg
     private static int id = 0;
     private Color color = Color.GREEN;
+    private FieldOfView fov = FieldOfView.getInstance();
  
 
     public TestCluster(float azimuth, float elevation) {

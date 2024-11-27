@@ -44,6 +44,9 @@ public class SpatialAttention implements KeyListener {
     private float azimuth = 0; // Current azimuth for manual control
     private float roll = 0; // Current roll for manual control
     private float elevation = 0; // Current elevation for manual control
+    private float joystickAzimuth = 0; // Current azimuth for manual control
+    private float joystickRoll = 0; // Current roll for manual control
+    private float joystickElevation = 0; // Current elevation for manual control
     private final float stepSize = 1.0f; // Incremental step size for azimuth/elevation
     private final Set<Integer> keyDown = new HashSet<>(); // Tracks currently pressed keys
     private Timer updateTimer;
@@ -51,7 +54,7 @@ public class SpatialAttention implements KeyListener {
     private boolean enableKeyboardControl = false; // Tracks if keyboard control is active
     private boolean enableJoystickControl = true;
     private boolean enableGimbalPose = true ; 
-    private double supportQualityThreshold = 20000.0;
+    private double supportQualityThreshold = 15000.0;
     
     
     private TrackerAgentDrawable bestTrackerAgent = null; // Reference to the best tracker agent
@@ -119,9 +122,9 @@ private void init() {
 
         if (enableJoystickControl) {
             switch (axis) {
-                case YAW -> setAzimuth(Math.max(-180.0f, Math.min(180.0f, getAzimuth() + value * 10.0f)));
-                case ROLL -> setRoll(Math.max(-90.0f, Math.min(90.0f, getElevation() + value * 10.0f)));
-                case PITCH -> setElevation(Math.max(-90.0f, Math.min(90.0f, getElevation() + value * 10.0f)));
+                case YAW -> setJoystickAzimuth(Math.max(-180.0f, Math.min(180.0f, getJoystickAzimuth() + value * 10.0f)));
+                case ROLL -> setJoystickRoll(Math.max(-90.0f, Math.min(90.0f, getJoystickRoll() + value * 10.0f)));
+                case PITCH -> setJoystickElevation(Math.max(-90.0f, Math.min(90.0f, getJoystickElevation() + value * 10.0f)));
                 default -> log.debug("Unhandled axis: {}", axis);
             }
         }
@@ -189,36 +192,35 @@ private void init() {
          //joystick is enabled by default, isJoystickActive provides saccadic suppression window 
         if (enableJoystickControl && isJoystickActive()) {  // 
             // Apply joystick input to gimbal
-            gimbalBase.setGimbalPoseDirect(getAzimuth(), 0, getElevation());
-        
-        } else if (isEnableKeyboardControl()) {
-            updateAzimuthAndElevation();
-            gimbalBase.setGimbalPoseDirect(getAzimuth(), 0f, getElevation()); // Send manual pose
-        
-        } else if (getBestTrackerAgent() != null && (getBestTrackerAgent().getSupportQuality() > supportQualityThreshold)) {
+            gimbalBase.setGimbalPoseDirect(getJoystickAzimuth(), 0, getJoystickElevation());
+        }   
+//        else if {   
+//            if (isEnableKeyboardControl()) {
+//            updateAzimuthAndElevation();
+//            gimbalBase.setGimbalPoseDirect(getAzimuth(), 0f, getElevation()); // Send manual pose
+//           }
+         else if (getBestTrackerAgent() != null && (getBestTrackerAgent().getSupportQuality() > supportQualityThreshold)) {
+            getBestTrackerAgent().run(); // update location
             log.warn("bestTrackerAgent supportQuality threshold:  {}, current: {} ",  supportQualityThreshold,  getBestTrackerAgent().getSupportQuality());
-            gimbalBase.setGimbalPoseDirect(getBestTrackerAgent().getAzimuth(), 0, getBestTrackerAgent().getElevation()); // Send best tracker agent pose
-        } else {
-         
+            gimbalBase.setGimbalPoseDirect(getBestTrackerAgent().getAzimuth(), 0f, getBestTrackerAgent().getElevation()); // Send best tracker agent pose
+        } else if (getBestTrackerAgent() == null) {      
               goToWaypoint(20.0f, -30.0f); // Send to waiting position
-      
         }
-   
         }
     }
     
    private void goToWaypoint( float azimuth, float elevation) {
         // only move if we are no already there!
        if ( azimuth != gimbalBase.getGimbalPose()[0] && elevation != gimbalBase.getGimbalPose()[2]) {
+           log.warn("waypoit desired : {} {}  actual: {} {}", azimuth, elevation,gimbalBase.getGimbalPose()[0], gimbalBase.getGimbalPose()[2] );
            TrackerManagerEngine.setIsSaccade(true);
                 gimbalBase.setGimbalPoseDirect(azimuth, 0f, elevation); // Send to waiting position
                 // Schedule the next action after a delay
              saccadeScheduler.schedule(() -> {
             TrackerManagerEngine.setIsSaccade(false);
             System.out.println("Delay completed, isSaccade set to false.");
-             }, 1, TimeUnit.SECONDS); // Delay of 1 second
+             }, 200, TimeUnit.MILLISECONDS); // Delay
        }
-       
    }
     
     
@@ -337,6 +339,48 @@ private void init() {
      */
     public TrackerAgentDrawable getBestTrackerAgent() {
         return bestTrackerAgent;
+    }
+
+    /**
+     * @return the joystickAzimuth
+     */
+    private float getJoystickAzimuth() {
+        return joystickAzimuth;
+    }
+
+    /**
+     * @param joystickAzimuth the joystickAzimuth to set
+     */
+    private void setJoystickAzimuth(float joystickAzimuth) {
+        this.joystickAzimuth = joystickAzimuth;
+    }
+
+    /**
+     * @return the joystickRoll
+     */
+    private float getJoystickRoll() {
+        return joystickRoll;
+    }
+
+    /**
+     * @param joystickRoll the joystickRoll to set
+     */
+    private void setJoystickRoll(float joystickRoll) {
+        this.joystickRoll = joystickRoll;
+    }
+
+    /**
+     * @return the joystickElevation
+     */
+    private float getJoystickElevation() {
+        return joystickElevation;
+    }
+
+    /**
+     * @param joystickElevation the joystickElevation to set
+     */
+    private void setJoystickElevation(float joystickElevation) {
+        this.joystickElevation = joystickElevation;
     }
 }
 

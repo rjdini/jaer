@@ -19,6 +19,7 @@
 package com.inilabs.jaer.projects.tracker;
 
 import com.inilabs.jaer.gimbal.*;
+import com.inilabs.jaer.projects.gui.ActionType;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -33,15 +34,15 @@ import com.inilabs.jaer.projects.gui.DrawableListener;
 import com.inilabs.jaer.projects.logging.AgentLogger;
 import com.inilabs.jaer.projects.logging.EventType;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import org.slf4j.LoggerFactory;
 
-public class FieldOfView extends BasicDrawable implements Drawable, DrawableListener, PropertyChangeListener {
+public class FieldOfView implements Drawable, DrawableListener, PropertyChangeListener {
 
-    private static FieldOfView instance = null;
     private final PropertyChangeSupport pcs = new PropertyChangeSupport(this);
-
     private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(FieldOfView.class);
     
     // Default FOV dimensions and chip parameters
@@ -59,14 +60,49 @@ public class FieldOfView extends BasicDrawable implements Drawable, DrawableList
     private float axialRoll = 0f;
     private final List<EventCluster> clusters = new ArrayList<>();
     
-    private FOVUtils fovutils = new FOVUtils();
- 
+    private String key;
+    private int id;
+    private boolean showPath = false;
+    private float azimuth = 0.0f;
+    private float elevation = 0.0f;
+    private float size = 1.0f;
+    private Color color = Color.BLACK;
+    private BiConsumer<ActionType, String> parentCallback;
+    private final LinkedList<float[]> pathBuffer = new LinkedList<>();
+
+    protected final int maxPathLength = 20;
+    private int centerX = 0;
+    private int centerY = 0;
+    private float azimuthScale = 1.0f;
+    private float elevationScale = 1.0f;
+    private float azimuthHeading = 0f;
+    private float elevationHeading = 0f;
+    private long startTime; // agent created
+    private long lastTime; // agent closed
+    protected long lifetime0; // temp value used for extending lifetime.
+    protected long maxLifeTime = 100 ; //millisec
+    protected boolean isOrphaned = false;
+    protected boolean isExpired = false;
+    private static FieldOfView instance;
+    
     // Singleton pattern for FieldOfView instance
-    public FieldOfView() {
-        super();
-        setColor(Color.RED);
-        setSize(FOVX);
-        AgentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
+    private FieldOfView() {
+      //  super();
+        this.setColor(Color.RED);
+        this.setSize(FOVX);
+        init();
+    }
+    
+        public static FieldOfView getInstance() {
+        if (instance == null) {
+            instance = new FieldOfView();
+        }
+        return instance;
+    }
+    
+    public void init(){
+           AgentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
+           
     }
 
 //    public static FieldOfView getInstance() {
@@ -80,7 +116,11 @@ public class FieldOfView extends BasicDrawable implements Drawable, DrawableList
         AgentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
     
-   
+    // dummy to conform to Drawable - not relevant to FOV
+   public long getLifetime() {
+       return 10000;  
+   }
+    
     // Property Change Listener Implementation
     @Override
     public void propertyChange(PropertyChangeEvent evt) {
@@ -88,8 +128,8 @@ public class FieldOfView extends BasicDrawable implements Drawable, DrawableList
             float[] newFOVPose = (float[]) evt.getNewValue();
             setPose(newFOVPose[0], newFOVPose[1], newFOVPose[2] );
             // update the FOV proxy, so that those who use the proxy will have their coords updated.
-            fovutils.setPose(newFOVPose[0], newFOVPose[1], newFOVPose[2] );
-            log.info("**********  Received evt FetchedGimbalPose  azi {}, ele {}", newFOVPose[0], newFOVPose[2]);
+            setPose(newFOVPose[0], newFOVPose[1], newFOVPose[2] );
+            log.debug("Received evt FetchedGimbalPose  azi {}, ele {}", newFOVPose[0], newFOVPose[2]);
 //            setAxialYaw(newFOVPose[0]);
 //            setAxialRoll(newFOVPose[1]);
 //            setAxialPitch(newFOVPose[2]);
@@ -203,11 +243,28 @@ public class FieldOfView extends BasicDrawable implements Drawable, DrawableList
         g2d.setTransform(originalTransform);
     
 
-        // Draw path if enabled
-        if (isPathVisible()) {
-            drawPath(g2d);
+             // Draw the path if enabled
+        if (showPath) {
+            drawPath(g2d, getCenterX(), getCenterY());
         }
        
+    }
+    
+    
+    protected void drawPath(Graphics2D g2d, int centerX, int centerY) {
+        g2d.setColor(Color.GRAY);
+        float[] previousPosition = null;
+
+        for (float[] position : pathBuffer) {
+            if (previousPosition != null) {
+                int previousX = centerX + (int) (previousPosition[0] * getAzimuthScale());
+                int previousY = centerY - (int) (previousPosition[1] * getElevationScale());
+                int currentX = centerX + (int) (position[0] * getAzimuthScale());
+                int currentY = centerY - (int) (position[1] * getElevationScale());
+                g2d.drawLine(previousX, previousY, currentX, currentY);
+            }
+            previousPosition = position;
+        }
     }
     
      // pan and tilt are legacy dimensions from Tobi's pan tilt system. 
@@ -235,7 +292,7 @@ public class FieldOfView extends BasicDrawable implements Drawable, DrawableList
 // get the chip pixel at the requested absolute yaw/pitch
     public float getPixelsAtPitch(float pitch) {
         float deltaPitch = pitch - getPose()[2];
-        float pixelYAtDeltaPitch = getCenterChipY()  - (deltaPitch / getFOVY()) * getChipHeightPixels();    
+        float pixelYAtDeltaPitch = getCenterChipY()  + (deltaPitch / getFOVY()) * getChipHeightPixels();    
         return pixelYAtDeltaPitch ;   
     }
     
@@ -385,5 +442,148 @@ public class FieldOfView extends BasicDrawable implements Drawable, DrawableList
     public void setCenterChipY(float centerChipY) {
         this.centerChipY = centerChipY;
     }
-}
+    
+    
+    
+    
+    @Override
+    public String getKey() {
+        return this.key;
+    }
 
+    @Override
+    public int getId() {
+        return this.id;
+    }
+
+   
+    @Override
+    public void showPath(boolean yes) {
+        this.setShowPath(yes);
+    }
+
+
+    @Override
+    public float getAzimuth() {
+        return azimuth;
+    }
+
+    
+    @Override
+    public float getElevation() {
+        return elevation;
+    }
+
+    @Override
+    public void setSize(float sizeDegrees) {
+        this.size = sizeDegrees;
+    }
+
+    @Override
+    public float getSize() {
+        return size;
+    }
+
+    @Override
+    public void setColor(Color color) {
+        this.color = color;
+    }
+
+    @Override
+    public Color getColor() {
+        return color;
+    }
+
+    @Override
+    public void setParentCallback(BiConsumer<ActionType, String> parentCallback) {
+        this.parentCallback = parentCallback;
+    }
+
+    @Override
+    public boolean isExpired() {
+        return false; // Dummy implementation
+    }
+
+    @Override
+    public boolean isOrphaned() {
+        return false; // Dummy implementation
+    }
+
+
+    private void addCurrentPositionToPath() {
+        if (pathBuffer.size() >= 20) { // Arbitrary max path length
+            pathBuffer.removeFirst();
+        }
+        pathBuffer.addLast(new float[]{azimuth, elevation});
+    }    
+
+    /**
+     * @return the showPath
+     */
+    public boolean isShowPath() {
+        return showPath;
+    }
+
+    /**
+     * @param showPath the showPath to set
+     */
+    public void setShowPath(boolean showPath) {
+        this.showPath = showPath;
+    }
+
+    /**
+     * @return the centerX
+     */
+    public int getCenterX() {
+        return centerX;
+    }
+
+    /**
+     * @return the centerY
+     */
+    public int getCenterY() {
+        return centerY;
+    }
+
+    /**
+     * @return the azimuthScale
+     */
+    public float getAzimuthScale() {
+        return azimuthScale;
+    }
+
+    /**
+     * @return the elevationScale
+     */
+    public float getElevationScale() {
+        return elevationScale;
+    }
+
+    /**
+     * @return the azimuthHeading
+     */
+    public float getAzimuthHeading() {
+        return azimuthHeading;
+    }
+
+    /**
+     * @return the elevationHeading
+     */
+    public float getElevationHeading() {
+        return elevationHeading;
+    }
+
+    /**
+     * @return the startTime
+     */
+    public long getStartTime() {
+        return startTime;
+    }
+
+    /**
+     * @return the lastTime
+     */
+    public long getLastTime() {
+        return lastTime;
+    }
+}

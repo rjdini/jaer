@@ -4,6 +4,7 @@
  */
 package com.inilabs.jaer.projects.gui;
 
+import com.inilabs.jaer.gimbal.FieldOfView;
 import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GLAutoDrawable;
 import java.awt.Graphics2D;
@@ -40,7 +41,6 @@ import java.util.List;
 import net.sf.jaer.eventprocessing.tracking.RectangularClusterTracker.Cluster;
 import org.slf4j.LoggerFactory;
 import com.inilabs.jaer.projects.gui.PolarSpaceGUI;
-import com.inilabs.jaer.projects.tracker.FieldOfView;
 import com.inilabs.jaer.projects.logging.AgentLogger;
 import com.inilabs.jaer.projects.logging.LoggingStatePropertyChangeFilter;
 import com.inilabs.jaer.projects.tracker.TrackerAgentDrawable;

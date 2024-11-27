@@ -34,7 +34,7 @@ public class FieldOfViewTest2 {
     private static void testInitializationAtZeroPose() {
         System.out.println("Testing Initialization at Zero Pose...");
 
-        FieldOfView fov = new FieldOfView();
+        FieldOfView fov = FieldOfView.getInstance();
         fov.setPose(0f, 0f, 0f);
 
         assert fov.getAxialYaw() == 0f : "Yaw mismatch! Expected 0.0, got " + fov.getAxialYaw();
@@ -47,7 +47,7 @@ public class FieldOfViewTest2 {
     private static void testInitializationAtNonZeroPose() {
         System.out.println("Testing Initialization at Non-Zero Pose...");
 
-        FieldOfView fov = new FieldOfView();
+        FieldOfView fov = FieldOfView.getInstance();
         fov.setPose(45f, -30f, 90f);
 
         assert fov.getAxialYaw() == 45f : "Yaw mismatch! Expected 45.0, got " + fov.getAxialYaw();
@@ -60,7 +60,7 @@ public class FieldOfViewTest2 {
     private static void testPolarInitializationAtZeroPose() {
         System.out.println("Testing Polar Initialization at Zero Pose...");
 
-        FieldOfView fov = new FieldOfView();
+        FieldOfView fov = FieldOfView.getInstance();
         fov.setPose(0f, 0f, 0f);
 
         float yawAtPixel = fov.getYawAtPixel(fov.getPixelsAtYaw(0f));
@@ -75,7 +75,7 @@ public class FieldOfViewTest2 {
     private static void testPolarInitializationAtNonZeroPose() {
         System.out.println("Testing Polar Initialization at Non-Zero Pose...");
 
-        FieldOfView fov = new FieldOfView();
+        FieldOfView fov = FieldOfView.getInstance();
         fov.setPose(45f, -30f, 90f);
 
         float yawAtPixel = fov.getYawAtPixel(fov.getPixelsAtYaw(45f));
@@ -90,7 +90,7 @@ public class FieldOfViewTest2 {
     private static void testPolarInitializationWithAbsolutePixelAtZeroPose() {
         System.out.println("Testing Polar Initialization with Absolute Pixel at Zero Pose...");
 
-        FieldOfView fov = new FieldOfView();
+        FieldOfView fov = FieldOfView.getInstance();
         fov.setPose(0f, 0f, 0f);
 
         int centerX = (int)fov.getPixelsAtYaw(0f);
@@ -108,7 +108,7 @@ public class FieldOfViewTest2 {
     private static void testPolarInitializationWithAbsolutePixelAtNonZeroPose() {
         System.out.println("Testing Polar Initialization with Absolute Pixel at Non-Zero Pose...");
 
-        FieldOfView fov = new FieldOfView();
+        FieldOfView fov = FieldOfView.getInstance();
         fov.setPose(45f, -30f, 90f);
 
         int pixelX = (int)fov.getPixelsAtYaw(45f);

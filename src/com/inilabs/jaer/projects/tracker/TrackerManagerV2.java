@@ -87,11 +87,11 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
     private float[] rgb = {0, 0, 0, 0};
     private boolean shutdown = false;
     private boolean isEnableTestClusters = false;
-    private PolarSpaceGUI polarSpaceGUI = null;
+    private static PolarSpaceGUI polarSpaceGUI = null;
     private TrackerAgentDrawable trackerAgentDrawable = null;
     private LoggingStatePropertyChangeFilter loggingStateFilter;
    private TrackerManagerEngine engine; 
-   private FieldOfView fov;
+   private static FieldOfView fov = FieldOfView.getInstance();
    private SpatialAttention spatialAttention = SpatialAttention.getInstance();
    
     private int numberClustersAdded = 5 ; // sets the number of clusters generated for testing
@@ -124,12 +124,10 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
         updateGimbalTimer.start();  
         
          Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
-         
-         fov = new FieldOfView();
+        
          polarSpaceGUI = getPolarSpaceGUI();
          polarSpaceGUI.getPolarSpaceDisplay().addDrawable(fov);
-         getGimbalBase().addPropertyChangeListener(fov);
-         engine = new TrackerManagerEngine(fov);
+         engine = new TrackerManagerEngine();
          engine.setPolarSpaceDisplay(polarSpaceGUI.getPolarSpaceDisplay());
         AgentLogger.initialize();
          polarSpaceGUI.getPolarSpaceDisplay().setHeading(0, 0);
@@ -193,7 +191,7 @@ public EventPacket<? extends BasicEvent> filterPacket(EventPacket<? extends Basi
         // Encapsulate clusters into RCTClusterAdapter for visualization
        
         List<RCTClusterAdapter> adaptedClusters = limitedClusters.stream()
-    .map(cluster -> new RCTClusterAdapter(cluster, fov))
+    .map(cluster -> new RCTClusterAdapter(cluster))
     .collect(Collectors.toList());
 
         
@@ -370,30 +368,27 @@ private GL2 drawTargetLocation(GL2 gl) {
       float sx = chip.getSizeX() / 32;
       TrackerAgentDrawable agent =  spatialAttention.getBestTrackerAgent(); 
       if (agent != null) {
+       agent.run(); // update data
   //  float[] target = getGimbalBase().getTarget()
      float pixelX = agent.getChipLocation().x;
-     float pixelY = agent.getChipLocation().y;        
-//    float [] target ={targetX, targetY};
-//    log.info("GimbalPose (y,p) " + target[0] + ", " + target[1]);
-//    
-//    float pixelX = getGimbalBase().getFOV().getPixelsAtPan(target[0]);
-//    float pixelY = getGimbalBase().getFOV().getPixelsAtTilt(target[1]);
-    log.debug("Target pixels received from FOV (p,t) " + pixelX + ", " + pixelY);
-    
+     float pixelY = agent.getChipLocation().y;            
     gl.glPushMatrix();
     gl.glPushAttrib(GL2.GL_CURRENT_BIT | GL2.GL_ENABLE_BIT);
     try {
         gl.glTranslatef(pixelX, pixelY, 0);
-        gl.glColor3f(0, 1, 1);
+        gl.glColor3f(agent.getColor().getRed(), agent.getColor().getGreen(), agent.getColor().getBlue());
         DrawGL.drawCircle(gl, 0f, 0f, sx, 10);
 
         // Text annotation on clusters
         GLUT cGLUT = chip.getCanvas().getGlut();
         final int font = GLUT.BITMAP_TIMES_ROMAN_24;
+        gl.glRasterPos3f(0, -sx, 0);
+        cGLUT.glutBitmapString(font, String.format(agent.getKey()+" qual: %.1f ", agent.getSupportQuality()));
         gl.glRasterPos3f(0, sx, 0);
-  //      cGLUT.glutBitmapString(font, String.format("FOV TARG(y,p) %.1f, %.1f deg ",
-//                getFOV().getYawAtPan(target[0]),
-//                getFOV().getPitchAtTilt(target[1]) ));
+        cGLUT.glutBitmapString(font, String.format("TARG(a,e) %.1f, %.1f deg ",
+               agent.getAzimuth(),
+               agent.getElevation()));
+        
     } finally {
         gl.glPopAttrib();
         gl.glPopMatrix();

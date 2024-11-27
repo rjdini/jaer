@@ -29,10 +29,10 @@ public class RCTClusterAdapter implements ClusterAdapter {
     protected long startTime;
     //  a dummy for testing
     private Point2D.Float testLocation = new Point2D.Float(0, 0);
-    private FieldOfView fov;
+    private FieldOfView fov = FieldOfView.getInstance();
   
     // Must pass the same fov used in the TrackerManagerEngine, else Polar coords will not be correct
-    public RCTClusterAdapter(RectangularClusterTracker.Cluster cluster, FieldOfView fov) {
+    public RCTClusterAdapter(RectangularClusterTracker.Cluster cluster) {
         this.cluster = cluster;
         this.startTime = getTimestamp();
         this.fov = fov;

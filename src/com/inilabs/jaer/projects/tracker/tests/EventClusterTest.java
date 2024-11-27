@@ -24,11 +24,12 @@ import com.inilabs.jaer.projects.tracker.EventCluster;
 import com.inilabs.jaer.projects.tracker.FieldOfView;
 import com.inilabs.jaer.projects.tracker.tests.TestClusterAdapter;
 
+
 public class EventClusterTest {
-private static FieldOfView fov = new FieldOfView();
-private static long lifetimeDuration = 10000;  
+     private static long lifeDurationMillis = 2000 ;
+     private static FieldOfView fov = FieldOfView.getInstance();
     
-    
+
     public static void main(String[] args) {
         testFromClusterAdapter();
         testEncapsulation();
@@ -42,7 +43,7 @@ private static long lifetimeDuration = 10000;
         TestClusterAdapter clusterAdapter = new TestClusterAdapter("testCluster", 45.0f, 15.0f);
 
         // Create an EventCluster using fromClusterAdapter
-        EventCluster eventCluster = EventCluster.fromClusterAdapter(clusterAdapter, fov, lifetimeDuration);
+        EventCluster eventCluster = EventCluster.fromClusterAdapter(clusterAdapter, lifeDurationMillis);
 
         // Validate encapsulation
         assert eventCluster.getEnclosedCluster() == clusterAdapter :
@@ -67,7 +68,7 @@ private static long lifetimeDuration = 10000;
         TestClusterAdapter clusterAdapter = new TestClusterAdapter("cluster1", 60.0f, 30.0f);
 
         // Create an EventCluster using fromClusterAdapter
-        EventCluster eventCluster = EventCluster.fromClusterAdapter(clusterAdapter, fov, lifetimeDuration);
+        EventCluster eventCluster = EventCluster.fromClusterAdapter(clusterAdapter, lifeDurationMillis);
 
         // Modify the TestClusterAdapter
         clusterAdapter.setAzimuth(90.0f);
@@ -90,7 +91,7 @@ private static long lifetimeDuration = 10000;
         TestClusterAdapter clusterAdapter = new TestClusterAdapter("testCluster", 30.0f, 15.0f);
 
         // Create an EventCluster
-        EventCluster eventCluster = EventCluster.fromClusterAdapter(clusterAdapter, fov, lifetimeDuration);
+        EventCluster eventCluster = EventCluster.fromClusterAdapter(clusterAdapter, lifeDurationMillis);
 
         // Validate initial visibility
         assert eventCluster.isVisible() : "Visibility mismatch! Expected: true, Found: false.";

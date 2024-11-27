@@ -21,7 +21,7 @@ public class TrackerManagerEngine {
     private PolarSpaceDisplay polarSpaceDisplay;
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private TrackerAgentDrawable currentBestAgent = null;
-    private FieldOfView fov;
+    private FieldOfView fov = FieldOfView.getInstance();
     private long defaultAgentLifeTimeMillis = 10000; // 10 secs
      private long defaultEventClusterLifeTimeMillis =5000; // 2 secs
      private long lifeTimeExtensionMillis = 0; // reward for good agent taking on new cluster
@@ -44,8 +44,7 @@ private final CopyOnWriteArrayList<EventCluster> eventClusters = new CopyOnWrite
     private static boolean isSaccade = false;
     
     
-    public TrackerManagerEngine(FieldOfView fov) {
-        this.fov = fov;
+    public TrackerManagerEngine() {
          // Start periodic processing task (10 Hz)
         scheduler.scheduleAtFixedRate(this::processPeriodically, 0, 100, TimeUnit.MILLISECONDS);
     }
@@ -91,7 +90,7 @@ public synchronized void updateRCTClusterList(List<RectangularClusterTracker.Clu
     if (!isIsSaccade()) { 
     // Convert RectangularClusterTracker.Cluster to RCTClusterAdapter
     List<RCTClusterAdapter> adaptedClusters = clusters.stream()
-        .map(cluster -> new RCTClusterAdapter(cluster, fov))
+        .map(cluster -> new RCTClusterAdapter(cluster))
         .collect(Collectors.toList());
     freshDataAvailable = true;
     processClusters(adaptedClusters);
@@ -159,7 +158,7 @@ private void processClusters(List<? extends ClusterAdapter> clusters) {
 
         // If the fresh cluster's key was not found, create a new EventCluster
         if (!clusterReplaced) {
-            EventCluster newEventCluster = EventCluster.fromClusterAdapter(adapter, fov, defaultEventClusterLifeTimeMillis);
+            EventCluster newEventCluster = EventCluster.fromClusterAdapter(adapter, defaultEventClusterLifeTimeMillis);
             eventClusters.add(newEventCluster);
 
             if (polarSpaceDisplay != null) {

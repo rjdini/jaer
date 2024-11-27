@@ -58,7 +58,7 @@ public class FieldOfView extends BasicDrawable implements PropertyChangeListener
     
 
     // Singleton pattern for FieldOfView instance
-    private FieldOfView() {
+    public FieldOfView() {
         super();
         setColor(Color.RED);
         setSize(FOVX);

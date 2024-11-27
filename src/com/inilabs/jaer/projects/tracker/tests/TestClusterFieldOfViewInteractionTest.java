@@ -23,7 +23,7 @@ public class TestClusterFieldOfViewInteractionTest {
     private static void testInitializationAtZeroPose() {
         logger.info("Testing Initialization at Zero Pose...");
 
-        FieldOfView fov = new FieldOfView();
+        FieldOfView fov = FieldOfView.getInstance();
         fov.setChipDimensions(640, 480);
         fov.setPose(0, 0, 0); // Azimuth = 0, Roll = 0, Elevation = 0
 
@@ -44,7 +44,7 @@ public class TestClusterFieldOfViewInteractionTest {
     private static void testInitializationAtNonZeroPose() {
         logger.info("Testing Initialization at Non-Zero Pose...");
 
-        FieldOfView fov = new FieldOfView();
+        FieldOfView fov = FieldOfView.getInstance();
         fov.setChipDimensions(640, 480);
 
         float poseAzimuth = 10.0f;
@@ -68,7 +68,7 @@ public class TestClusterFieldOfViewInteractionTest {
     private static void testPolarInitializationAtZeroPose() {
         logger.info("Testing Polar Initialization at Zero Pose...");
 
-        FieldOfView fov = new FieldOfView();
+        FieldOfView fov = FieldOfView.getInstance();
         fov.setChipDimensions(640, 480);
         fov.setPose(0, 0, 0); // Azimuth = 0, Roll = 0, Elevation = 0
 
@@ -98,7 +98,7 @@ public class TestClusterFieldOfViewInteractionTest {
     private static void testPolarInitializationAtNonZeroPose() {
         logger.info("Testing Polar Initialization at Non-Zero Pose...");
 
-        FieldOfView fov = new FieldOfView();
+        FieldOfView fov = FieldOfView.getInstance();
         fov.setChipDimensions(640, 480);
 
         float poseAzimuth = 10.0f;
@@ -129,7 +129,7 @@ public class TestClusterFieldOfViewInteractionTest {
     private static void testPolarInitializationWithAbsolutePixelAtZeroPose() {
         logger.info("Testing Polar Initialization with Absolute Pixels at Zero Pose...");
 
-        FieldOfView fov = new FieldOfView();
+        FieldOfView fov = FieldOfView.getInstance();
         fov.setChipDimensions(640, 480);
         fov.setPose(0, 0, 0); // Azimuth = 0, Roll = 0, Elevation = 0
 
@@ -155,7 +155,7 @@ public class TestClusterFieldOfViewInteractionTest {
     private static void testPolarInitializationWithAbsolutePixelAtNonZeroPose() {
         logger.info("Testing Polar Initialization with Absolute Pixels at Non-Zero Pose...");
 
-        FieldOfView fov = new FieldOfView();
+        FieldOfView fov = FieldOfView.getInstance();
         fov.setChipDimensions(640, 480);
 
         float poseAzimuth = 10.0f;

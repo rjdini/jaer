@@ -21,6 +21,9 @@ package com.inilabs.jaer.projects.tracker.tests;
 import com.inilabs.jaer.projects.tracker.ClusterAdapter;
 import java.awt.Color;
 import java.awt.geom.Point2D;
+import com.inilabs.jaer.projects.tracker.FieldOfView;
+
+
 
 public class TestClusterAdapter implements ClusterAdapter {
     private float azimuth;
@@ -28,8 +31,8 @@ public class TestClusterAdapter implements ClusterAdapter {
     private boolean visible;
     private String key;
     private long startTime;
-    private Color color = Color.magenta;
-   
+    private static FieldOfView fov = FieldOfView.getInstance();
+
     public TestClusterAdapter(String key, float azimuth, float elevation) {
         this.key = key;
         this.azimuth = azimuth;
@@ -38,16 +41,35 @@ public class TestClusterAdapter implements ClusterAdapter {
         this.startTime = getTimestamp();
     }
 
-    public long getLifeTime() {
+     protected long getTimestamp() {
+        return System.currentTimeMillis();
+    }
+     
+       public void resetLifeTime() {
+        startTime = getTimestamp();
+    }
+
+   @Override
+  public long getLifeTime() {
         return( getTimestamp() -  startTime);
     }
+     
+     @Override
+     public boolean isRCTCluster() {
+         return false;
+     } 
+     
+     public float getSize() {
+         return 0.5f;
+     }
+     
+     @Override
+     public Color getColor(){
+         return Color.BLUE;
+     }
     
-    public float getSize() {
-        return 0.5f;
-    }
-    
-    public Color getColor() {
-        return color;
+     public void resetLifetime() {
+        startTime = getTimestamp();
     }
     
     @Override
@@ -55,23 +77,11 @@ public class TestClusterAdapter implements ClusterAdapter {
         return azimuth;
     }
 
-    public void resetLifeTime() {
-        startTime = getTimestamp();
-    }
    
-    protected long getTimestamp() {
-        return System.currentTimeMillis();
-    }
-    
     public void setAzimuth(float azimuth) {
         this.azimuth = azimuth;
     }
 
-   public boolean isRCTCluster() {
-       return false ;
-   }
-    
-    
     @Override
     public float getElevation() {
         return elevation;

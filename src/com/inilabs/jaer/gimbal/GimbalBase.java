@@ -145,7 +145,7 @@ public class GimbalBase implements GimbalInterface, LaserOnOffControl {
 
     private final float chipFOV = 30.0f; // degrees
   
-    public FieldOfView fov = new FieldOfView(); 
+    public FieldOfView fov = FieldOfView.getInstance(); 
     
     
     public GimbalBase() {
@@ -184,6 +184,7 @@ rs4controllerGUI = new RS4ControllerGUISwingV1();
 
     private void init() {
       sendDefaultGimbalPose();  
+      addPropertyChangeListener(fov);
 } 
     
     

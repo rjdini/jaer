@@ -64,7 +64,7 @@ public class EventCluster extends AgentDrawable implements Expirable, Runnable, 
  * @param cluster The Cluster object to adapt.
  * @return A new EventCluster instance based on the Cluster data.
  */
-public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter,  FieldOfView fov, long lifetimeMillis) {
+public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter, long lifetimeMillis) {
     // Optionally include transformation logic
     EventCluster eventCluster = new EventCluster();
     eventCluster.enclosedCluster = clusterAdapter; 

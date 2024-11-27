@@ -33,8 +33,8 @@ public class FieldOfViewTest {
     private static void testSingletonBehavior() {
         System.out.println("Testing Singleton Behavior...");
 
-        FieldOfView fov1 = new FieldOfView();
-        FieldOfView fov2 = new FieldOfView();
+        FieldOfView fov1 = FieldOfView.getInstance();
+        FieldOfView fov2 = FieldOfView.getInstance();
 
         assert fov1 == fov2 : "Singleton instances are not the same!";
         System.out.println("Passed: Singleton behavior.");
@@ -43,7 +43,7 @@ public class FieldOfViewTest {
     private static void testPoseSettersAndGetters() {
         System.out.println("Testing Pose Setters and Getters...");
 
-        FieldOfView fov = new FieldOfView();
+        FieldOfView fov = FieldOfView.getInstance();
 
         // Set and validate yaw
         fov.setAxialYaw(30f);
@@ -63,7 +63,7 @@ public class FieldOfViewTest {
     private static void testPixelToAngleConversions() {
         System.out.println("Testing Pixel-to-Angle Conversions...");
 
-        FieldOfView fov = new FieldOfView();
+        FieldOfView fov = FieldOfView.getInstance();
 
         // Set chip dimensions
         fov.setChipDimensions(640, 480);
@@ -86,7 +86,7 @@ public class FieldOfViewTest {
     private static void testChipDimensionUpdates() {
         System.out.println("Testing Chip Dimension Updates...");
 
-        FieldOfView fov = new FieldOfView();
+        FieldOfView fov = FieldOfView.getInstance();
 
         // Set new chip dimensions
         fov.setChipDimensions(800, 600);

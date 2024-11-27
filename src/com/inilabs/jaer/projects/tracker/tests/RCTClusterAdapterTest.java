@@ -57,7 +57,7 @@ public class RCTClusterAdapterTest {
     private static void testInitializationWithTestLocation() {
         logger.info("Testing Initialization with Test Location...");
 
-        FieldOfView fov = new FieldOfView();
+        FieldOfView fov = FieldOfView.getInstance();
         fov.setChipDimensions(640, 480);
         fov.setPose(0f, 0f, 0f);
 
@@ -96,7 +96,7 @@ public class RCTClusterAdapterTest {
     private static void testClusterLocationToAzimuthElevation() {
     logger.info("Testing Cluster Location to Azimuth/Elevation Mapping...");
 
-    FieldOfView fov = new FieldOfView();
+    FieldOfView fov = FieldOfView.getInstance();
     fov.setChipDimensions(640, 480);
     fov.setFOVX(20.0f); // Horizontal FOV
     fov.setFOVY(15.0f); // Vertical FOV

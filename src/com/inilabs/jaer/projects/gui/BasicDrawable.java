@@ -58,7 +58,7 @@ public class BasicDrawable implements Drawable, DrawableListener {
     protected long maxLifetime = 100 ; //millisec
     protected boolean isOrphaned = false;
     protected boolean isExpired = false;
-    protected static FieldOfView fov = new FieldOfView();
+    protected static FieldOfView fov = FieldOfView.getInstance();
     protected List<EventCluster> clusters = new ArrayList<>();
 
     // Default constructor, places object at (0,0) and auto-generates key
