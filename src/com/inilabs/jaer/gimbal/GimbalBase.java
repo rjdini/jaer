@@ -134,7 +134,7 @@ public class GimbalBase implements GimbalInterface, LaserOnOffControl {
     public static RS4ControllerGUISwingV1 rs4controllerGUI = null;
     
     private int poseSendInterval = 100 ; // ms
-    private int poseFetchInterval = 100 ; // ms
+    private int poseFetchInterval = 20 ; // ms
       
     private float panSum = 0.0f;
     private float tiltSum = 0.0f;
@@ -142,7 +142,9 @@ public class GimbalBase implements GimbalInterface, LaserOnOffControl {
     
     private boolean targetEnabled = false;
     private boolean enableGimbal = false ; // debugging
-
+    private float gimbalYawOffsetError = 1f;
+    private float gimbalPitchOffsetError = 1f;
+    
     private final float chipFOV = 30.0f; // degrees
   
     public FieldOfView fov = FieldOfView.getInstance(); 
@@ -633,7 +635,8 @@ rs4controllerGUI = new RS4ControllerGUISwingV1();
            currentSendYaw = yaw;
            currentSendRoll = roll;
            currentSendPitch = pitch;         
-          rs4controller.setPose(currentSendYaw, currentSendRoll, currentSendPitch); // PanTilt does not consider Roll 
+        
+           rs4controller.setPoseDirect(currentSendYaw+gimbalYawOffsetError, currentSendRoll, currentSendPitch+gimbalPitchOffsetError); // PanTilt does not consider Roll 
            
            previousSendYaw = currentSendYaw;
            previousSendRoll = currentSendRoll;
@@ -673,9 +676,9 @@ rs4controllerGUI = new RS4ControllerGUISwingV1();
           float [] previousReceivedPose = {previousYaw, previousRoll, previousPitch};
           
           // update thecurrent  values 
-           this. yaw = rs4controller.getYaw();  // (deg, in gimbal polar space)
+           this. yaw = rs4controller.getYaw()-gimbalYawOffsetError;  // (deg, in gimbal polar space)
            this.roll = rs4controller.getRoll();
-           this. pitch = rs4controller.getPitch();
+           this. pitch = rs4controller.getPitch()-gimbalPitchOffsetError;
           float [] newReceivedPose = {this.getYaw(), this.getRoll(), this.getPitch()};
           
           // notify the listeners of polar cordinate updates

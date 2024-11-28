@@ -225,6 +225,16 @@ private void updateGimbal() {
 
 
 
+ // <editor-fold defaultstate="collapsed" desc="GUI button --ControllerGUI--">
+    /**
+     * Invokes the calibration GUI Calibration values are stored persistently as
+     * preferences. Built automatically into filter parameter panel as an
+     * action.
+     */
+    public void doControllerGUI() {
+        getGimbalBase().rs4controllerGUI.setVisible(true);
+    }
+
 
     
     // <editor-fold defaultstate="collapsed" desc="GUI button --Aim--">

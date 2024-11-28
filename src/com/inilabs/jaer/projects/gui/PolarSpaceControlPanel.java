@@ -48,101 +48,207 @@ public class PolarSpaceControlPanel extends JPanel {
     // Sliders for azimuth and elevation headings
 private JSlider azimuthHeadingSlider;
 private JSlider elevationHeadingSlider;
+private JSlider azimuthWaypointSlider;
+private JSlider elevationWaypointSlider;
+private JSlider supportQualitySlider;
 
 // Reset button
 private JButton resetHeadingButton;
-private  static SpatialAttention spatialAttention  = SpatialAttention.getInstance();
+private JButton resetWaypointButton;
 
+private float defaultWaypointAzimuth;
+private float defaultWaypointElevation;
+
+private  static SpatialAttention spatialAttention  = SpatialAttention.getInstance();
 
 
 public PolarSpaceControlPanel(PolarSpaceDisplay polarDisplay, ActionListener closeAction) {
     this.polarDisplay = polarDisplay;
-    setLayout(new BorderLayout(10, 10)); // Use BorderLayout for main layout
+  //  setLayout(new BorderLayout(5, 5)); // Use BorderLayout for main layout
     AgentLogger.initialize();
 
-     // Register SpatialAttention as a KeyListener
-        polarDisplay.setFocusable(true); // Ensure polarDisplay can receive focus
-        polarDisplay.requestFocusInWindow(); // Request focus for polarDisplay
-        polarDisplay.addKeyListener(spatialAttention);
-        
-    // Center Panel: Heading Controls (Sliders and Reset Button)
-    JPanel headingGroupPanel = createHeadingGroupPanel();
+    // Register SpatialAttention as a KeyListener
+    polarDisplay.setFocusable(true); // Ensure polarDisplay can receive focus
+    polarDisplay.requestFocusInWindow(); // Request focus for polarDisplay
+    polarDisplay.addKeyListener(spatialAttention);
 
-    // West Panel: Azimuth and Elevation Range Sliders
-    JPanel rangeSettingsPanel = createRangeSettingsPanel();
+    // West Panel
+    JPanel westPanel = new JPanel(new BorderLayout(5, 5)); // Use BorderLayout    
+    westPanel.add(createHeadingGroupPanel(), BorderLayout.NORTH);
+    westPanel.add(createRangeSettingsPanel(), BorderLayout.SOUTH);
 
-    // South Panel: Control Buttons
-    JPanel buttonPanel = createButtonPanel(closeAction);
+    // Center Panel
+    JPanel centerPanel = new JPanel(new BorderLayout(5, 5)); // Use BorderLayout
+    JPanel spatialAttentionPanel = createSpatialAttentionGroupPanel();
+    spatialAttentionPanel.setPreferredSize(new Dimension(400, 200)); // Ensure a visible size
+    JPanel waypointPanel = createWaypointPanel();
+    waypointPanel.setPreferredSize(new Dimension(400, 200));
+    centerPanel.add(spatialAttentionPanel, BorderLayout.NORTH);
+    centerPanel.add(waypointPanel, BorderLayout.SOUTH);
+    centerPanel.setBackground(Color.RED);
 
-    
-     // East Panel: Logging Controls and Keyboard Control
+    // East Panel: Logging Controls and Keyboard Control
     JPanel eastPanel = new JPanel(new BorderLayout(5, 5)); // Use BorderLayout for better organization
-    eastPanel.add(createLoggingPanel(), BorderLayout.NORTH); // Logging controls at the top
-    eastPanel.add(createGimbalControlPanel(), BorderLayout.CENTER); // Logging controls at the top
-    eastPanel.add(createKeyboardControlPanel(), BorderLayout.SOUTH); // Keyboard control at the bottom
+    // Create a container for logging and gimbal controls
+    JPanel loggingAndGimbalPanel = new JPanel(new BorderLayout(5, 5));
+    loggingAndGimbalPanel.add(createLoggingPanel(), BorderLayout.NORTH);
+    loggingAndGimbalPanel.add(createGimbalControlPanel(), BorderLayout.CENTER);
+    loggingAndGimbalPanel.add(createKeyboardControlPanel(), BorderLayout.SOUTH);
+    // Add the combined panel and keyboard controls to the east panel
+    eastPanel.add(loggingAndGimbalPanel, BorderLayout.NORTH);
+    eastPanel.add(createButtonPanel(closeAction), BorderLayout.SOUTH);
 
     // Add panels to the layout
-    add(headingGroupPanel, BorderLayout.NORTH); // Center: Heading group panel
-    add(rangeSettingsPanel, BorderLayout.WEST);  // West: Range sliders
-    add(buttonPanel, BorderLayout.SOUTH);        // South: Control buttons
-    add(eastPanel, BorderLayout.EAST);        // East: Logging controls
+    add(westPanel, BorderLayout.WEST);   // West: Range sliders
+    add(centerPanel, BorderLayout.CENTER); // Center: Spatial attention group
+    add(eastPanel, BorderLayout.EAST);   // East: Logging controls
 
     // Synchronize sliders if linked
     synchronizeSliders();
 }
 
 
+
+private JPanel createSpatialAttentionGroupPanel() {
+    // Create the main panel with a vertical BoxLayout
+    JPanel spatialAttentionGroupPanel = new JPanel();
+    spatialAttentionGroupPanel.setLayout(new BoxLayout(spatialAttentionGroupPanel, BoxLayout.Y_AXIS));
+    spatialAttentionGroupPanel.setBorder(BorderFactory.createTitledBorder("Attention Controls"));
+    spatialAttentionGroupPanel.setPreferredSize(new Dimension(400, 200));
+
+    // Create a sub-panel for the Support Quality slider
+    JPanel supportQualityPanel = new JPanel(new BorderLayout(5, 5));
+    JLabel supportQualityLabel = new JLabel("Support Quality:", SwingConstants.RIGHT);
+    supportQualitySlider = createSlider(0, 100, (int)spatialAttention.getSupportQualityThreshold(), e -> updateSupportQuality());
+
+    // Configure the slider
+    supportQualitySlider.setMajorTickSpacing(10); // 
+    supportQualitySlider.setMinorTickSpacing(2);  // 
+    supportQualitySlider.setPaintTicks(true);
+    supportQualitySlider.setPaintLabels(true);
+
+    // Add the label and slider to the sub-panel
+    supportQualityPanel.add(supportQualityLabel, BorderLayout.WEST);
+    supportQualityPanel.add(supportQualitySlider, BorderLayout.CENTER);
+
+    // Add the sub-panel to the main panel
+    spatialAttentionGroupPanel.add(supportQualityPanel);
+
+    return spatialAttentionGroupPanel;
+}
+
+
+private JPanel createWaypointPanel() {
+    // Main panel with vertical BoxLayout
+    JPanel wayPointPanel = new JPanel();
+    wayPointPanel.setLayout(new BoxLayout(wayPointPanel, BoxLayout.Y_AXIS));
+    wayPointPanel.setBorder(BorderFactory.createTitledBorder("Waypoint Controls"));
+
+    wayPointPanel.setPreferredSize(new Dimension(600, 200));
+      
+    // Azimuth Waypoint Slider
+    JPanel azimuthPanel = new JPanel(new BorderLayout(5, 5));
+    azimuthPanel.add(new JLabel("Azimuth:", SwingConstants.RIGHT), BorderLayout.WEST);
+    defaultWaypointAzimuth = spatialAttention.getWaypointAzimuth();
+    azimuthWaypointSlider = createSlider(-180, 180, (int)defaultWaypointAzimuth,  e -> updateAzimuthWaypoint());
+    azimuthWaypointSlider.setMajorTickSpacing(60); // Major ticks every 20 units
+    azimuthWaypointSlider.setMinorTickSpacing(30);
+    azimuthPanel.add(azimuthWaypointSlider, BorderLayout.CENTER);
+    wayPointPanel.add(azimuthPanel);
+    
+    // Elevation Waypoint Slider
+    JPanel elevationPanel = new JPanel(new BorderLayout(5, 5));
+    elevationPanel.add(new JLabel("Elevation:", SwingConstants.RIGHT), BorderLayout.WEST);
+    defaultWaypointElevation = spatialAttention.getWaypointElevation();
+    elevationWaypointSlider = createSlider(-90, 90,  (int)defaultWaypointElevation, e -> updateElevationWaypoint());
+    elevationWaypointSlider.setMajorTickSpacing(30); // Major ticks every 20 units
+    elevationWaypointSlider.setMinorTickSpacing(10);
+    elevationPanel.add(elevationWaypointSlider, BorderLayout.CENTER);
+    wayPointPanel.add(elevationPanel);
+
+    // Reset Button Panel
+    JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+    resetWaypointButton = new JButton("Reset Azimuth/Elevation");
+    resetWaypointButton.addActionListener(e -> resetWaypoint());
+    buttonPanel.add(resetWaypointButton);
+    wayPointPanel.add(buttonPanel);
+
+    return wayPointPanel;
+}
+
+
+
 private JPanel createHeadingGroupPanel() {
-    JPanel headingGroupPanel = new JPanel(new GridLayout(0, 2, 10, 5));
+    // Main panel with vertical BoxLayout
+    JPanel headingGroupPanel = new JPanel();
+    headingGroupPanel.setLayout(new BoxLayout(headingGroupPanel, BoxLayout.Y_AXIS));
     headingGroupPanel.setBorder(BorderFactory.createTitledBorder("Heading Controls"));
 
+    headingGroupPanel.setPreferredSize(new Dimension(600, 200));
+      
     // Azimuth Heading Slider
-    JLabel azimuthHeadingLabel = new JLabel("Azimuth:", SwingConstants.RIGHT);
+    JPanel azimuthPanel = new JPanel(new BorderLayout(5, 5));
+    azimuthPanel.add(new JLabel("Azimuth:", SwingConstants.RIGHT), BorderLayout.WEST);
     azimuthHeadingSlider = createSlider(-180, 180, 0, e -> updateAzimuthHeading());
-
+    azimuthHeadingSlider.setMajorTickSpacing(60); // Major ticks every 20 units
+    azimuthHeadingSlider.setMinorTickSpacing(10);
+    azimuthPanel.add(azimuthHeadingSlider, BorderLayout.CENTER);
+    headingGroupPanel.add(azimuthPanel);
+    
     // Elevation Heading Slider
-    JLabel elevationHeadingLabel = new JLabel("Elevation:", SwingConstants.RIGHT);
+    JPanel elevationPanel = new JPanel(new BorderLayout(5, 5));
+    elevationPanel.add(new JLabel("Elevation:", SwingConstants.RIGHT), BorderLayout.WEST);
     elevationHeadingSlider = createSlider(-90, 90, 0, e -> updateElevationHeading());
+    elevationHeadingSlider.setMajorTickSpacing(30); // Major ticks every 20 units
+    elevationHeadingSlider.setMinorTickSpacing(10);
+    elevationPanel.add(elevationHeadingSlider, BorderLayout.CENTER);
+    headingGroupPanel.add(elevationPanel);
 
-    // Reset Button
+    // Reset Button Panel
+    JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
     resetHeadingButton = new JButton("Reset Azimuth/Elevation");
-    resetHeadingButton.addActionListener(e -> resetAzimuthElevation());
-
-    // Add components to panel
-    headingGroupPanel.add(azimuthHeadingLabel);
-    headingGroupPanel.add(azimuthHeadingSlider);
-    headingGroupPanel.add(elevationHeadingLabel);
-    headingGroupPanel.add(elevationHeadingSlider);
-    headingGroupPanel.add(new JLabel()); // Placeholder for alignment
-    headingGroupPanel.add(resetHeadingButton);
+    resetHeadingButton.addActionListener(e -> resetHeading());
+    buttonPanel.add(resetHeadingButton);
+    headingGroupPanel.add(buttonPanel);
 
     return headingGroupPanel;
 }
 
-private JPanel createRangeSettingsPanel() {
-    JPanel settingsPanel = new JPanel(new GridLayout(0, 2, 10, 5));
 
+private JPanel createRangeSettingsPanel() {
+    // Create the main panel with a vertical BoxLayout
+    JPanel settingsPanel = new JPanel();
+    settingsPanel.setLayout(new BoxLayout(settingsPanel, BoxLayout.Y_AXIS));
+    settingsPanel.setBorder(BorderFactory.createTitledBorder("Range Controls"));
+
+    settingsPanel.setPreferredSize(new Dimension(600, 200));
+    
     // Azimuth Range Slider
-    settingsPanel.add(new JLabel("Azimuth Range:", SwingConstants.RIGHT));
+    JPanel azimuthPanel = new JPanel(new BorderLayout(5, 5));
+    azimuthPanel.add(new JLabel("Azimuth", SwingConstants.RIGHT), BorderLayout.WEST);
     azimuthRangeSlider = createSlider(0, 150, 30, e -> updateAzimuthRange());
-    settingsPanel.add(azimuthRangeSlider);
+    azimuthPanel.add(azimuthRangeSlider, BorderLayout.CENTER);
+    settingsPanel.add(azimuthPanel);
 
     // Elevation Range Slider
-    settingsPanel.add(new JLabel("Elevation Range:", SwingConstants.RIGHT));
+    JPanel elevationPanel = new JPanel(new BorderLayout(5, 5));
+    elevationPanel.add(new JLabel("Elevation", SwingConstants.RIGHT), BorderLayout.WEST);
     elevationRangeSlider = createSlider(0, 90, 30, e -> updateElevationRange());
-    settingsPanel.add(elevationRangeSlider);
+    elevationPanel.add(elevationRangeSlider, BorderLayout.CENTER);
+    settingsPanel.add(elevationPanel);
+
+    // Link Sliders Button
+    JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+    linkSlidersButton = createToggleButton("Link Sliders", 120, 25);
+    linkSlidersButton.addActionListener(e -> slidersLinked = linkSlidersButton.isSelected());
+    buttonPanel.add(linkSlidersButton);
+    settingsPanel.add(buttonPanel);
 
     return settingsPanel;
 }
 
 private JPanel createButtonPanel(ActionListener closeAction) {
     JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
-
-    // Link Sliders Button
-    linkSlidersButton = createToggleButton("Link Sliders", 120, 25);
-    linkSlidersButton.addActionListener(e -> slidersLinked = linkSlidersButton.isSelected());
-    buttonPanel.add(linkSlidersButton);
-
     // Path Toggle Button
     pathToggleButton = createToggleButton("Show Paths", 120, 25);
     pathToggleButton.addActionListener(new PathToggleListener());
@@ -216,18 +322,6 @@ private JPanel createKeyboardControlPanel() {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 private JPanel createLoggingPanel() {
     JPanel loggingPanel = new JPanel(new GridLayout(2, 1, 5, 5));
 
@@ -260,8 +354,36 @@ private void synchronizeSliders() {
 }
 
 
-
+private void updateSupportQuality() {
+    double supportQuality = supportQualitySlider.getValue();
+    spatialAttention.setSupportQualityThreshold(supportQuality);
+}
     
+
+
+   // New methods to update headings
+private void updateAzimuthWaypoint() {
+    float azimuth = (float)azimuthHeadingSlider.getValue()   ;
+    spatialAttention.setWaypointAzimuth(azimuth); // Update display
+}
+
+private void updateElevationWaypoint() {
+    float elevation = (float)elevationHeadingSlider.getValue();
+    spatialAttention.setWaypointElevation(elevation); // Update display
+}
+
+
+// Method to reset azimuth and elevation to 0
+private void resetWaypoint() {
+  azimuthWaypointSlider.setValue((int)defaultWaypointAzimuth);
+  elevationWaypointSlider.setValue((int)defaultWaypointElevation);
+   spatialAttention.setWaypoint(defaultWaypointAzimuth, defaultWaypointElevation); // Reset heading in the display
+}
+
+
+
+
+
     // New methods to update headings
 private void updateAzimuthHeading() {
     float azimuth = (float)azimuthHeadingSlider.getValue()   ;
@@ -274,12 +396,11 @@ private void updateElevationHeading() {
 }
 
 // Method to reset azimuth and elevation to 0
-private void resetAzimuthElevation() {
+private void resetHeading() {
     azimuthHeadingSlider.setValue(0);
     elevationHeadingSlider.setValue(0);
     polarDisplay.setHeading(0, 0); // Reset heading in the display
 }
-
     
     
     

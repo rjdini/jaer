@@ -48,15 +48,15 @@ public class PolarSpaceGUI extends JFrame {
 
         // Initialize the PolarSpaceDisplay at the center
         polarDisplay = new PolarSpaceDisplay();
-        polarDisplay.setPreferredSize(new Dimension(1200, 800)); // Ensure broader width
+        polarDisplay.setPreferredSize(new Dimension(1600, 1000)); // Ensure broader width
         polarDisplay.setMinimumSize(new Dimension(1000, 800));   // Minimum size constraints
-        polarDisplay.setMaximumSize(new Dimension(1500, 1000));   // Maximum size constraints
+        polarDisplay.setMaximumSize(new Dimension(1800, 1200));   // Maximum size constraints
         add(polarDisplay, BorderLayout.CENTER);
 
         JPanel eastPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
         
         // Initialize the control panel at the bottom
-        controlPanel = new PolarSpaceControlPanel(polarDisplay, e -> dispose());
+        controlPanel = new PolarSpaceControlPanel(polarDisplay, e -> dispose()); 
         add(controlPanel, BorderLayout.SOUTH);
 
         // Initialize the DrawableDisplayPanel at the left

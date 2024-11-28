@@ -49,9 +49,11 @@ public class FieldOfView implements Drawable, DrawableListener, PropertyChangeLi
     private float focalLength = 100f;
     private float chipWidthPixels = 640f;
     private float chipHeightPixels = 480f;
-    private float centerChipX = chipWidthPixels/2f;
-     private float centerChipY = chipHeightPixels/2f;
-    private float FOVX = 20.0f;
+    private float lensOffsetWidthPixels = 0f;
+    private float lensOffsetHeightPixels = 0f;
+    private float centerChipX = chipWidthPixels/2f - lensOffsetWidthPixels;
+     private float centerChipY = (chipHeightPixels/2f) - lensOffsetHeightPixels;
+    private float FOVX = 40.0f;
     private float FOVY = FOVX * (getChipHeightPixels() / getChipWidthPixels());
 
     // Orientation (yaw, pitch, roll) in degrees
@@ -96,6 +98,7 @@ public class FieldOfView implements Drawable, DrawableListener, PropertyChangeLi
         public static FieldOfView getInstance() {
         if (instance == null) {
             instance = new FieldOfView();
+            instance.key="fov_instance";
         }
         return instance;
     }

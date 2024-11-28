@@ -47,6 +47,9 @@ public class SpatialAttention implements KeyListener {
     private float joystickAzimuth = 0; // Current azimuth for manual control
     private float joystickRoll = 0; // Current roll for manual control
     private float joystickElevation = 0; // Current elevation for manual control
+    private float waypointAzimuth = 15; // Current azimuth for manual control
+    private float waypointElevation = -40; // Current elevation for manual control
+    
     private final float stepSize = 1.0f; // Incremental step size for azimuth/elevation
     private final Set<Integer> keyDown = new HashSet<>(); // Tracks currently pressed keys
     private Timer updateTimer;
@@ -54,7 +57,7 @@ public class SpatialAttention implements KeyListener {
     private boolean enableKeyboardControl = false; // Tracks if keyboard control is active
     private boolean enableJoystickControl = true;
     private boolean enableGimbalPose = true ; 
-    private double supportQualityThreshold = 2000.0;
+    private double supportQualityThreshold = 30.0;
     
     
     private TrackerAgentDrawable bestTrackerAgent = null; // Reference to the best tracker agent
@@ -192,7 +195,7 @@ private void init() {
     * This freezes the pose, so that (eg) filters can be tested without interference of gimbal motion.
     * 
     */
-    public void updateGimbalPose() {
+    public synchronized void updateGimbalPose() {
         // under normal operation SA simply sends the coordinates of current best trackeragent to the gimbal.
         // However - large moves of the gimbal would lead to generation false trackers, so these moveets occur within a saccade.
         // when TrackerManagerEngine has isSaccade true,  it does not process incomming clusters (both RCT and Test).
@@ -212,12 +215,12 @@ private void init() {
 //            updateAzimuthAndElevation();
 //            gimbalBase.setGimbalPoseDirect(getAzimuth(), 0f, getElevation()); // Send manual pose
 //           }
-         else if (getBestTrackerAgent() != null && (getBestTrackerAgent().getSupportQuality() > supportQualityThreshold)) {
-            //getBestTrackerAgent().run(); // update location
-            log.warn("bestTrackerAgent supportQuality threshold:  {}, current: {} ",  supportQualityThreshold,  getBestTrackerAgent().getSupportQuality());
+         else if (getBestTrackerAgent() != null && (getBestTrackerAgent().getSupportQuality() > getSupportQualityThreshold())) {
+            getBestTrackerAgent().run(); // update location
+            log.warn("bestTrackerAgent supportQuality threshold:  {}, current: {} ", getSupportQualityThreshold(),  getBestTrackerAgent().getSupportQuality());
             gimbalBase.setGimbalPoseDirect(getBestTrackerAgent().getAzimuth(), 0f, getBestTrackerAgent().getElevation()); // Send best tracker agent pose
-        } else if (getBestTrackerAgent() == null) {      
-              goToWaypoint(20.0f, -30.0f); // Send to waiting position
+        } else {      
+              goToWaypoint(getWaypointAzimuth(), getWaypointElevation()); // Send to waiting position
         }
         }
     }
@@ -226,11 +229,11 @@ private void init() {
         // only move if we are no already there!
    //    if ( azimuth != gimbalBase.getGimbalPose()[0] && elevation != gimbalBase.getGimbalPose()[2]) {
            log.warn("waypoit desired : {} {}  actual: {} {}", azimuth, elevation,gimbalBase.getGimbalPose()[0], gimbalBase.getGimbalPose()[2] );
-           TrackerManagerEngine.setIsSaccade(true);
+ //          TrackerManagerEngine.setIsSaccade(true);
                 gimbalBase.setGimbalPoseDirect(azimuth, 0f, elevation); // Send to waiting position
                 // Schedule the next action after a delay
              scheduler.schedule(() -> {
-            TrackerManagerEngine.setIsSaccade(false);
+    //        TrackerManagerEngine.setIsSaccade(false);
             System.out.println("Delay completed, isSaccade set to false.");
              }, 200, TimeUnit.MILLISECONDS); // Delay
   //     }
@@ -394,6 +397,54 @@ private void init() {
      */
     private void setJoystickElevation(float joystickElevation) {
         this.joystickElevation = joystickElevation;
+    }
+
+    /**
+     * @return the supportQualityThreshold
+     */
+    public double getSupportQualityThreshold() {
+        return supportQualityThreshold;
+    }
+
+    /**
+     * @param supportQualityThreshold the supportQualityThreshold to set
+     */
+    public void setSupportQualityThreshold(double supportQualityThreshold) {
+        this.supportQualityThreshold = supportQualityThreshold;
+    }
+
+    /**
+     * @return the waypointAzimuth
+     */
+    public float getWaypointAzimuth() {
+        return waypointAzimuth;
+    }
+
+    /**
+     * @param waypointAzimuth the waypointAzimuth to set
+     */
+    public void setWaypointAzimuth(float waypointAzimuth) {
+        this.waypointAzimuth = waypointAzimuth;
+    }
+
+    
+    public void setWaypoint(float azi, float ele) {
+        waypointAzimuth = azi;
+        waypointElevation = ele;
+    }
+    
+    /**
+     * @return the waypointElevation
+     */
+    public float getWaypointElevation() {
+        return waypointElevation;
+    }
+
+    /**
+     * @param waypointElevation the waypointElevation to set
+     */
+    public void setWaypointElevation(float waypointElevation) {
+        this.waypointElevation = waypointElevation;
     }
 }
 

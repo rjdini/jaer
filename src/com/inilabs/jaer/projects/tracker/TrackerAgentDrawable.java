@@ -111,7 +111,7 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
                         + numberOfClusters 
                         + clusterContribution;
 
-    return qualityScore;
+    return qualityScore / 100;
 }
 
        private float getClusterDistance(EventCluster cluster) {
