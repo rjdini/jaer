@@ -664,7 +664,7 @@ rs4controllerGUI = new RS4ControllerGUISwingV1();
     
     
     
-    // GimbalLock  Force fetchGimbalData to always retrieve fresh data directly from RS4ControllerV2 at each scheduled interval, 
+    // FetchGimbal retrieves fresh data directly from RS4ControllerV2 at each scheduled interval, 
     // regardless of whether data has changed.
     // This ensures GimbalBase consistently reflects the latest data from RS4ControllerV2, 
     // minimizing any discrepancies between the controller’s actual and reported poses.  

@@ -21,6 +21,7 @@ package com.inilabs.jaer.projects.cog;
 import com.inilabs.jaer.gimbal.GimbalBase;
 import com.inilabs.jaer.projects.cog.JoystickReader;
 import static com.inilabs.jaer.projects.cog.JoystickReader.Axis.PITCH;
+import com.inilabs.jaer.projects.motor.DirectGimbalController;
 import com.inilabs.jaer.projects.tracker.TrackerAgentDrawable;
 import com.inilabs.jaer.projects.tracker.TrackerManagerEngine;
 import com.inilabs.jaer.projects.tracker.TrackerManagerV2;
@@ -70,7 +71,7 @@ public class SpatialAttention implements KeyListener {
      private volatile boolean joystickActive = false;
     private final long JOYSTICK_TIMEOUT = 3000; // Timeout in milliseconds
 
-    private static GimbalBase gimbalBase = GimbalBase.getInstance();
+    private static DirectGimbalController gimbal = DirectGimbalController.getInstance();
 //    private TrackerManagerEngine engine = new TrackerManagerEngine();
   
     private static SpatialAttention instance;
@@ -208,7 +209,7 @@ private void init() {
          //joystick is enabled by default, isJoystickActive provides saccadic suppression window 
         if (enableJoystickControl && isJoystickActive()) {  // 
             // Apply joystick input to gimbal
-            gimbalBase.setGimbalPoseDirect(getJoystickAzimuth(), 0, getJoystickElevation());
+            gimbal.setGimbalPoseDirect(getJoystickAzimuth(), 0, getJoystickElevation());
         }   
 //        else if {   
 //            if (isEnableKeyboardControl()) {
@@ -218,7 +219,7 @@ private void init() {
          else if (getBestTrackerAgent() != null && (getBestTrackerAgent().getSupportQuality() > getSupportQualityThreshold())) {
             getBestTrackerAgent().run(); // update location
             log.warn("bestTrackerAgent supportQuality threshold:  {}, current: {} ", getSupportQualityThreshold(),  getBestTrackerAgent().getSupportQuality());
-            gimbalBase.setGimbalPoseDirect(getBestTrackerAgent().getAzimuth(), 0f, getBestTrackerAgent().getElevation()); // Send best tracker agent pose
+            gimbal.setGimbalPose(getBestTrackerAgent().getAzimuth(), 0f, getBestTrackerAgent().getElevation()); // Send best tracker agent pose
         } else {      
               goToWaypoint(getWaypointAzimuth(), getWaypointElevation()); // Send to waiting position
         }
@@ -228,9 +229,9 @@ private void init() {
    private void goToWaypoint( float azimuth, float elevation) {
         // only move if we are no already there!
    //    if ( azimuth != gimbalBase.getGimbalPose()[0] && elevation != gimbalBase.getGimbalPose()[2]) {
-           log.warn("waypoit desired : {} {}  actual: {} {}", azimuth, elevation,gimbalBase.getGimbalPose()[0], gimbalBase.getGimbalPose()[2] );
+           log.warn("waypoint desired : {} {}  actual: {} {}", azimuth, elevation, gimbal.getGimbalPose().getYaw() , gimbal.getGimbalPose().getPitch() );
  //          TrackerManagerEngine.setIsSaccade(true);
-                gimbalBase.setGimbalPoseDirect(azimuth, 0f, elevation); // Send to waiting position
+                gimbal.setGimbalPose(azimuth, 0f, elevation); // Send to waiting position
                 // Schedule the next action after a delay
              scheduler.schedule(() -> {
     //        TrackerManagerEngine.setIsSaccade(false);
