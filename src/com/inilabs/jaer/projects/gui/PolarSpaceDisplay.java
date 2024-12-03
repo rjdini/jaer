@@ -20,8 +20,8 @@
 
 package com.inilabs.jaer.projects.gui;
 
-import com.inilabs.jaer.gimbal.FieldOfView;
-import com.inilabs.jaer.projects.tracker.TrackerManagerEngine;
+import com.inilabs.jaer.projects.environ.WaypointDrawable;
+import com.inilabs.jaer.projects.environ.WaypointManager;
 import javax.swing.JPanel;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -39,6 +39,7 @@ import java.awt.event.MouseEvent;
 import java.util.Collections;
 import javax.swing.JLabel;
 import javax.swing.ToolTipManager;
+import java.util.function.BiConsumer;
 
 public class PolarSpaceDisplay extends JPanel {
 
@@ -54,7 +55,9 @@ public class PolarSpaceDisplay extends JPanel {
     private float elevationScale = 1f;
     private JLabel coordinatesLabel;
     private static PolarSpaceDisplay instance = null;
-
+    private BiConsumer<Float, Float> waypointAdder; // Optional callback for adding waypoints
+    
+    
     private final Map<String, Drawable> drawables = Collections.synchronizedMap(new HashMap<>());
     
   private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(PolarSpaceDisplay.class);
@@ -79,8 +82,8 @@ public class PolarSpaceDisplay extends JPanel {
         setBackground(Color.WHITE);
         setPreferredSize(new Dimension(1000, 800));
     
-        azimuthHeading = 0.0f; // Heading azimuth
-        elevationHeading = 0.0f; // Heading elevation
+        setAzimuthHeading(0.0f); // Heading azimuth
+        setElevationHeading(0.0f); // Heading elevation
         azimuthRange = 30.0f; // Azimuth range on either side of the heading
         elevationRange = 30.0f; // Elevation range on either side of the heading
         width = getWidth();
@@ -107,9 +110,33 @@ public class PolarSpaceDisplay extends JPanel {
                 showTooltipOnClick(e);
             }
         });
-    
+        
+        
+  // Add MouseListener for waypoint addition
+        addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (waypointAdder != null) { // If a waypointAdder is registered
+                    int x = e.getX();
+                    int y = e.getY();
+
+                    // Convert mouse coordinates to azimuth and elevation
+                    float azimuth = (x - getCenterX()) / getAzimuthScale();
+                    float elevation = (getCenterY() - y) / getElevationScale();
+
+                    // Notify the registered waypointAdder
+                    waypointAdder.accept(azimuth, elevation);
+                }
+            }
+        });      
+              
     }
 
+    public void setWaypointAdder(BiConsumer<Float, Float> waypointAdder) {
+        this.waypointAdder = waypointAdder; // Register a waypoint manager or any handler
+    }
+    
+    
  /**
      * Re-initializes the display to its default state.
      */
@@ -143,8 +170,8 @@ public class PolarSpaceDisplay extends JPanel {
         int centerY = getHeight() / 2;
 
         // Calculate azimuth and elevation based on clicked coordinates
-        float azimuth = ((e.getX() - centerX) / getAzimuthScale()) + azimuthHeading;
-        float elevation = ((centerY - e.getY()) / getElevationScale()) + elevationHeading;
+        float azimuth = ((e.getX() - centerX) / getAzimuthScale()) + getAzimuthHeading();
+        float elevation = ((centerY - e.getY()) / getElevationScale()) + getElevationHeading();
 
         // Update tooltip text
         setToolTipText(String.format("X: %d, Y: %d | Azimuth: %.2f°, Elevation: %.2f°",
@@ -168,8 +195,8 @@ public class PolarSpaceDisplay extends JPanel {
     int    centerX = getWidth() / 2;
      int   centerY = getHeight() / 2;
 
-        float azimuth = ((e.getX() - centerX) / getAzimuthScale()) + azimuthHeading;
-        float elevation = ((centerY - e.getY()) / getElevationScale()) + elevationHeading;
+        float azimuth = ((e.getX() - centerX) / getAzimuthScale()) + getAzimuthHeading();
+        float elevation = ((centerY - e.getY()) / getElevationScale()) + getElevationHeading();
 
         return String.format("X: %d, Y: %d | Azimuth: %.2f°, Elevation: %.2f°",
                 e.getX(), e.getY(), azimuth, elevation);
@@ -181,8 +208,8 @@ public class PolarSpaceDisplay extends JPanel {
     // Obtain the current transformation parameters from PolarSpaceDisplay
     float azimuthScale = getAzimuthScale();          // Pixels per degree for azimuth
     float elevationScale = getElevationScale();      // Pixels per degree for elevation
-    float azimuthHeading = this.azimuthHeading;      // Current azimuth heading in degrees
-    float elevationHeading = this.elevationHeading;  // Current elevation heading in degrees
+    float azimuthHeading = this.getAzimuthHeading();      // Current azimuth heading in degrees
+    float elevationHeading = this.getElevationHeading();  // Current elevation heading in degrees
 
     int centerX = getWidth() / 2; // Horizontal center of the display in pixels
     int centerY = getHeight() / 2; // Vertical center of the display in pixels
@@ -227,8 +254,8 @@ public class PolarSpaceDisplay extends JPanel {
     
 
     public void setHeading(float azimuth, float elevation) {
-        this.azimuthHeading = azimuth;
-        this.elevationHeading = elevation;
+        this.setAzimuthHeading(azimuth);
+        this.setElevationHeading(elevation);
         notifyTransformListeners();
         repaint();
     }
@@ -315,7 +342,7 @@ public synchronized Drawable getDrawableByKey(String key) {
         centerY = getHeight() / 2;
 
         for (Drawable drawable : drawables.values()) {
-            drawable.onTransformChanged(azimuthScale, elevationScale, azimuthHeading, elevationHeading, centerX, centerY);
+            drawable.onTransformChanged(getAzimuthScale(), getElevationScale(), getAzimuthHeading(), getElevationHeading(), getCenterX(), getCenterY());
         }
     }
     
@@ -341,7 +368,7 @@ public synchronized boolean containsDrawable(Drawable drawable) {
         repaint();
     }
    
-    
+ 
      public synchronized void removeAllDrawables() {
         drawables.clear();
         repaint();
@@ -357,8 +384,8 @@ protected synchronized void paintComponent(Graphics g) {
     int centerY = height / 2;
 
     
-    int horizonX =  centerX + (int) ((0 - azimuthHeading * getAzimuthScale()));
-    int horizonY =  centerY - (int) ((0 - elevationHeading * getElevationScale()));  
+    int horizonX =  getCenterX() + (int) ((0 - getAzimuthHeading() * getAzimuthScale()));
+    int horizonY =  centerY - (int) ((0 - getElevationHeading() * getElevationScale()));  
     
     // Paint the upper half pale blue
     g2d.setColor(new Color(173, 216, 230, 100)); // Pale blue with alpha for translucency
@@ -373,10 +400,10 @@ protected synchronized void paintComponent(Graphics g) {
     g2d.fillOval(getWidth() / 2 - 3, centerY - 3, 6, 6);
 
     // Draw azimuth and elevation scale bars centered at the heading point
-    ScaleBar azimuthScaleBar = new ScaleBar(true, (int) azimuthRange, getAzimuthScale(), azimuthHeading);
+    ScaleBar azimuthScaleBar = new ScaleBar(true, (int) azimuthRange, getAzimuthScale(), getAzimuthHeading());
     azimuthScaleBar.draw(g2d, getWidth() / 2, centerY);
 
-    ScaleBar elevationScaleBar = new ScaleBar(false, (int) elevationRange, getElevationScale(), elevationHeading);
+    ScaleBar elevationScaleBar = new ScaleBar(false, (int) elevationRange, getElevationScale(), getElevationHeading());
     elevationScaleBar.draw(g2d, getWidth() / 2, centerY);
 
     // Draw all drawables
@@ -395,6 +422,34 @@ protected synchronized void paintComponent(Graphics g) {
     g2d.drawLine(getWidth() / 2, 0, getWidth() / 2, getHeight()); // Vertical line
     g2d.drawLine(0, centerY, getWidth(), centerY); // Horizontal line
 }
+
+    /**
+     * @return the azimuthHeading
+     */
+    public float getAzimuthHeading() {
+        return azimuthHeading;
+    }
+
+    /**
+     * @return the elevationHeading
+     */
+    public float getElevationHeading() {
+        return elevationHeading;
+    }
+
+    /**
+     * @return the centerX
+     */
+    public int getCenterX() {
+        return centerX;
+    }
+
+    /**
+     * @return the centerY
+     */
+    public int getCenterY() {
+        return centerY;
+    }
 
 }
 

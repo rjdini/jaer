@@ -16,19 +16,32 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
-
-
 package com.inilabs.jaer.projects.motor;
 
+import org.slf4j.LoggerFactory;
+
 public class JoystickController implements JoystickReader.JoystickListener {
-    private final DirectGimbalController gimbal;
+    private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(JoystickController.class);
+    private static DirectGimbalController gimbal;
     private float yaw = 0.0f;
     private float pitch = 0.0f;
     private float roll = 0.0f;
 
-    public JoystickController() {
-        this.gimbal = DirectGimbalController.getInstance();
+    private static JoystickController instance;
+    
+    private JoystickController(DirectGimbalController gimbal) {
+    }   
+    
+     // Get the singleton instance
+    public static synchronized JoystickController getInstance(DirectGimbalController gimbal) {
+        if (instance == null) {
+            instance = new JoystickController(gimbal);
+            instance.gimbal = gimbal;
+        }
+        return instance;
     }
+
+    
 
     public void start() {
         // Create and start the JoystickReader
@@ -51,9 +64,20 @@ public class JoystickController implements JoystickReader.JoystickListener {
     public void onButtonPress(JoystickReader.Button button, boolean pressed) {
         if (pressed) {
             switch (button) {
-                case BUTTON1 -> System.out.println("Button 1 pressed: Resetting gimbal pose.");
-                case BUTTON2 -> System.out.println("Button 2 pressed: Performing custom action.");
+                case BUTTON1 -> {
+                    System.out.println("Button 1 pressed: Setting gimbal to default pose.");
+                    gimbal.setDefaultPose(new Pose(yaw, roll, pitch));
+                }
+                case BUTTON2 -> {
+                    System.out.println("Button 2 pressed: Disabling gimbal pose.");
+                    gimbal.setGimbalPoseEnabled(false);
+                }
                 default -> System.err.println("Unknown button: " + button);
+            }
+        } else {
+            if (button == JoystickReader.Button.BUTTON2) {
+                System.out.println("Button 2 released: Enabling gimbal pose.");
+                gimbal.setGimbalPoseEnabled(true);
             }
         }
     }
@@ -63,3 +87,4 @@ public class JoystickController implements JoystickReader.JoystickListener {
         System.out.printf("Updated Gimbal Pose - Yaw: %.2f°, Roll: %.2f°, Pitch: %.2f°%n", yaw, roll, pitch);
     }
 }
+

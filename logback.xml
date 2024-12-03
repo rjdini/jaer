@@ -1,4 +1,4 @@
-<configuration debug="true">
+<configuration>
 
     <!-- Console Appender -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
@@ -41,9 +41,8 @@
     </logger>
 
     <!-- Root Logger: logs to both Console and General File -->
-    <root level="warn">
+    <root level="INFO">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="GENERAL_FILE"/>
     </root>
 </configuration>
-

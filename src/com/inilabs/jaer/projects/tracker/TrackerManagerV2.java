@@ -4,15 +4,12 @@
  */
 package com.inilabs.jaer.projects.tracker;
 
-import com.inilabs.jaer.projects.gui.*;
 import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GLAutoDrawable;
 import java.awt.Graphics2D;
 import java.awt.geom.Point2D;
 
-import java.util.TimerTask;
 import com.jogamp.opengl.GL;
-
 import net.sf.jaer.Description;
 import net.sf.jaer.DevelopmentStatus;
 import net.sf.jaer.chip.AEChip;
@@ -22,33 +19,19 @@ import net.sf.jaer.eventprocessing.EventFilter2DMouseAdaptor;
 import net.sf.jaer.eventprocessing.FilterChain;
 import net.sf.jaer.eventprocessing.tracking.RectangularClusterTracker;
 import net.sf.jaer.graphics.FrameAnnotater;
-import net.sf.jaer.hardwareinterface.HardwareInterfaceException;
 import com.jogamp.opengl.util.gl2.GLUT;
-import net.sf.jaer.eventprocessing.tracking.ClusterInterface;
-import net.sf.jaer.eventprocessing.tracking.ClusterPathPoint;
 import net.sf.jaer.util.DrawGL;
 import net.sf.jaer.util.EngineeringFormat;
-import net.sf.jaer.util.filter.LowpassFilter;
-
-import com.inilabs.jaer.gimbal.GimbalAimer;
-import com.inilabs.jaer.gimbal.GimbalAimerGUI;
-import com.inilabs.jaer.gimbal.GimbalBase;
 import com.inilabs.jaer.projects.cog.SpatialAttention;
-import java.awt.Color;
 import java.awt.Point;
 import java.awt.event.MouseEvent;
 import java.beans.PropertyChangeSupport;
-import java.util.Iterator;
 import java.util.List;
-import net.sf.jaer.eventprocessing.tracking.RectangularClusterTracker.Cluster;
 import org.slf4j.LoggerFactory;
 import com.inilabs.jaer.projects.gui.PolarSpaceGUI;
 import com.inilabs.jaer.projects.logging.AgentLogger;
 import com.inilabs.jaer.projects.logging.LoggingStatePropertyChangeFilter;
-import com.inilabs.jaer.projects.tracker.RCTClusterAdapter;
-import com.inilabs.jaer.projects.tracker.TrackerAgentDrawable;
-import com.inilabs.jaer.projects.tracker.TrackerManagerEngine;
-import java.util.LinkedList;
+import com.inilabs.jaer.projects.motor.DirectGimbalController;
 import java.util.Timer;
 import java.util.stream.Collectors;
 
@@ -68,7 +51,7 @@ import java.util.stream.Collectors;
  * @author tobi, rjd
  */
 @DevelopmentStatus(DevelopmentStatus.Status.Experimental)
-@Description("Rev 21Nov24: Rev 0.0.1  RS4Ronin tracks real and synthtic targets in PolarSpace")
+@Description("Rev 3Dec24:  RS4Ronin tracks real and synthtic targets in PolarSpace")
 public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements FrameAnnotater {
 
     private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(TrackerManagerV2.class);
@@ -78,29 +61,24 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
     Point2D.Float targetLocation = null;
     RectangularClusterTracker.Cluster targetCluster = null;
 
-    private boolean mousePressed = false;
-    private boolean shiftPressed = false;
-    private boolean ctlPressed = false;
-    private boolean altPressed = false;
-    private Point mousePoint = null;
     private String who = "";  // the name of  this class, for locking gimbal access (if necessary) 
     private float[] rgb = {0, 0, 0, 0};
-    private boolean shutdown = false;
     private boolean isEnableTestClusters = false;
     private static PolarSpaceGUI polarSpaceGUI = null;
     private TrackerAgentDrawable trackerAgentDrawable = null;
-    private LoggingStatePropertyChangeFilter loggingStateFilter;
+    private final LoggingStatePropertyChangeFilter loggingStateFilter;
    private TrackerManagerEngine engine; 
-   private static FieldOfView fov = FieldOfView.getInstance();
-   private SpatialAttention spatialAttention = SpatialAttention.getInstance();
+   private static FieldOfView fov;
+   private final SpatialAttention spatialAttention;
    
-    private int numberClustersAdded = 5 ; // sets the number of clusters generated for testing
+    private final int numberClustersAdded = 5 ; // sets the number of clusters generated for testing
     private TMExerciser exerciser = new TMExerciser();
     private TrackerAgentDrawable primaryTrackerAgent;
      EngineeringFormat fmt = new EngineeringFormat();
      
     Timer timer = new Timer();
-    private GimbalBase gimbalBase; 
+   // private GimbalBase gimbalBase; 
+      private static DirectGimbalController gimbal;
 
     public TrackerManagerV2(AEChip chip) {
         super(chip);
@@ -112,19 +90,20 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
         tracker.getSupport().addPropertyChangeListener(this);
         filterChain.add(loggingStateFilter);
         filterChain.add(tracker);
-        gimbalBase = new GimbalBase();
+        fov = FieldOfView.getInstance();
+        gimbal = DirectGimbalController.getInstance();
+        gimbal.addPropertyChangeListener(fov);
         setEnclosedFilterChain(filterChain);
 
         who = "TargetManager";
         support = new PropertyChangeSupport(this);
         
-         javax.swing.Timer updateTestTimer = new javax.swing.Timer(200, e ->   updateTrackerManagerEngineTests()) ;
-        updateTestTimer.start();  
-         javax.swing.Timer updateGimbalTimer = new javax.swing.Timer(200, e ->   updateGimbal()) ;
-        updateGimbalTimer.start();  
+         javax.swing.Timer updateTestTimer = new javax.swing.Timer(100, e ->   updateTrackerManagerEngineTests()) ;
+        updateTestTimer.start();
         
          Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
         
+         spatialAttention = SpatialAttention.getInstance();
          polarSpaceGUI = getPolarSpaceGUI();
          polarSpaceGUI.getPolarSpaceDisplay().addDrawable(fov);
          engine = new TrackerManagerEngine();
@@ -138,8 +117,8 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
        log.info("Shutting down TargetManager...");
 } 
    
-   private GimbalBase getGimbalBase() {
-    return gimbalBase;
+   private DirectGimbalController getGimbal() {
+    return gimbal;
 } 
    
    private FieldOfView getFOV() {
@@ -180,7 +159,7 @@ public EventPacket<? extends BasicEvent> filterPacket(EventPacket<? extends Basi
 
     // Get visible clusters from the RCT tracker
     List<RectangularClusterTracker.Cluster> visibleClusters = tracker.getVisibleClusters();
-    log.info("^^^^^^^^^^Number of visible clusters  = {}", visibleClusters.size() );
+ 
     if (!visibleClusters.isEmpty()) {
         // Adapt the RCT tracker JAER clusters and pass them to the TrackerManagerEngine 
         // Optionally limit the number of clusters for testing
@@ -214,13 +193,9 @@ private void updateTrackerManagerEngineTests() {
 private void setPrimaryTrackerAgent( TrackerAgentDrawable agent ) {
 primaryTrackerAgent = agent;
 }
+
 private TrackerAgentDrawable getPrimaryTrackerAgent() {
 return primaryTrackerAgent ;
-}
-
-
-private void updateGimbal() {
-//    getSpatialAttention().updateGimbalPose();
 }
 
 
@@ -232,7 +207,7 @@ private void updateGimbal() {
      * action.
      */
     public void doControllerGUI() {
-        getGimbalBase().rs4controllerGUI.setVisible(true);
+        getGimbal().rs4controllerGUI.setVisible(true);
     }
 
 
@@ -365,8 +340,8 @@ private GL2 drawGimbalPoseCrossHair(GL2 gl) {
         // Move the raster position just above the crosshair
         gl.glRasterPos3f(0, sy2 + 10, 0); // Offset by 10 pixels above crosshair
         cGLUT.glutBitmapString(font, String.format("FOV(y,p) %.1f, %.1f deg ",
-                getGimbalBase().getYaw(),
-                getGimbalBase().getPitch()));
+                getGimbal().getGimbalPose().getYaw(),
+                getGimbal().getGimbalPose().getPitch()));
    
     } finally {
         gl.glPopMatrix();

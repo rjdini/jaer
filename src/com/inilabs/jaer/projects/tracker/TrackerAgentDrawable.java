@@ -52,6 +52,9 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
     private long startTime;
     private long maxLifetime;
 
+    private boolean supportQualityTestEnabled = false;
+    private double mockSupportQuality = 50;
+    
     // private List<EventCluster> clusters = new ArrayList<>();
     //  private float azimuth; // Current azimuth position
     //  private float elevation; // Current elevation position
@@ -64,13 +67,12 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
         this.maxLifetime = lifetimeMillis; // Set initial expiration
         this. lastMovementTime = getTimestamp();
       
-        this.logger.info("TrackerAgentDrawable created with key: {} at startTime: {}", getKey(), startTime);
-        this.agentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
+        TrackerAgentDrawable.logger.info("TrackerAgentDrawable created with key: {} at startTime: {}", getKey(), startTime);
+        AgentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
     
     public TrackerAgentDrawable() {
     super();    
-    System.out.println(" TAD constructor key: " + getKey() + " ID: " + getId() );
 }
     
 
@@ -84,8 +86,21 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
         return loggingEnabled;
     }
 
+    public void enableSupportQualltyTests(boolean yes) {
+        supportQualityTestEnabled = yes;
+    }
+    
+    // used for testing
+    public void setMockSupportQuality(double quality) {
+        mockSupportQuality = quality ; 
+    }
+    
     // Example implementation for support quality calculation
     public synchronized double getSupportQuality() {
+        if (supportQualityTestEnabled) {
+            return mockSupportQuality ;
+        }
+        
     List<EventCluster> clusters = getClusters(); // Assuming getClusters() exists
 
     // If no clusters are associated, the quality score is zero

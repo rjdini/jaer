@@ -18,7 +18,6 @@
  */
 package com.inilabs.jaer.projects.motor.tests;
 
-import com.inilabs.jaer.projects.cog.tests.*;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;

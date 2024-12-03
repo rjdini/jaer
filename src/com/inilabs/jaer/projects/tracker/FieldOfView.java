@@ -18,7 +18,6 @@
  */
 package com.inilabs.jaer.projects.tracker;
 
-import com.inilabs.jaer.gimbal.*;
 import com.inilabs.jaer.projects.gui.ActionType;
 import java.awt.Color;
 import java.awt.Graphics;
@@ -53,7 +52,7 @@ public class FieldOfView implements Drawable, DrawableListener, PropertyChangeLi
     private float lensOffsetHeightPixels = 0f;
     private float centerChipX = chipWidthPixels/2f - lensOffsetWidthPixels;
      private float centerChipY = (chipHeightPixels/2f) - lensOffsetHeightPixels;
-    private float FOVX = 40.0f;
+    private float FOVX = 30.0f;
     private float FOVY = FOVX * (getChipHeightPixels() / getChipWidthPixels());
 
     // Orientation (yaw, pitch, roll) in degrees
@@ -130,14 +129,7 @@ public class FieldOfView implements Drawable, DrawableListener, PropertyChangeLi
         if ("FetchedGimbalPose".equals(evt.getPropertyName())) {
             float[] newFOVPose = (float[]) evt.getNewValue();
             setPose(newFOVPose[0], newFOVPose[1], newFOVPose[2] );
-            // update the FOV proxy, so that those who use the proxy will have their coords updated.
-            setPose(newFOVPose[0], newFOVPose[1], newFOVPose[2] );
-            log.debug("Received evt FetchedGimbalPose  azi {}, ele {}", newFOVPose[0], newFOVPose[2]);
-//            setAxialYaw(newFOVPose[0]);
-//            setAxialRoll(newFOVPose[1]);
-//            setAxialPitch(newFOVPose[2]);
-
-    
+            log.debug("Received evt FetchedGimbalPose  azi {}, ele {}", newFOVPose[0], newFOVPose[2]);    
         }
     }
     

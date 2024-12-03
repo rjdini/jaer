@@ -31,7 +31,7 @@ public class StepInputTest {
  //       Gimbal gimbal = new Gimbal();
   //      GimbalController controller = new GimbalController(gimbal, 0.4f, 0.0f, 0.000f);
 
-  DirectGimbalController gimbalController = new DirectGimbalController();
+  DirectGimbalController gimbalController = DirectGimbalController.getInstance();
   
         // Create GUI for visualization
         JFrame frame = new JFrame("Step Input Test");

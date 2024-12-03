@@ -22,7 +22,6 @@
  */
 package com.inilabs.jaer.projects.gui;
 
-import com.inilabs.jaer.gimbal.GimbalBase;
 import com.inilabs.jaer.projects.cog.SpatialAttention;
 import javax.swing.*;
 import javax.swing.event.ChangeListener;
@@ -30,6 +29,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import com.inilabs.jaer.projects.logging.AgentLogger;
+import com.inilabs.jaer.projects.motor.KeyboardController;
 
 public class PolarSpaceControlPanel extends JPanel {
 
@@ -60,6 +60,7 @@ private float defaultWaypointAzimuth;
 private float defaultWaypointElevation;
 
 private  static SpatialAttention spatialAttention  = SpatialAttention.getInstance();
+private  static KeyboardController keyboardController  = new KeyboardController();
 
 
 public PolarSpaceControlPanel(PolarSpaceDisplay polarDisplay, ActionListener closeAction) {
@@ -70,7 +71,7 @@ public PolarSpaceControlPanel(PolarSpaceDisplay polarDisplay, ActionListener clo
     // Register SpatialAttention as a KeyListener
     polarDisplay.setFocusable(true); // Ensure polarDisplay can receive focus
     polarDisplay.requestFocusInWindow(); // Request focus for polarDisplay
-    polarDisplay.addKeyListener(spatialAttention);
+    polarDisplay.addKeyListener(keyboardController);
 
     // West Panel
     JPanel westPanel = new JPanel(new BorderLayout(5, 5)); // Use BorderLayout    
@@ -296,17 +297,17 @@ private JPanel createKeyboardControlPanel() {
     JButton keyboardControlButton = new JButton("Keyboard Control OFF");
     keyboardControlButton.setBackground(Color.RED);
     keyboardControlButton.setOpaque(true);
-    spatialAttention.setEnableKeyboardControl(false);
+    keyboardController.setEnableKeyboardControl(false);
     keyboardControlButton.addActionListener(e -> {
    
-        if (!spatialAttention.isEnableKeyboardControl()) {
-            spatialAttention.setEnableKeyboardControl(true);
+        if (!keyboardController.isEnableKeyboardControl()) {
+            keyboardController.setEnableKeyboardControl(true);
             keyboardControlButton.setText("Keyboard Control ON");
             keyboardControlButton.setBackground(Color.GREEN);
             polarDisplay.setFocusable(true);
             polarDisplay.requestFocusInWindow(); // Ensure focus for keyboard input
         } else {
-            spatialAttention.setEnableKeyboardControl(false);
+            keyboardController.setEnableKeyboardControl(false);
             keyboardControlButton.setText("Keyboard Control OFF");
             keyboardControlButton.setBackground(Color.RED);
         }

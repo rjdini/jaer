@@ -19,7 +19,10 @@
 package com.inilabs.jaer.projects.motor;
 
 import com.inilabs.birdland.gimbal.RS4ControllerV2;
+import static com.inilabs.jaer.gimbal.GimbalBase.rs4controllerGUI;
+import com.inilabs.jaer.gimbal.RS4ControllerGUISwingV1;
 import com.inilabs.jaer.projects.tracker.FieldOfView;
+import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -30,13 +33,12 @@ public class DirectGimbalController {
  
     private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(DirectGimbalController.class);
 
-    private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
-    private static RS4ControllerV2 rs4controller = RS4ControllerV2.getInstance();
+    private static RS4ControllerV2 rs4controller;
+    public static RS4ControllerGUISwingV1 rs4controllerGUI;
     private Pose currentPose = new Pose(0.0f, 0.0f, 0.0f);
     private volatile float targetYaw = 0, targetRoll = 0, targetPitch = 0;
     private final PropertyChangeSupport pcs = new PropertyChangeSupport(this);
     private static DirectGimbalController instance;
-    private static FieldOfView fov = FieldOfView.getInstance();
     private float previousSendYaw = 0f;
     private float previousSendRoll = 0f;
     private float previousSendPitch = 0f;
@@ -60,13 +62,14 @@ public class DirectGimbalController {
     
     private static final float gimbalYawOffsetError = 0f;
     private static final float gimbalPitchOffsetError = 0f;
-    
+    private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
     
     // Constructor
-    public DirectGimbalController() {
+   private DirectGimbalController() {
+        super();
         Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
         // Run at 10 Hz (100 ms interval)
-        executor.scheduleAtFixedRate(this::updateGimbal, 0, 50, TimeUnit.MILLISECONDS);
+        executor.scheduleAtFixedRate(this::updateGimbal, 100, 100, TimeUnit.MILLISECONDS);
        init();
     }
     
@@ -78,9 +81,18 @@ public class DirectGimbalController {
     }
     
        private void init() {
+      rs4controller = RS4ControllerV2.getInstance();
+      rs4controllerGUI = new RS4ControllerGUISwingV1();     
       sendDefaultGimbalPose();  
-      pcs.addPropertyChangeListener(fov);
 } 
+       
+        public void addPropertyChangeListener(PropertyChangeListener listener) {
+        this.pcs.addPropertyChangeListener(listener);
+    }
+
+    public void removePropertyChangeListener(PropertyChangeListener listener) {
+        this.pcs.removePropertyChangeListener(listener);
+    }
         
  public void sendDefaultGimbalPose(){   
      setGimbalPoseDirect(getDefaultPose());
@@ -108,12 +120,10 @@ public class DirectGimbalController {
     // periodic update of the RS4 Gimbal state 
     private synchronized void updateGimbal() {
         fetchGimbalPose();  
-         currentPose = new Pose(currentYaw, currentRoll, currentPitch ); 
-        log.info("Current gimbal pose: (y, r, p)  {}, {}, {}",  currentYaw, currentRoll, currentPitch);
         
-        if(isGimbalPoseEnabled()) { 
-        this.setGimbalPoseDirect(targetYaw, targetRoll, targetPitch);  
-        }
+       if(isGimbalPoseEnabled()) { 
+        setGimbalPoseDirect(targetYaw, targetRoll, targetPitch);
+      }
     }
     
     
@@ -134,11 +144,11 @@ public class DirectGimbalController {
            currentPitch = rs4controller.getPitch()-gimbalPitchOffsetError;
           float [] newReceivedPose = {currentYaw, currentRoll, currentPitch};
           
+          currentPose = new Pose(currentYaw, currentRoll, currentPitch ); 
+   
           // notify the listeners of polar cordinate updates
            pcs.firePropertyChange("FetchedGimbalPose", previousReceivedPose, newReceivedPose);    
-           log.info("Fetched RS4Controller pose (y,r,p)  {}, {}, {}", currentYaw, currentRoll, currentPitch );
-    //      updateGimbalPoseAsPanTilt();
-      // }
+           log.debug("Fetched RS4Controller pose (y,r,p)  {}, {}, {}", currentYaw, currentRoll, currentPitch );          
     }
 
     
@@ -160,9 +170,8 @@ public class DirectGimbalController {
            previousSendRoll = currentSendRoll;
            previousSendPitch = currentSendPitch;
            float [] newSendPose = {currentSendYaw, currentSendRoll,  currentSendPitch};
-           this.pcs.firePropertyChange("SendGimbalPose", previousSendPose, newSendPose);  
-            
-            log.info("SendGimbalPoseDirect (y,r,p) " + currentSendYaw + ",  " + currentSendRoll + ", " + currentSendPitch );
+           this.pcs.firePropertyChange("SendGimbalPose", previousSendPose, newSendPose); 
+            log.debug("SendGimbalPoseDirect (y,r,p)  {}, {}, {}", currentSendYaw, currentSendRoll, currentSendPitch );
     }
          
      
@@ -213,4 +222,9 @@ public class DirectGimbalController {
     public void setGimbalPoseEnabled(boolean gimbalPoseEnabled) {
         this.gimbalPoseEnabled = gimbalPoseEnabled;
     }
+    
+     public RS4ControllerGUISwingV1 getRS4ControllerGUI() {
+        return rs4controllerGUI;
+    }
+    
 }

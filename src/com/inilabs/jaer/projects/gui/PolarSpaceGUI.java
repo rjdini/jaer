@@ -18,8 +18,7 @@
  */
 package com.inilabs.jaer.projects.gui;
 
-import com.inilabs.jaer.gimbal.GimbalBase;
-import com.inilabs.jaer.projects.cog.SpatialAttention;
+
 import javax.swing.*;
 import java.awt.*;
 

@@ -21,7 +21,6 @@ package com.inilabs.jaer.projects.gui;
 
 import com.inilabs.jaer.projects.tracker.FieldOfView;
 import com.inilabs.jaer.projects.tracker.EventCluster;
-import com.inilabs.jaer.projects.tracker.FOVUtils;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -58,14 +57,15 @@ public class BasicDrawable implements Drawable, DrawableListener {
     protected long maxLifetime = 100 ; //millisec
     protected boolean isOrphaned = false;
     protected boolean isExpired = false;
-    protected static FieldOfView fov = FieldOfView.getInstance();
+    protected static FieldOfView fov;
     protected List<EventCluster> clusters = new ArrayList<>();
 
     // Default constructor, places object at (0,0) and auto-generates key
     public BasicDrawable() {
         this.id = ++idCounter;
         this.key = getClass().getSimpleName() + "_" + id;
-         this.startTime = getTimestamp();
+        this.startTime = getTimestamp();
+        this.fov = FieldOfView.getInstance();
     }
 
     // Constructor with specific azimuth and elevation, and optional key
@@ -74,6 +74,8 @@ public class BasicDrawable implements Drawable, DrawableListener {
         this.key = key != null ? key : getClass().getSimpleName() + "_" + id;
         this.azimuth = initialAzimuth;
         this.elevation = initialElevation;
+       this.startTime = getTimestamp();
+       this.fov = FieldOfView.getInstance();
     }
  
     

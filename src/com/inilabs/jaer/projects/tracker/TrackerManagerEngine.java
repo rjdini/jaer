@@ -150,7 +150,7 @@ private void processClusters(List<? extends ClusterAdapter> clusters) {
                 eventCluster.setEnclosedCluster(adapter);
                 clusterReplaced = true;
 
-                log.info("Replaced existing cluster in EventCluster with key: {}", freshClusterKey);
+               log.debug("Replaced existing cluster in EventCluster with key: {}", freshClusterKey);
                 break;
             }
             
@@ -168,7 +168,7 @@ private void processClusters(List<? extends ClusterAdapter> clusters) {
             //TrackerAgentDrawable agent = findOrCreateAgent(newEventCluster);
            // agent.addCluster(newEventCluster);
 
-            log.info("Created new EventCluster for cluster with key: {}", freshClusterKey);
+            log.debug("Created new EventCluster for cluster with key: {}", freshClusterKey);
         }
     }
          // Step 3: Run all EventClusters to update their locations derived  their new enclosed clusters
@@ -202,14 +202,14 @@ private void processClusters(List<? extends ClusterAdapter> clusters) {
 
          // Check if agent is expired 
         if (agent.isExpired()) {
-            log.info("Removing expired tracker agent: {}", agent.getKey());
+            log.debug("Removing expired tracker agent: {}", agent.getKey());
             removeDrawableFromDisplay(agent);
             agentsToRemove.add(agent.getKey());
         }
         
         // Check if agent is static (not moving) and remove if static for too long
         if (agent.isStatic() && agent.getClusters().isEmpty()) {
-            log.info("Removing static tracker agent: {}", agent.getKey());
+            log.debug("Removing static tracker agent: {}", agent.getKey());
             removeDrawableFromDisplay(agent);
             agentsToRemove.add(agent.getKey());
         }

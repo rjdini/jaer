@@ -18,21 +18,16 @@
  */
 package com.inilabs.jaer.projects.tracker;
 
-import net.sf.jaer.eventprocessing.tracking.RectangularClusterTracker.Cluster;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import com.inilabs.jaer.projects.gui.BasicDrawable;
-import  com.inilabs.jaer.projects.tracker.FieldOfView;
 import com.inilabs.jaer.projects.gui.AgentDrawable;
 import com.inilabs.jaer.projects.gui.Drawable;
 import com.inilabs.jaer.projects.gui.DrawableListener;
 import com.inilabs.jaer.projects.logging.AgentLogger;
 import com.inilabs.jaer.projects.logging.EventType;
-import com.inilabs.jaer.projects.tracker.ClusterAdapter;
 import java.util.ArrayList;
 import java.util.List;
-import net.sf.jaer.eventprocessing.tracking.RectangularClusterTracker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,8 +74,7 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter, lon
 
  public EventCluster() {
     super();    
-     agentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), getEnclosedClusterKeyAsList());
-  //  System.out.println(" constructor key: " + getKey() + " ID: " + getId() );
+     AgentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), getEnclosedClusterKeyAsList());
 }
 
 //

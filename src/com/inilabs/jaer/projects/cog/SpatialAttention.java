@@ -19,12 +19,9 @@
 package com.inilabs.jaer.projects.cog;
 
 import com.inilabs.jaer.gimbal.GimbalBase;
-import com.inilabs.jaer.projects.cog.JoystickReader;
-import static com.inilabs.jaer.projects.cog.JoystickReader.Axis.PITCH;
 import com.inilabs.jaer.projects.motor.DirectGimbalController;
+import com.inilabs.jaer.projects.motor.JoystickController;
 import com.inilabs.jaer.projects.tracker.TrackerAgentDrawable;
-import com.inilabs.jaer.projects.tracker.TrackerManagerEngine;
-import com.inilabs.jaer.projects.tracker.TrackerManagerV2;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.beans.PropertyChangeEvent;
@@ -38,145 +35,76 @@ import java.util.concurrent.TimeUnit;
 import javax.swing.Timer;
 import org.slf4j.LoggerFactory;
 
-public class SpatialAttention implements KeyListener {
+public class SpatialAttention {
    
       private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(SpatialAttention.class);
     
     private float azimuth = 0; // Current azimuth for manual control
     private float roll = 0; // Current roll for manual control
     private float elevation = 0; // Current elevation for manual control
-    private float joystickAzimuth = 0; // Current azimuth for manual control
-    private float joystickRoll = 0; // Current roll for manual control
-    private float joystickElevation = 0; // Current elevation for manual control
     private float waypointAzimuth = 15; // Current azimuth for manual control
     private float waypointElevation = -40; // Current elevation for manual control
     
-    private final float stepSize = 1.0f; // Incremental step size for azimuth/elevation
-    private final Set<Integer> keyDown = new HashSet<>(); // Tracks currently pressed keys
-    private Timer updateTimer;
     
-    private boolean enableKeyboardControl = false; // Tracks if keyboard control is active
-    private boolean enableJoystickControl = true;
+    private Timer updateTimer;
+   
     private boolean enableGimbalPose = true ; 
-    private double supportQualityThreshold = 30.0;
+    private double supportQualityThreshold = 50.0;
+    
+     private static final long BREAK_CONTACT_DURATION = 5000; // Threshold in milliseconds
+    private long lastSuccessfulUpdate = System.currentTimeMillis();
+    private boolean isSaccade = false; // State to ignore incoming data during waypoint movement
+    private final ScheduledExecutorService scheduler;
     
     
     private TrackerAgentDrawable bestTrackerAgent = null; // Reference to the best tracker agent
-    private JoystickReader joystickReader;
-
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4);
-     
-   // private static final ScheduledExecutorService saccadeScheduler = Executors.newSingleThreadScheduledExecutor();
     
-     private volatile boolean joystickActive = false;
-    private final long JOYSTICK_TIMEOUT = 3000; // Timeout in milliseconds
+     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+    
+   
 
     private static DirectGimbalController gimbal = DirectGimbalController.getInstance();
 //    private TrackerManagerEngine engine = new TrackerManagerEngine();
   
+    private static JoystickController joystickController = JoystickController.getInstance(gimbal);
+    
+    
     private static SpatialAttention instance;
     
    private SpatialAttention() {
-       // Timer for periodic updates
-        this.updateTimer = new Timer(200, e -> updateGimbalPose());
-        this.updateTimer.start();
-         Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
-     
-        init();
-    //   startTasks();        
+
+         this.scheduler = Executors.newSingleThreadScheduledExecutor(); 
+      //  this.updateTimer = new Timer(100, e -> updateGimbalPose());
+     //   this.updateTimer.start();
+                 
+         Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));  
 }
 
 
     public static SpatialAttention getInstance() {
-    if (instance == null) {
-        synchronized (GimbalBase.class) {
-            if (instance == null) {
-                instance = new SpatialAttention();
-            }
+        if (instance == null) {
+            instance = new SpatialAttention();
+            instance.startTasks();
         }
+        return instance;
     }
-    return instance;
-}
-
-private void startTasks() {
-        // Schedule a task to periodically request data
-        // Schedule the 100ms timer thread
+   
+   
+public void startTasks() {
         try {
-        scheduler.scheduleAtFixedRate(this::updateGimbalPose, 200, 200, TimeUnit.MILLISECONDS);    
-     //   scheduler.scheduleAtFixedRate(this::fetchGimbalPose, poseFetchInterval, poseFetchInterval, TimeUnit.MILLISECONDS);
+                   // Schedule a task to periodically update the gimbal
+                  executor.scheduleAtFixedRate(this::updateGimbalPose, 50, 50, TimeUnit.MILLISECONDS);
         log.info("Scheduled tasks started....");
         } catch(Exception e ) { 
             log.error("Error starting scheduled tasks : {}", e.getMessage(), e);
         }
     }
 
-
-
     
-private void shutdown() {
-  
- shutdownScheduler();
- 
+public void shutdown() {
+ executor.shutdown();    
+ scheduler.shutdown();
 }    
-
-  // Clean up the scheduler when no longer needed
-    public void shutdownScheduler() {
-        scheduler.shutdown();
-}
-
-
-
-    
-private void init() {
-              
-     // Initialize joystick reader
-     joystickReader = new JoystickReader(new JoystickReader.JoystickListener() {
-          
-         @Override
-    public void onAxisChange(JoystickReader.Axis axis, float value) {
-        // Mark joystick as active
-        joystickActive = true;
-
-        if (enableJoystickControl) {
-            switch (axis) {
-                case YAW -> setJoystickAzimuth(Math.max(-180.0f, Math.min(180.0f, getJoystickAzimuth() + value * 10.0f)));
-                case ROLL -> setJoystickRoll(Math.max(-90.0f, Math.min(90.0f, getJoystickRoll() + value * 10.0f)));
-                case PITCH -> setJoystickElevation(Math.max(-90.0f, Math.min(90.0f, getJoystickElevation() + value * 10.0f)));
-                default -> log.debug("Unhandled axis: {}", axis);
-            }
-        }
-        
-        // Schedule a task to mark joystick as inactive after a delay
-        scheduler.schedule(() -> {
-            joystickActive = false;
-            log.debug("Joystick inactive");
-        }, JOYSTICK_TIMEOUT, TimeUnit.MILLISECONDS);
-         
-    }
-                
-            @Override
-            public void onButtonPress(JoystickReader.Button button, boolean pressed) {
-                if (pressed && button == JoystickReader.Button.BUTTON1) {
-                    enableJoystickControl= !enableJoystickControl;
-                    System.out.println("Joystick control " + (enableJoystickControl ? "enabled" : "disabled"));
-                }
-            }
-        });
-
-        joystickReader.start();
-    }
-
-    
-    
-    
-    
-    
-    
-    
-    public boolean isJoystickActive() {
-        return joystickActive;
-    }
-
 
    
     /**
@@ -184,110 +112,78 @@ private void init() {
     *  The default update is against the current best TrackerAgentDrawable.
     * 
     * That agent is decided by the TrackerManagerEngine, and assigned here .
-    * 
-    * However, the default can be override by keyboard controls (a legacy, in case no joystick is available).
-    * The keyboard controls override the default only if the keyboard is enabled by the 'keyboard enable' button on the PolarSpaceControlPanel.
-    * 
-    *  The joystick  is always live, and has the hightest priority for updating the gimbal pose. 
-    * Because the joystick may change the pose over many degrees, any input from the gimbal activates a saccadic blink
-    * that lasts a short while after input from the joystick stops. 
-    * 
+    *  
     * Finally the gimbal can be completely inactivated by de-selecting the 'Gimbal Enable' button on the PolarSpaceControlPanel.
     * This freezes the pose, so that (eg) filters can be tested without interference of gimbal motion.
     * 
     */
-    public synchronized void updateGimbalPose() {
+    private synchronized void updateGimbalPose() {
         // under normal operation SA simply sends the coordinates of current best trackeragent to the gimbal.
         // However - large moves of the gimbal would lead to generation false trackers, so these moveets occur within a saccade.
         // when TrackerManagerEngine has isSaccade true,  it does not process incomming clusters (both RCT and Test).
         // In future we could make this more sophisticated - eg continue to attend to 'imagined' test targets.
-        
-        
-        // make meovements on y if gimbal is enabled
-        if(isEnableGimbalPose()) {
-       
-         //joystick is enabled by default, isJoystickActive provides saccadic suppression window 
-        if (enableJoystickControl && isJoystickActive()) {  // 
-            // Apply joystick input to gimbal
-            gimbal.setGimbalPoseDirect(getJoystickAzimuth(), 0, getJoystickElevation());
-        }   
-//        else if {   
-//            if (isEnableKeyboardControl()) {
-//            updateAzimuthAndElevation();
-//            gimbalBase.setGimbalPoseDirect(getAzimuth(), 0f, getElevation()); // Send manual pose
-//           }
-         else if (getBestTrackerAgent() != null && (getBestTrackerAgent().getSupportQuality() > getSupportQualityThreshold())) {
-            getBestTrackerAgent().run(); // update location
-            log.warn("bestTrackerAgent supportQuality threshold:  {}, current: {} ", getSupportQualityThreshold(),  getBestTrackerAgent().getSupportQuality());
-            gimbal.setGimbalPose(getBestTrackerAgent().getAzimuth(), 0f, getBestTrackerAgent().getElevation()); // Send best tracker agent pose
-        } else {      
-              goToWaypoint(getWaypointAzimuth(), getWaypointElevation()); // Send to waiting position
+    
+        // Check if the system is in a saccade state
+        if (isSaccade) {
+            log.info("Ignoring incoming data due to saccade.");
+            return;
         }
+
+        if (getBestTrackerAgent() != null &&
+            (getBestTrackerAgent().getSupportQuality() > getSupportQualityThreshold())) {
+
+            // Update the tracker agent and send pose to gimbal
+            getBestTrackerAgent().run();
+            log.info("Best Tracker Agent supportQuality threshold: {}, current: {}",
+                    getSupportQualityThreshold(), getBestTrackerAgent().getSupportQuality());
+            gimbal.setGimbalPose(getBestTrackerAgent().getAzimuth(), 0f, getBestTrackerAgent().getElevation());
+
+            // Update the last successful update timestamp
+            lastSuccessfulUpdate = System.currentTimeMillis();
+        } else {
+            // Check if the time since the last successful update exceeds the threshold
+            if (System.currentTimeMillis() - lastSuccessfulUpdate >= BREAK_CONTACT_DURATION) {
+                goToWaypoint(getWaypointAzimuth(), getWaypointElevation());
+            }
         }
-    }
-    
-   private void goToWaypoint( float azimuth, float elevation) {
-        // only move if we are no already there!
-   //    if ( azimuth != gimbalBase.getGimbalPose()[0] && elevation != gimbalBase.getGimbalPose()[2]) {
-           log.warn("waypoint desired : {} {}  actual: {} {}", azimuth, elevation, gimbal.getGimbalPose().getYaw() , gimbal.getGimbalPose().getPitch() );
- //          TrackerManagerEngine.setIsSaccade(true);
-                gimbal.setGimbalPose(azimuth, 0f, elevation); // Send to waiting position
-                // Schedule the next action after a delay
-             scheduler.schedule(() -> {
-    //        TrackerManagerEngine.setIsSaccade(false);
-            System.out.println("Delay completed, isSaccade set to false.");
-             }, 200, TimeUnit.MILLISECONDS); // Delay
-  //     }
-   }
-    
-    
- 
-    public boolean isEnableKeyboardControl() {
-        return enableKeyboardControl;
     }
 
-    public void setBestTrackerAgent(TrackerAgentDrawable agent) {
+    private void goToWaypoint(float azimuth, float elevation) {
+        // Check if already at the waypoint
+        if (azimuth == gimbal.getGimbalPose().getYaw() && elevation == gimbal.getGimbalPose().getPitch()) {
+            log.info("Gimbal is already at the waypoint.");
+            return;
+        }
+
+        // Enter saccade state
+        isSaccade = true;
+        log.info("Entering saccade state: Moving to waypoint azimuth: {}, elevation: {}", azimuth, elevation);
+
+        gimbal.setGimbalPose(azimuth, 0f, elevation);
+
+        // Schedule exiting the saccade state
+        scheduler.schedule(() -> {
+            isSaccade = false;
+            log.info("Saccade completed. Exiting saccade state.");
+        }, 200, TimeUnit.MILLISECONDS); // Delay after reaching waypoint
+    }
+ 
+    
+       public void setBestTrackerAgent(TrackerAgentDrawable agent) {
         bestTrackerAgent = agent; // Update the best tracker agent
     }
-
-    private void updateAzimuthAndElevation() {
-        if (keyDown.contains(KeyEvent.VK_6)) {
-            setAzimuth(getAzimuth() - stepSize);
-        }
-        if (keyDown.contains(KeyEvent.VK_7)) {
-            setAzimuth(getAzimuth() + stepSize);
-        }
-        if (keyDown.contains(KeyEvent.VK_8)) {
-            setElevation(getElevation() + stepSize);
-        }
-        if (keyDown.contains(KeyEvent.VK_9)) {
-            setElevation(getElevation() - stepSize);
-        }
-    }
-
-    @Override
-    public void keyPressed(KeyEvent e) {
-        if (isEnableKeyboardControl()) {
-            keyDown.add(e.getKeyCode()); // Track pressed keys
-        }
-    }
-
-    @Override
-    public void keyReleased(KeyEvent e) {
-        if (isEnableKeyboardControl()) {
-            keyDown.remove(e.getKeyCode()); // Remove released keys
-        }
-    }
-
-    @Override
-    public void keyTyped(KeyEvent e) {
-        // No implementation needed for keyTyped
-    }
-
     
     
-    
-    
+    public float getWaypointAzimuth() {
+        return 90f; // Example azimuth
+    }
+
+    public float getWaypointElevation() {
+        return 45f; // Example elevation
+    }
+       
+       
+       
     /**
      * @return the azimuth
      */
@@ -331,13 +227,6 @@ private void init() {
     }
 
     /**
-     * @param enableKeyboardControl the enableKeyboardControl to set
-     */
-    public void setEnableKeyboardControl(boolean yes) {
-        this.enableKeyboardControl = yes;
-    }
-
-    /**
      * @return the isEnableGimbalPose
      */
     public boolean isEnableGimbalPose() {
@@ -358,47 +247,6 @@ private void init() {
         return bestTrackerAgent;
     }
 
-    /**
-     * @return the joystickAzimuth
-     */
-    private float getJoystickAzimuth() {
-        return joystickAzimuth;
-    }
-
-    /**
-     * @param joystickAzimuth the joystickAzimuth to set
-     */
-    private void setJoystickAzimuth(float joystickAzimuth) {
-        this.joystickAzimuth = joystickAzimuth;
-    }
-
-    /**
-     * @return the joystickRoll
-     */
-    private float getJoystickRoll() {
-        return joystickRoll;
-    }
-
-    /**
-     * @param joystickRoll the joystickRoll to set
-     */
-    private void setJoystickRoll(float joystickRoll) {
-        this.joystickRoll = joystickRoll;
-    }
-
-    /**
-     * @return the joystickElevation
-     */
-    private float getJoystickElevation() {
-        return joystickElevation;
-    }
-
-    /**
-     * @param joystickElevation the joystickElevation to set
-     */
-    private void setJoystickElevation(float joystickElevation) {
-        this.joystickElevation = joystickElevation;
-    }
 
     /**
      * @return the supportQualityThreshold
@@ -414,12 +262,7 @@ private void init() {
         this.supportQualityThreshold = supportQualityThreshold;
     }
 
-    /**
-     * @return the waypointAzimuth
-     */
-    public float getWaypointAzimuth() {
-        return waypointAzimuth;
-    }
+ 
 
     /**
      * @param waypointAzimuth the waypointAzimuth to set
@@ -434,13 +277,6 @@ private void init() {
         waypointElevation = ele;
     }
     
-    /**
-     * @return the waypointElevation
-     */
-    public float getWaypointElevation() {
-        return waypointElevation;
-    }
-
     /**
      * @param waypointElevation the waypointElevation to set
      */
