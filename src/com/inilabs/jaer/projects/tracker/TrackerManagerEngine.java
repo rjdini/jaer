@@ -22,9 +22,9 @@ public class TrackerManagerEngine {
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private TrackerAgentDrawable currentBestAgent = null;
     private FieldOfView fov = FieldOfView.getInstance();
-    private long defaultAgentLifeTimeMillis = 3000; // 10 secs
-     private long defaultEventClusterLifeTimeMillis =4000; // 2 secs
-     private long lifeTimeExtensionMillis = 1000; // reward for good agent taking on new cluster
+    private long defaultAgentLifeTimeMillis = 5000; // 10 secs
+     private long defaultEventClusterLifeTimeMillis =2000; // 2 secs
+     private long lifeTimeExtensionMillis = 0; // reward for good agent taking on new cluster
      private TrackerAgentDrawable lastBestAgent = null; // Reference to the previous best tracker
      private List<TrackerAgentDrawable> bestTrackerAgentList = new ArrayList<>();  
 
@@ -366,9 +366,15 @@ private void updateBestTrackerAgent() {
         // Update the bestTrackerAgentList
         bestTrackerAgentList.clear();
         bestTrackerAgentList.addAll(bestAgents);
-  //      if(getBestTrackerAgentDrawable() != null) {
-        getSpatialAttention().setBestTrackerAgent(getBestTrackerAgentDrawable());
-   //     }
+       if(getBestTrackerAgentDrawable() != null) {
+           if(getBestTrackerAgentDrawable().getSupportQuality() > spatialAttention.getSupportQualityThreshold()) {
+                 getSpatialAttention().setBestTrackerAgent(getBestTrackerAgentDrawable());  // good one
+           }  else {
+            getSpatialAttention().setBestTrackerAgent(null); // candidate score is not high enough
+           }
+        } else {
+           getSpatialAttention().setBestTrackerAgent(null); // no candidate
+       }
         // Enforce the limit on the number of TrackerAgentDrawables
         enforceAgentLimit();
     }

@@ -22,6 +22,7 @@ import com.inilabs.jaer.gimbal.GimbalBase;
 import com.inilabs.jaer.projects.motor.DirectGimbalController;
 import com.inilabs.jaer.projects.motor.JoystickController;
 import com.inilabs.jaer.projects.tracker.TrackerAgentDrawable;
+import com.inilabs.jaer.projects.tracker.TrackerManagerEngine;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.beans.PropertyChangeEvent;
@@ -42,16 +43,16 @@ public class SpatialAttention {
     private float azimuth = 0; // Current azimuth for manual control
     private float roll = 0; // Current roll for manual control
     private float elevation = 0; // Current elevation for manual control
-    private float waypointAzimuth = 15; // Current azimuth for manual control
-    private float waypointElevation = -40; // Current elevation for manual control
+    private float waypointAzimuth = 0f ; // Current azimuth for manual control
+    private float waypointElevation = -40f; // Current elevation for manual control
     
     
     private Timer updateTimer;
    
     private boolean enableGimbalPose = true ; 
-    private double supportQualityThreshold = 50.0;
+    private double supportQualityThreshold = 90.0;
     
-     private static final long BREAK_CONTACT_DURATION = 5000; // Threshold in milliseconds
+     private static final long BREAK_CONTACT_DURATION = 2000; // Threshold in milliseconds
     private long lastSuccessfulUpdate = System.currentTimeMillis();
     private boolean isSaccade = false; // State to ignore incoming data during waypoint movement
     private final ScheduledExecutorService scheduler;
@@ -123,6 +124,7 @@ public void shutdown() {
         // when TrackerManagerEngine has isSaccade true,  it does not process incomming clusters (both RCT and Test).
         // In future we could make this more sophisticated - eg continue to attend to 'imagined' test targets.
     
+        if (enableGimbalPose)  { // override from PolarSpaceControlPanel
         // Check if the system is in a saccade state
         if (isSaccade) {
             log.info("Ignoring incoming data due to saccade.");
@@ -146,6 +148,7 @@ public void shutdown() {
                 goToWaypoint(getWaypointAzimuth(), getWaypointElevation());
             }
         }
+        }
     }
 
     private void goToWaypoint(float azimuth, float elevation) {
@@ -157,6 +160,7 @@ public void shutdown() {
 
         // Enter saccade state
         isSaccade = true;
+        TrackerManagerEngine.setIsSaccade(isSaccade);
         log.info("Entering saccade state: Moving to waypoint azimuth: {}, elevation: {}", azimuth, elevation);
 
         gimbal.setGimbalPose(azimuth, 0f, elevation);
@@ -164,8 +168,9 @@ public void shutdown() {
         // Schedule exiting the saccade state
         scheduler.schedule(() -> {
             isSaccade = false;
+            TrackerManagerEngine.setIsSaccade(isSaccade);
             log.info("Saccade completed. Exiting saccade state.");
-        }, 200, TimeUnit.MILLISECONDS); // Delay after reaching waypoint
+        }, 2000, TimeUnit.MILLISECONDS); // Delay after reaching waypoint
     }
  
     
@@ -175,11 +180,11 @@ public void shutdown() {
     
     
     public float getWaypointAzimuth() {
-        return 90f; // Example azimuth
+        return waypointAzimuth; 
     }
 
     public float getWaypointElevation() {
-        return 45f; // Example elevation
+        return waypointElevation; 
     }
        
        

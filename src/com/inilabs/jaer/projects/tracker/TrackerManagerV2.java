@@ -98,7 +98,7 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
         who = "TargetManager";
         support = new PropertyChangeSupport(this);
         
-         javax.swing.Timer updateTestTimer = new javax.swing.Timer(100, e ->   updateTrackerManagerEngineTests()) ;
+         javax.swing.Timer updateTestTimer = new javax.swing.Timer(50, e ->   updateTrackerManagerEngineTests()) ;
         updateTestTimer.start();
         
          Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
@@ -380,7 +380,7 @@ private GL2 drawTargetLocation(GL2 gl) {
         gl.glPopMatrix();
     }
       } else {
-      log.warn("Draw target best agent = null");
+      log.debug("Draw target best agent = null");
       }
     return gl;
 }

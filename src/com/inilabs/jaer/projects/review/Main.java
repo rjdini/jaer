@@ -20,29 +20,28 @@
 package com.inilabs.jaer.projects.review;
 
 import com.inilabs.jaer.projects.review.tests.LogReviewTestPanel;
+import java.io.IOException;
 import javax.swing.*;
 import java.util.Map;
 
 public class Main {
+    
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            JFrame frame = new JFrame("Log Review Test");
-            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            frame.setSize(1200, 800);
+    try {
+        LogParser parser = new LogParser();
+        Map<String, Map<String, TrajectoryDrawable>> sessions = parser.parseLogFile("logs/AgentLogger.json");
 
-            try {
-//                LogParser parser = new LogParser();
-//                Map<String, Map<String, TrajectoryDrawable>> sessions =
-//                        parser.parseLogFile("./data/AgentLogger_TEST.json");
-//
-//                LogReviewTestPanel panel = new LogReviewTestPanel(sessions);
-//                frame.add(panel);
-//                frame.setVisible(true);
-            } catch (Exception e) {
-                e.printStackTrace();
-                JOptionPane.showMessageDialog(frame, "Error loading log file: " + e.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
-            }
+        // Example: Print session details
+        sessions.forEach((session, trackers) -> {
+            System.out.println("Session: " + session);
+            trackers.forEach((trackerName, trajectory) -> {
+                System.out.println("  Tracker: " + trackerName);
+                System.out.println("    Points: " + trajectory.getPoints());
+                System.out.println("    Clusters: " + trajectory.getClusters());
+            });
         });
+    } catch (IOException e) {
+        e.printStackTrace();
     }
+}
 }

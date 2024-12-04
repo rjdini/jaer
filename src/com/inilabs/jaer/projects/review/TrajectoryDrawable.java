@@ -22,6 +22,7 @@ package com.inilabs.jaer.projects.review;
 import com.inilabs.jaer.projects.gui.BasicDrawable;
 import com.inilabs.jaer.projects.gui.Drawable;
 import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
+
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.util.ArrayList;
@@ -31,10 +32,12 @@ import java.util.List;
 public class TrajectoryDrawable extends BasicDrawable implements Drawable {
     private final String trackerName;
     private final List<TrajectoryPointDrawable> points;
+    private final List<String> clusters; // List of associated clusters
 
     public TrajectoryDrawable(String trackerName) {
         this.trackerName = trackerName;
         this.points = new ArrayList<>();
+        this.clusters = new ArrayList<>();
     }
 
     public String getTrackerName() {
@@ -49,11 +52,36 @@ public class TrajectoryDrawable extends BasicDrawable implements Drawable {
         points.add(point);
     }
 
+    public List<String> getClusters() {
+        return Collections.unmodifiableList(clusters);
+    }
+
+    public void addCluster(String cluster) {
+        if (!clusters.contains(cluster)) {
+            clusters.add(cluster);
+        }
+    }
+
+    public void addClusters(List<String> newClusters) {
+        for (String cluster : newClusters) {
+            addCluster(cluster);
+        }
+    }
+
+    public void removeCluster(String cluster) {
+        clusters.remove(cluster);
+    }
+
+    public void clearClusters() {
+        clusters.clear();
+    }
+
     public void draw(Graphics g) {
         if (points.isEmpty()) return;
 
         Graphics2D g2d = (Graphics2D) g;
 
+        // Draw the trajectory
         TrajectoryPointDrawable previousPoint = null;
         for (int i = 0; i < points.size(); i++) {
             TrajectoryPointDrawable currentPoint = points.get(i);
@@ -82,5 +110,13 @@ public class TrajectoryDrawable extends BasicDrawable implements Drawable {
 
             previousPoint = currentPoint;
         }
+
+        // Draw associated clusters
+        if (!clusters.isEmpty()) {
+            int x = centerX + 10; // Example offset for cluster info
+            int y = centerY + 20; // Example offset for cluster info
+            g2d.drawString("Clusters: " + String.join(", ", clusters), x, y);
+        }
     }
 }
+

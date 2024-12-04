@@ -39,6 +39,15 @@ public class DirectGimbalController {
     private volatile float targetYaw = 0, targetRoll = 0, targetPitch = 0;
     private final PropertyChangeSupport pcs = new PropertyChangeSupport(this);
     private static DirectGimbalController instance;
+    
+    private float leftYawLimit = -90f;
+    private float rightYawLimit = 90f;
+    private float leftRollLimit = -60f;
+    private float rightRollLimit = 60f;
+    private float lowerPitchLimit = -60f;
+    private float upperPitchLimit = 60f;
+      
+    
     private float previousSendYaw = 0f;
     private float previousSendRoll = 0f;
     private float previousSendPitch = 0f;
@@ -60,8 +69,8 @@ public class DirectGimbalController {
     private boolean gimbalPoseEnabled = true;
     
     
-    private static final float gimbalYawOffsetError = 0f;
-    private static final float gimbalPitchOffsetError = 0f;
+    private static final float gimbalYawOffsetError = -1.5f;
+    private static final float gimbalPitchOffsetError = 0.5f;
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
     
     // Constructor
@@ -108,10 +117,37 @@ public class DirectGimbalController {
  }
  
     public synchronized void setGimbalPose(float yaw, float roll, float pitch) {
-        this.targetYaw = yaw;
-        this.targetRoll = roll;
-        this.targetPitch = pitch;
+        
+        this.targetYaw =  rangeCheckYaw(yaw);
+        this.targetRoll = rangeCheckRoll(roll);
+        this.targetPitch = rangeCheckPitch(pitch);
     }
+   
+    private float rangeCheckYaw(float yaw) {
+        float checkedYaw = 0;
+        if(yaw < leftYawLimit ) { checkedYaw = leftYawLimit; }
+        else if(yaw > rightYawLimit) { checkedYaw = rightYawLimit; }
+        else { checkedYaw = yaw; }
+        return checkedYaw;
+    }
+    
+    private float rangeCheckRoll(float roll) {
+        float checkedRoll = 0;
+        if(roll < leftRollLimit ) { checkedRoll = leftRollLimit; }
+        else if(roll > rightRollLimit) { checkedRoll = rightRollLimit; }
+        else { checkedRoll = roll; }
+        return checkedRoll;
+    }
+    
+    private float rangeCheckPitch(float pitch) {
+        float checkedPitch = 0;
+        if (pitch < lowerPitchLimit ) { checkedPitch = lowerPitchLimit; }
+        else if (pitch > upperPitchLimit) { checkedPitch = upperPitchLimit; }
+        else { checkedPitch = pitch; }
+        return checkedPitch;
+    }
+    
+    
     
     public Pose getGimbalPose() {
         return currentPose;
