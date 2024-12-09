@@ -43,7 +43,7 @@ public class TestBasicDrawable {
         frame.setSize(800, 600);
 
         // PolarSpaceDisplay
-        PolarSpaceDisplay display = new PolarSpaceDisplay();
+        PolarSpaceDisplay display = PolarSpaceDisplay.getInstance();
         frame.add(display, BorderLayout.CENTER);
 
         // Create a BasicDrawable at (0,0) with auto-incremented ID and add it to display

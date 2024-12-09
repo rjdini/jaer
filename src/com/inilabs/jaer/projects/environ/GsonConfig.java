@@ -16,12 +16,20 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
-package com.inilabs.jaer.projects.gui;
+package com.inilabs.jaer.projects.environ;
 
-public interface DrawableListener {
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
-      // Methods to update transforms parameters
-    void onTransformChanged(float azimuthScale, float elevationScale, float azimuthHeading, float elevationHeading, int centerX, int centerY);
-    void showPath(boolean show);  // Added method to control path visibility
+public class GsonConfig {
+      public static Gson createGson() {
+        return new GsonBuilder()
+            .addSerializationExclusionStrategy(new NoSuperclassExclusionStrategy(WaypointDrawable.class))
+            .addDeserializationExclusionStrategy(new NoSuperclassExclusionStrategy(WaypointDrawable.class))
+            .setPrettyPrinting()
+            .create();
+    }
     
+  
 }
+

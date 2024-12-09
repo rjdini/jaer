@@ -88,19 +88,19 @@ public class TrajectoryDrawable extends BasicDrawable implements Drawable {
 
             // Draw a line connecting to the previous point
             if (previousPoint != null) {
-                int x1 = centerX + (int) ((previousPoint.getAzimuth() - azimuthHeading) * azimuthScale);
-                int y1 = centerY - (int) ((previousPoint.getElevation() - elevationHeading) * elevationScale);
+                int x1 = getCenterX() + (int) ((previousPoint.getAzimuth() - getAzimuthHeading()) * getAzimuthScale());
+                int y1 = getCenterY() - (int) ((previousPoint.getElevation() - getElevationHeading()) * getElevationScale());
 
-                int x2 = centerX + (int) ((currentPoint.getAzimuth() - azimuthHeading) * azimuthScale);
-                int y2 = centerY - (int) ((currentPoint.getElevation() - elevationHeading) * elevationScale);
+                int x2 = getCenterX() + (int) ((currentPoint.getAzimuth() - getAzimuthHeading()) * getAzimuthScale());
+                int y2 = getCenterY() - (int) ((currentPoint.getElevation() - getElevationHeading()) * getElevationScale());
 
                 g2d.drawLine(x1, y1, x2, y2);
             }
 
             // Draw the first point with the tracker name as a label
             if (i == 0) {
-                int x = centerX + (int) ((currentPoint.getAzimuth() - azimuthHeading) * azimuthScale);
-                int y = centerY - (int) ((currentPoint.getElevation() - elevationHeading) * elevationScale);
+                int x = getCenterX() + (int) ((currentPoint.getAzimuth() - getAzimuthHeading()) * getAzimuthScale());
+                int y = getCenterY() - (int) ((currentPoint.getElevation() - getElevationHeading()) * getElevationScale());
 
                 g2d.drawString(trackerName, x + 5, y - 5); // Label with the tracker name
             }
@@ -113,8 +113,8 @@ public class TrajectoryDrawable extends BasicDrawable implements Drawable {
 
         // Draw associated clusters
         if (!clusters.isEmpty()) {
-            int x = centerX + 10; // Example offset for cluster info
-            int y = centerY + 20; // Example offset for cluster info
+            int x = getCenterX() + 10; // Example offset for cluster info
+            int y = getCenterY() + 20; // Example offset for cluster info
             g2d.drawString("Clusters: " + String.join(", ", clusters), x, y);
         }
     }

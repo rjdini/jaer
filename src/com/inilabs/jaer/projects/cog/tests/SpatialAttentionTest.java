@@ -30,6 +30,7 @@ public class SpatialAttentionTest {
 
     public static void main(String[] args) {
         // Initialize SpatialAttention singleton
+        
         SpatialAttention spatialAttention = SpatialAttention.getInstance();
 
         // Create a mock TrackerAgentDrawable

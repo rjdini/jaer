@@ -93,12 +93,12 @@ public class FieldOfView extends BasicDrawable implements PropertyChangeListener
     
     @Override
     public void onTransformChanged(float azimuthScale, float elevationScale, float azimuthHeading, float elevationHeading, int centerX, int centerY) {
-        this.azimuthScale = azimuthScale;
-        this.elevationScale = elevationScale;
-        this.azimuthHeading = azimuthHeading;
-        this.elevationHeading = elevationHeading;
-        this.centerX = centerX;
-        this.centerY = centerY;
+        this.setAzimuthScale(azimuthScale);
+        this.setElevationScale(elevationScale);
+        this.setAzimuthHeading(azimuthHeading);
+        this.setElevationHeading(elevationHeading);
+        this.setCenterX(centerX);
+        this.setCenterY(centerY);
     }
 
 

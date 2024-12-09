@@ -21,6 +21,7 @@ package com.inilabs.jaer.projects.tracker.tests;
 
 import com.inilabs.jaer.gimbal.GimbalBase;
 import com.inilabs.jaer.projects.cog.SpatialAttention;
+import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
 import com.inilabs.jaer.projects.gui.PolarSpaceGUI;
 import com.inilabs.jaer.projects.logging.AgentLogger;
 import com.inilabs.jaer.projects.tracker.FieldOfView;
@@ -32,6 +33,7 @@ public class TrackerManagerEngineTest {
     private static GimbalBase gimbalBase = new GimbalBase();
     private static FieldOfView fov = FieldOfView.getInstance();
     private static SpatialAttention spatialAttention = SpatialAttention.getInstance();
+    
      
     public static void main(String[] args) {
          // Create an instance of TrackerManagerEngine
@@ -43,7 +45,6 @@ public class TrackerManagerEngineTest {
         // Create an instance of PolarSpaceGUI
         PolarSpaceGUI gui = new PolarSpaceGUI();
         gui.getPolarSpaceDisplay().setPreferredSize(new Dimension(1000, 600));
-        engine.setPolarSpaceDisplay(gui.getPolarSpaceDisplay());
 
         // Integrate the test panel with the PolarSpaceGUI
         gui.setTestPanel(testPanel);

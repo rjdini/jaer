@@ -19,6 +19,8 @@
 package com.inilabs.jaer.projects.cog;
 
 import com.inilabs.jaer.gimbal.GimbalBase;
+import com.inilabs.jaer.projects.environ.WaypointManager;
+import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
 import com.inilabs.jaer.projects.motor.DirectGimbalController;
 import com.inilabs.jaer.projects.motor.JoystickController;
 import com.inilabs.jaer.projects.tracker.TrackerAgentDrawable;
@@ -37,50 +39,46 @@ import javax.swing.Timer;
 import org.slf4j.LoggerFactory;
 
 public class SpatialAttention {
-   
-      private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(SpatialAttention.class);
-    
+
+    private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(SpatialAttention.class);
+
     private float azimuth = 0; // Current azimuth for manual control
     private float roll = 0; // Current roll for manual control
     private float elevation = 0; // Current elevation for manual control
-    private float waypointAzimuth = 0f ; // Current azimuth for manual control
-    private float waypointElevation = -40f; // Current elevation for manual control
-    
-    
+    private float waypointAzimuth = -10f; // Current azimuth for manual control
+    private float waypointElevation = 0f; // Current elevation for manual control
+
     private Timer updateTimer;
-   
-    private boolean enableGimbalPose = true ; 
+
+    private boolean enableGimbalPose = true;
     private double supportQualityThreshold = 90.0;
-    
-     private static final long BREAK_CONTACT_DURATION = 2000; // Threshold in milliseconds
+
+    private static final long BREAK_CONTACT_DURATION = 2000; // Threshold in milliseconds
     private long lastSuccessfulUpdate = System.currentTimeMillis();
     private boolean isSaccade = false; // State to ignore incoming data during waypoint movement
     private final ScheduledExecutorService scheduler;
-    
-    
+
     private TrackerAgentDrawable bestTrackerAgent = null; // Reference to the best tracker agent
-    
-     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
-    
-   
 
-    private static DirectGimbalController gimbal = DirectGimbalController.getInstance();
+    private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+
+    private final DirectGimbalController gimbal;
 //    private TrackerManagerEngine engine = new TrackerManagerEngine();
-  
-    private static JoystickController joystickController = JoystickController.getInstance(gimbal);
-    
-    
+
+    private final JoystickController joystickController;
+    private final WaypointManager waypointManager;
+
     private static SpatialAttention instance;
-    
-   private SpatialAttention() {
 
-         this.scheduler = Executors.newSingleThreadScheduledExecutor(); 
-      //  this.updateTimer = new Timer(100, e -> updateGimbalPose());
-     //   this.updateTimer.start();
-                 
-         Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));  
-}
+    private SpatialAttention() {
+        this.waypointManager = WaypointManager.getInstance();
+        this.gimbal = DirectGimbalController.getInstance();
+        this.joystickController = JoystickController.getInstance(gimbal);
+        
+        this.scheduler = Executors.newSingleThreadScheduledExecutor();
 
+        Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
+    }
 
     public static SpatialAttention getInstance() {
         if (instance == null) {
@@ -89,79 +87,78 @@ public class SpatialAttention {
         }
         return instance;
     }
-   
-   
-public void startTasks() {
+
+    public void startTasks() {
         try {
-                   // Schedule a task to periodically update the gimbal
-                  executor.scheduleAtFixedRate(this::updateGimbalPose, 50, 50, TimeUnit.MILLISECONDS);
-        log.info("Scheduled tasks started....");
-        } catch(Exception e ) { 
+            // Schedule a task to periodically update the gimbal
+            executor.scheduleAtFixedRate(this::updateGimbalPose, 50, 50, TimeUnit.MILLISECONDS);
+            log.info("Scheduled tasks started....");
+        } catch (Exception e) {
             log.error("Error starting scheduled tasks : {}", e.getMessage(), e);
         }
     }
 
-    
-public void shutdown() {
- executor.shutdown();    
- scheduler.shutdown();
-}    
+    public void shutdown() {
+        executor.shutdown();
+        scheduler.shutdown();
+    }
 
-   
     /**
-    *  This is he crucial update date of the Gimbal by various  sources:
-    *  The default update is against the current best TrackerAgentDrawable.
-    * 
-    * That agent is decided by the TrackerManagerEngine, and assigned here .
-    *  
-    * Finally the gimbal can be completely inactivated by de-selecting the 'Gimbal Enable' button on the PolarSpaceControlPanel.
-    * This freezes the pose, so that (eg) filters can be tested without interference of gimbal motion.
-    * 
-    */
+     * This is he crucial update date of the Gimbal by various sources: The
+     * default update is against the current best TrackerAgentDrawable.
+     *
+     * That agent is decided by the TrackerManagerEngine, and assigned here .
+     *
+     * Finally the gimbal can be completely inactivated by de-selecting the
+     * 'Gimbal Enable' button on the PolarSpaceControlPanel. This freezes the
+     * pose, so that (eg) filters can be tested without interference of gimbal
+     * motion.
+     *
+     */
     private synchronized void updateGimbalPose() {
         // under normal operation SA simply sends the coordinates of current best trackeragent to the gimbal.
         // However - large moves of the gimbal would lead to generation false trackers, so these moveets occur within a saccade.
         // when TrackerManagerEngine has isSaccade true,  it does not process incomming clusters (both RCT and Test).
         // In future we could make this more sophisticated - eg continue to attend to 'imagined' test targets.
-    
-        if (enableGimbalPose)  { // override from PolarSpaceControlPanel
-        // Check if the system is in a saccade state
-        if (isSaccade) {
-            log.info("Ignoring incoming data due to saccade.");
-            return;
-        }
 
-        if (getBestTrackerAgent() != null &&
-            (getBestTrackerAgent().getSupportQuality() > getSupportQualityThreshold())) {
-
-            // Update the tracker agent and send pose to gimbal
-            getBestTrackerAgent().run();
-            log.info("Best Tracker Agent supportQuality threshold: {}, current: {}",
-                    getSupportQualityThreshold(), getBestTrackerAgent().getSupportQuality());
-            gimbal.setGimbalPose(getBestTrackerAgent().getAzimuth(), 0f, getBestTrackerAgent().getElevation());
-
-            // Update the last successful update timestamp
-            lastSuccessfulUpdate = System.currentTimeMillis();
-        } else {
-            // Check if the time since the last successful update exceeds the threshold
-            if (System.currentTimeMillis() - lastSuccessfulUpdate >= BREAK_CONTACT_DURATION) {
-                goToWaypoint(getWaypointAzimuth(), getWaypointElevation());
+        if (enableGimbalPose) { // override from PolarSpaceControlPanel
+            // Check if the system is in a saccade state
+            if (isSaccade) {
+                log.debug("Ignoring incoming data due to saccade.");
+                return;
             }
-        }
+
+            if (getBestTrackerAgent() != null
+                    && (getBestTrackerAgent().getSupportQuality() > getSupportQualityThreshold())) {
+
+                // Update the tracker agent and send pose to gimbal
+                getBestTrackerAgent().run();
+                log.info("Best Tracker Agent supportQuality threshold: {}, current: {}",
+                        getSupportQualityThreshold(), getBestTrackerAgent().getSupportQuality());
+                gimbal.setGimbalPose(getBestTrackerAgent().getAzimuth(), 0f, getBestTrackerAgent().getElevation());
+
+                // Update the last successful update timestamp
+                lastSuccessfulUpdate = System.currentTimeMillis();
+            } else {
+                // Check if the time since the last successful update exceeds the threshold
+                if (System.currentTimeMillis() - lastSuccessfulUpdate >= BREAK_CONTACT_DURATION) {
+                    goToWaypoint(getWaypointAzimuth(), getWaypointElevation());
+                }
+            }
         }
     }
 
     private void goToWaypoint(float azimuth, float elevation) {
         // Check if already at the waypoint
         if (azimuth == gimbal.getGimbalPose().getYaw() && elevation == gimbal.getGimbalPose().getPitch()) {
-            log.info("Gimbal is already at the waypoint.");
+       //    log.info("Gimbal is already at the waypoint.");
             return;
         }
 
         // Enter saccade state
         isSaccade = true;
         TrackerManagerEngine.setIsSaccade(isSaccade);
-        log.info("Entering saccade state: Moving to waypoint azimuth: {}, elevation: {}", azimuth, elevation);
+        log.debug("Entering saccade state: Moving to waypoint azimuth: {}, elevation: {}", azimuth, elevation);
 
         gimbal.setGimbalPose(azimuth, 0f, elevation);
 
@@ -169,26 +166,22 @@ public void shutdown() {
         scheduler.schedule(() -> {
             isSaccade = false;
             TrackerManagerEngine.setIsSaccade(isSaccade);
-            log.info("Saccade completed. Exiting saccade state.");
+            log.debug("Saccade completed. Exiting saccade state.");
         }, 2000, TimeUnit.MILLISECONDS); // Delay after reaching waypoint
     }
- 
-    
-       public void setBestTrackerAgent(TrackerAgentDrawable agent) {
+
+    public void setBestTrackerAgent(TrackerAgentDrawable agent) {
         bestTrackerAgent = agent; // Update the best tracker agent
     }
-    
-    
+
     public float getWaypointAzimuth() {
-        return waypointAzimuth; 
+        return waypointAzimuth;
     }
 
     public float getWaypointElevation() {
-        return waypointElevation; 
+        return waypointElevation;
     }
-       
-       
-       
+
     /**
      * @return the azimuth
      */
@@ -202,14 +195,14 @@ public void shutdown() {
     private void setAzimuth(float azimuth) {
         this.azimuth = azimuth;
     }
-    
-        /**
+
+    /**
      * @return the roll
      */
     private float getRoll() {
         return roll;
     }
-    
+
     /**
      * @param roll the roll to set
      */
@@ -252,7 +245,6 @@ public void shutdown() {
         return bestTrackerAgent;
     }
 
-
     /**
      * @return the supportQualityThreshold
      */
@@ -267,8 +259,6 @@ public void shutdown() {
         this.supportQualityThreshold = supportQualityThreshold;
     }
 
- 
-
     /**
      * @param waypointAzimuth the waypointAzimuth to set
      */
@@ -276,12 +266,11 @@ public void shutdown() {
         this.waypointAzimuth = waypointAzimuth;
     }
 
-    
     public void setWaypoint(float azi, float ele) {
         waypointAzimuth = azi;
         waypointElevation = ele;
     }
-    
+
     /**
      * @param waypointElevation the waypointElevation to set
      */
@@ -289,4 +278,3 @@ public void shutdown() {
         this.waypointElevation = waypointElevation;
     }
 }
-

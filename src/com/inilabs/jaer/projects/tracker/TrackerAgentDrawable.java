@@ -20,7 +20,6 @@ package com.inilabs.jaer.projects.tracker;
 
 import com.inilabs.jaer.projects.gui.AgentDrawable;
 import com.inilabs.jaer.projects.gui.Drawable;
-import com.inilabs.jaer.projects.gui.DrawableListener;
 import com.inilabs.jaer.projects.logging.AgentLogger;
 import com.inilabs.jaer.projects.logging.EventType;
 import java.awt.Color;
@@ -34,7 +33,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Runnable, Drawable, DrawableListener {
+public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Runnable, Drawable {
 
     // This logger logs class-specific performance issues, not the event logger
     private static final Logger logger = LoggerFactory.getLogger(TrackerAgentDrawable.class);
@@ -135,14 +134,7 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
         return (float) Math.sqrt(deltaAzimuth * deltaAzimuth + deltaElevation * deltaElevation);
            }
     
-    
-
-    // Stub for `getClusters()` - ensure this method exists to retrieve associated clusters
-    public List<EventCluster> getClusters() {
-        // Replace with actual logic to return associated clusters
-        return clusters; // Return an empty list for now
-    }
-
+ 
     public void revertColor() {
         setColor(Color.BLACK);
     }
@@ -214,10 +206,7 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
 
        // the cluster management shouldnt be down here in BasicDrawable!  TODO
        // Helper method to get cluster keys as a list of strings
-    @Override
-    public List<String> getClusterKeys() {
-        return clusters.stream().map(EventCluster::getKey).collect(Collectors.toList());
-    }
+   
     
     public boolean isStatic() {
         long currentTime = System.currentTimeMillis();
@@ -246,8 +235,8 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
 
     private void moveToCentroid() {
         // Update the agent's position (for visualization or further processing)
-        setAzimuth(this.azimuth);
-        setElevation(this.elevation);
+        setAzimuth(this.getAzimuth());
+        setElevation(this.getElevation());
     }
 
     /**
@@ -258,7 +247,7 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
         float maxDistance = -1;
 
         for (EventCluster cluster : clusters) {
-            float distance = calculateDistance(this.azimuth, this.elevation, cluster.getAzimuth(), cluster.getElevation());
+            float distance = calculateDistance(this.getAzimuth(), this.getElevation(), cluster.getAzimuth(), cluster.getElevation());
             if (distance > maxDistance) {
                 maxDistance = distance;
                 farthestCluster = cluster;
@@ -320,9 +309,9 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
 
     @Override
     public void close() {
-        lastTime = getTimestamp();
+        setLastTime(getTimestamp());
         clusters.clear();
-        logger.info("Agent {} closed at lastTime: {}", getKey(), lastTime);
+        logger.info("Agent {} closed at lastTime: {}", getKey(), getLastTime());
         agentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
     
@@ -339,12 +328,12 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
     public synchronized void draw(Graphics g) {
         Graphics2D g2d = (Graphics2D) g;
 
-        int x = centerX + (int) ((getAzimuth() - azimuthHeading) * azimuthScale);
-        int y = centerY - (int) ((getElevation() - elevationHeading) * elevationScale);
+        int x = getCenterX() + (int) ((getAzimuth() - getAzimuthHeading()) * getAzimuthScale());
+        int y = getCenterY() - (int) ((getElevation() - getElevationHeading()) * getElevationScale());
 
         g2d.setColor(color);
-        int pixelSizeX = (int) (size * azimuthScale);
-        int pixelSizeY = (int) (size * elevationScale);
+        int pixelSizeX = (int) (getSize() * getAzimuthScale());
+        int pixelSizeY = (int) (getSize() * getElevationScale());
         g2d.drawOval(x - pixelSizeX / 2, y - pixelSizeY / 2, pixelSizeX, pixelSizeY);
         g2d.drawString(getKey()+"qual: % .1f "+getSupportQuality() , x, y - pixelSizeY / 2);
 

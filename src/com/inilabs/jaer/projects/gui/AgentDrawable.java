@@ -28,10 +28,11 @@ import java.awt.Graphics2D;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
-public class AgentDrawable extends BasicDrawable implements Drawable, DrawableListener{
-   
+public class AgentDrawable extends BasicDrawable implements Drawable {
+private final CopyOnWriteArrayList<EventCluster> clusters = new CopyOnWriteArrayList<>();
    
 
     public AgentDrawable() {
@@ -46,6 +47,15 @@ public class AgentDrawable extends BasicDrawable implements Drawable, DrawableLi
         setColor(Color.BLACK);
     }
 
+    public CopyOnWriteArrayList<EventCluster>  getClusters() {
+        return clusters;
+    }
+    
+    
+    public List<String> getClusterKeys() {
+        return clusters.stream().map(EventCluster::getKey).collect(Collectors.toList());
+    }
+    
     public void setShowPath(boolean showPath) {
         this.showPath = showPath;
     }
@@ -72,24 +82,24 @@ public class AgentDrawable extends BasicDrawable implements Drawable, DrawableLi
 
     @Override
     public void onTransformChanged(float azimuthScale, float elevationScale, float azimuthHeading, float elevationHeading, int centerX, int centerY) {
-        this.azimuthScale = azimuthScale;
-        this.elevationScale = elevationScale;
-        this.azimuthHeading = azimuthHeading;
-        this.elevationHeading = elevationHeading;
-        this.centerX = centerX;
-        this.centerY = centerY;
+        this.setAzimuthScale(azimuthScale);
+        this.setElevationScale(elevationScale);
+        this.setAzimuthHeading(azimuthHeading);
+        this.setElevationHeading(elevationHeading);
+        this.setCenterX(centerX);
+        this.setCenterY(centerY);
     }
 
     @Override
     public void draw(Graphics g) {
         Graphics2D g2d = (Graphics2D) g;
 
-        int x = centerX + (int) ((getAzimuth() - azimuthHeading) * azimuthScale);
-        int y = centerY - (int) ((getElevation() - elevationHeading) * elevationScale);
+        int x = getCenterX() + (int) ((getAzimuth() - getAzimuthHeading()) * getAzimuthScale());
+        int y = getCenterY() - (int) ((getElevation() - getElevationHeading()) * getElevationScale());
 
         g2d.setColor(color);
-        int pixelSizeX = (int) (size * azimuthScale);
-        int pixelSizeY = (int) (size * elevationScale);
+        int pixelSizeX = (int) (getSize() * getAzimuthScale());
+        int pixelSizeY = (int) (getSize() * getElevationScale());
         g2d.drawOval(x - pixelSizeX / 2, y - pixelSizeY / 2, pixelSizeX, pixelSizeY);
         g2d.drawString(getKey(), x, y+pixelSizeY);
 
@@ -105,21 +115,23 @@ public class AgentDrawable extends BasicDrawable implements Drawable, DrawableLi
         float[] previousPosition = {0,0};
 
         for (float[] position : pathBuffer) {
-            int pathX = centerX + (int) ((position[0] - azimuthHeading) * azimuthScale);
-            int pathY = centerY - (int) ((position[1] - elevationHeading) * elevationScale);
+            int pathX = getCenterX() + (int) ((position[0] - getAzimuthHeading()) * getAzimuthScale());
+            int pathY = getCenterY() - (int) ((position[1] - getElevationHeading()) * getElevationScale());
 
             if (previousPosition != null) {
-                int prevX = centerX + (int) ((previousPosition[0] - azimuthHeading) * azimuthScale);
-                int prevY = centerY - (int) ((previousPosition[1] - elevationHeading) * elevationScale);
+                int prevX = getCenterX() + (int) ((previousPosition[0] - getAzimuthHeading()) * getAzimuthScale());
+                int prevY = getCenterY() - (int) ((previousPosition[1] - getElevationHeading()) * getElevationScale());
                 g2d.drawLine(prevX, prevY, pathX, pathY);
             }
             previousPosition = position;
         }
     }
 
+   
+    
     public void close() {
-        lastTime = getTimestamp();
-        clusters.clear();
+        setLastTime(getTimestamp());
+        getClusters().clear();
         AgentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
 }

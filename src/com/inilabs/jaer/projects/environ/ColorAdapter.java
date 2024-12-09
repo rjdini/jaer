@@ -16,52 +16,22 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
+
 package com.inilabs.jaer.projects.environ;
-
-import com.google.gson.TypeAdapter;
-import com.google.gson.stream.JsonReader;
-import com.google.gson.stream.JsonWriter;
-
+import com.google.gson.*;
 import java.awt.Color;
-import java.io.IOException;
+import java.lang.reflect.Type;
 
-public class ColorAdapter extends TypeAdapter<Color> {
-
+public class ColorAdapter implements JsonSerializer<Color>, JsonDeserializer<Color> {
     @Override
-    public void write(JsonWriter out, Color color) throws IOException {
-        if (color == null) {
-            out.nullValue();
-            return;
-        }
-        out.beginObject();
-        out.name("r").value(color.getRed());
-        out.name("g").value(color.getGreen());
-        out.name("b").value(color.getBlue());
-        out.name("a").value(color.getAlpha());
-        out.endObject();
+    public JsonElement serialize(Color color, Type type, JsonSerializationContext context) {
+        // Serialize to an RGB integer
+        return new JsonPrimitive(color.getRGB());
     }
 
     @Override
-    public Color read(JsonReader in) throws IOException {
-        in.beginObject();
-        int r = 0, g = 0, b = 0, a = 255; // Default values
-        while (in.hasNext()) {
-            switch (in.nextName()) {
-                case "r":
-                    r = in.nextInt();
-                    break;
-                case "g":
-                    g = in.nextInt();
-                    break;
-                case "b":
-                    b = in.nextInt();
-                    break;
-                case "a":
-                    a = in.nextInt();
-                    break;
-            }
-        }
-        in.endObject();
-        return new Color(r, g, b, a);
+    public Color deserialize(JsonElement json, Type type, JsonDeserializationContext context) {
+        // Deserialize from an RGB integer
+        return new Color(json.getAsInt());
     }
 }

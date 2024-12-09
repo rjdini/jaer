@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2024 rjd.
  *
- * This library is free software; you can redistribute it and/or
+ * This library is free software; you can redistribute it and/orcluster
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
@@ -29,18 +29,18 @@ public class TrajectoryPointDrawable extends BasicDrawable implements Drawable {
     private Color color;
 
     public TrajectoryPointDrawable(float azimuth, float elevation, long timestamp) {
-        this.azimuth = azimuth;
-        this.elevation = elevation;
-        this.timestamp = timestamp;
-        this.color = Color.BLUE; // Default color
+        this.setAzimuth(azimuth);
+        this.setElevation(elevation);
+        this.setTimestamp(timestamp);
+        this.setColor(Color.BLUE); // Default color
     }
 
     public float getAzimuth() {
-        return azimuth;
+        return getAzimuth();
     }
 
     public float getElevation() {
-        return elevation;
+        return getElevation();
     }
 
     public long getTime() {
@@ -55,8 +55,8 @@ public class TrajectoryPointDrawable extends BasicDrawable implements Drawable {
     public void draw(Graphics g) {
         Graphics2D g2d = (Graphics2D) g;
 
-        int x = centerX + (int) ((azimuth - azimuthHeading) * azimuthScale);
-        int y = centerY - (int) ((elevation - elevationHeading) * elevationScale);
+        int x = getCenterX() + (int) ((getAzimuth() - getAzimuthHeading()) * getAzimuthScale());
+        int y = getCenterY() - (int) ((getElevation() - getElevationHeading()) * getElevationScale());
 
         g2d.setColor(color);
         int size = 5; // Fixed size for individual points
@@ -68,7 +68,7 @@ public class TrajectoryPointDrawable extends BasicDrawable implements Drawable {
 
     @Override
     public String toString() {
-        return String.format("Azimuth: %.2f, Elevation: %.2f, Time: %d", azimuth, elevation, timestamp);
+        return String.format("Azimuth: %.2f, Elevation: %.2f, Time: %d", getAzimuth(), getElevation(), timestamp);
     }
 }
 

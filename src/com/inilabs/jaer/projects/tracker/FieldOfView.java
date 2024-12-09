@@ -27,9 +27,7 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 
-import com.inilabs.jaer.projects.gui.BasicDrawable;
 import com.inilabs.jaer.projects.gui.Drawable;
-import com.inilabs.jaer.projects.gui.DrawableListener;
 import com.inilabs.jaer.projects.logging.AgentLogger;
 import com.inilabs.jaer.projects.logging.EventType;
 import java.util.ArrayList;
@@ -39,7 +37,7 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import org.slf4j.LoggerFactory;
 
-public class FieldOfView implements Drawable, DrawableListener, PropertyChangeListener {
+public class FieldOfView implements Drawable, PropertyChangeListener {
 
     private final PropertyChangeSupport pcs = new PropertyChangeSupport(this);
     private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(FieldOfView.class);

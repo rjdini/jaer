@@ -18,7 +18,7 @@ import org.slf4j.LoggerFactory;
 public class TrackerManagerEngine {
     private static final int MAX_TRACKER_AGENTS = 3;
     private static final int MAX_CLUSTERS_PER_AGENT = 5; // Limit on clusters per agent
-    private PolarSpaceDisplay polarSpaceDisplay;
+    private PolarSpaceDisplay polarSpaceDisplay = PolarSpaceDisplay.getInstance();
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private TrackerAgentDrawable currentBestAgent = null;
     private FieldOfView fov = FieldOfView.getInstance();
@@ -59,9 +59,9 @@ private final CopyOnWriteArrayList<EventCluster> eventClusters = new CopyOnWrite
     }
 
     
-    public void setPolarSpaceDisplay(PolarSpaceDisplay display) {
-        this.polarSpaceDisplay = display;
-    }
+//    public void setPolarSpaceDisplay(PolarSpaceDisplay display) {
+//        this.polarSpaceDisplay = display;
+//    }
     
     /**
      * Periodically processes clusters and trackers.

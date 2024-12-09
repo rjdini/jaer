@@ -16,25 +16,29 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
-package com.inilabs.jaer.projects.motor.tests;
 
-import com.inilabs.jaer.projects.motor.DirectGimbalController;
-import com.inilabs.jaer.projects.motor.JoystickController;
+package com.inilabs.jaer.projects.environ;
 
-public class JoystickTest {
-    public static void main(String[] args) {
-        
-        DirectGimbalController gimbal = DirectGimbalController.getInstance(); // Assuming Gimbal is implemented
-        JoystickController controller = JoystickController.getInstance(gimbal);
+import com.google.gson.ExclusionStrategy;
+import com.google.gson.FieldAttributes;
 
-        System.out.println("Starting Joystick Controller...");
-        controller.start();
+public class NoSuperclassExclusionStrategy implements ExclusionStrategy {
 
-        // Keep the program running
-        try {
-            Thread.sleep(Long.MAX_VALUE);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+    private final Class<?> targetClass;
+
+    public NoSuperclassExclusionStrategy(Class<?> targetClass) {
+        this.targetClass = targetClass;
+    }
+
+    @Override
+    public boolean shouldSkipField(FieldAttributes f) {
+        // Exclude fields that are not declared in the target class
+        return !f.getDeclaringClass().equals(targetClass);
+    }
+
+    @Override
+    public boolean shouldSkipClass(Class<?> clazz) {
+        return false; // Do not skip entire classes
     }
 }
+

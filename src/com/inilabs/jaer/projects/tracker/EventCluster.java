@@ -23,7 +23,6 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import com.inilabs.jaer.projects.gui.AgentDrawable;
 import com.inilabs.jaer.projects.gui.Drawable;
-import com.inilabs.jaer.projects.gui.DrawableListener;
 import com.inilabs.jaer.projects.logging.AgentLogger;
 import com.inilabs.jaer.projects.logging.EventType;
 import java.util.ArrayList;
@@ -31,7 +30,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class EventCluster extends AgentDrawable implements Expirable, Runnable, Drawable, DrawableListener{
+public class EventCluster extends AgentDrawable implements Expirable, Runnable, Drawable{
    private static final Logger log = LoggerFactory.getLogger(EventCluster.class);
    private static final AgentLogger agentLogger = AgentLogger.getInstance();
    public ClusterAdapter enclosedCluster;
@@ -63,8 +62,8 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter, lon
     // Optionally include transformation logic
     EventCluster eventCluster = new EventCluster();
     eventCluster.enclosedCluster = clusterAdapter; 
-    eventCluster.azimuth = clusterAdapter.getAzimuth();
-    eventCluster.elevation = clusterAdapter.getElevation();
+    eventCluster.setAzimuth(clusterAdapter.getAzimuth());
+    eventCluster.setElevation(clusterAdapter.getElevation());
     eventCluster.startTime = eventCluster.getTimestamp();
     eventCluster.maxLifetime = lifetimeMillis ; 
     eventCluster.color=Color.BLACK;
@@ -115,21 +114,16 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter, lon
     }
     
     public void updateFromAdapter(ClusterAdapter adapter) {
-    this.azimuth = adapter.getAzimuth();
-    this.elevation = adapter.getElevation();
+    this.setAzimuth(adapter.getAzimuth());
+    this.setElevation(adapter.getElevation());
     this.size = adapter.getSize();
     // Update other fields as needed
 }
-
-   
-    public void setKey(String key) {
-        this.key = key;
-    }
     
     @Override
     public float getAzimuth() {
         if (this.enclosedCluster == null) {
-            return  azimuth;
+            return  super.getAzimuth();
         }
         return enclosedCluster.getAzimuth();
     }
@@ -137,14 +131,10 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter, lon
     @Override
     public float getElevation() {
        if (enclosedCluster == null) {
-             return elevation;
+             return super.getElevation();
         }        return enclosedCluster.getElevation();
     }
 
-    @Override
-    public String getKey() {
-            return this.key;
-    }
 
     public String getEnclosedClusterKey() {
          if (enclosedCluster != null) { 
@@ -259,15 +249,15 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter, lon
     public synchronized void draw(Graphics g) {
         Graphics2D g2d = (Graphics2D) g;
            // deafult location and size for plotting
-          int myX =  centerX + (int) ((getAzimuth() - getAzimuthHeading()) * getAzimuthScale());
-          int myY =  centerY - (int) ((getElevation() - getElevationHeading()) * getElevationScale());  
-           int pixelSizeX = (int) (size * azimuthScale);
-           int pixelSizeY = (int) (size * elevationScale);
+          int myX =  getCenterX() + (int) ((getAzimuth() - getAzimuthHeading()) * getAzimuthScale());
+          int myY =  getCenterY() - (int) ((getElevation() - getElevationHeading()) * getElevationScale());  
+           int pixelSizeX = (int) (size * getAzimuthScale());
+           int pixelSizeY = (int) (size * getElevationScale());
         
            // if we have an enclosed cluster - we use its coords (should have been updated on move() in anycase.
         if(getEnclosedCluster() != null ) { // use the enclsoed cluster's coords.
-         myX =  centerX + (int) ((getEnclosedCluster().getAzimuth() - getAzimuthHeading()) * getAzimuthScale());
-          myY =  centerY - (int) ((getEnclosedCluster().getElevation() - getElevationHeading()) * getElevationScale());  
+         myX =  getCenterX() + (int) ((getEnclosedCluster().getAzimuth() - getAzimuthHeading()) * getAzimuthScale());
+          myY =  getCenterY() - (int) ((getEnclosedCluster().getElevation() - getElevationHeading()) * getElevationScale());  
           setColor(getEnclosedCluster().getColor());
         } 
       

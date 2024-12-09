@@ -34,7 +34,7 @@ public class LogReviewTest {
 
             PolarSpaceDisplay display = gui.getPolarSpaceDisplay();
             display.setPreferredSize(new Dimension(1000, 600));
-            display.initializeDisplay();
+            //display.initializeDisplay();
 
             LogReviewTestPanel testPanel = new LogReviewTestPanel(gui);
             gui.setTestPanel(testPanel);

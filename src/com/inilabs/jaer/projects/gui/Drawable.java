@@ -31,7 +31,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import com.inilabs.jaer.projects.gui.ActionType;
 
-public interface Drawable extends DrawableListener {
+public interface Drawable  {
 
     // Unique key for the drawable
     String getKey();
@@ -67,6 +67,8 @@ public interface Drawable extends DrawableListener {
     boolean isExpired(); // Checks if the drawable has reached end of life
       
     boolean isOrphaned(); // Checks if the drawable is still valid
+    
+     void onTransformChanged(float azimuthScale, float elevationScale, float azimuthHeading, float elevationHeading, int centerX, int centerY);
     
     void close();
  

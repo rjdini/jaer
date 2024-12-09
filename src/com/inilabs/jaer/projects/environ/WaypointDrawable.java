@@ -17,42 +17,45 @@
  * MA 02110-1301  USA
  */
 
+
 package com.inilabs.jaer.projects.environ;
 
 import com.inilabs.jaer.projects.gui.BasicDrawable;
 import com.inilabs.jaer.projects.gui.Drawable;
 import com.google.gson.annotations.Expose;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 
-import java.awt.*;
+    
 
+/**
+ * Represents a drawable waypoint in polar space (azimuth and elevation).
+ */
+    @JsonIgnoreProperties(ignoreUnknown = true)
 public class WaypointDrawable extends BasicDrawable implements Drawable {
-     @Expose
-    private String name;
+    @Expose private String name;
+    @Expose private float azimuth;
+    @Expose private float elevation;
+   @Expose private Color color;     
+   
 
-    @Expose
-    private float azimuth;
-
-    @Expose
-    private float elevation;
-
-    @Expose
-    private Color color; // Ensure only this field is serialized/deserialized
-    
-    
-    public WaypointDrawable(String name, float azimuth, float elevation) {
+    /**
+     * Constructs a WaypointDrawable.
+     *
+     * @param name      Name of the waypoint.
+     * @param azimuth   Azimuth angle in degrees.
+     * @param elevation Elevation angle in degrees.
+     * @param color     Color of the waypoint.
+     */
+    public WaypointDrawable(String name, float azimuth, float elevation, Color color) {
         this.name = name;
         this.azimuth = azimuth;
         this.elevation = elevation;
-    }
-
-     public Color getColor() {
-        return color;
-    }
-
-    public void setColor(Color color) {
         this.color = color;
     }
-  
+
     // Getters and Setters
     public String getName() {
         return name;
@@ -78,22 +81,35 @@ public class WaypointDrawable extends BasicDrawable implements Drawable {
         this.elevation = elevation;
     }
 
-    @Override
-    public String getKey() {
-        return "Waypoint_" + name; // Unique key based on the name
+    public Color getColor() {
+        return color;
     }
 
+    public void setColor(Color color) {
+        this.color = color;
+    }
+
+    @Override
+    public String getKey() {
+        return "Waypoint_" + name; // Generates a unique key based on the name
+    }
+
+    /**
+     * Draws the waypoint on the given Graphics object.
+     *
+     * @param g Graphics object to draw on.
+     */
     @Override
     public void draw(Graphics g) {
         Graphics2D g2d = (Graphics2D) g;
 
         // Transform coordinates based on azimuth and elevation
-        int x = centerX + (int) ((azimuth - azimuthHeading) * azimuthScale);
-        int y = centerY - (int) ((elevation - elevationHeading) * elevationScale);
+        int x = getCenterX() + (int) ((this.getAzimuth() - getAzimuthHeading()) * getAzimuthScale());
+        int y = getCenterY() - (int) ((this.getElevation() - getElevationHeading()) * getElevationScale());
 
         // Draw circle
         g2d.setColor(color);
-        int radius = (int) (2 * azimuthScale); // 2 degrees radius
+        int radius = (int) (2 * getAzimuthScale()); // 2 degrees radius
         g2d.drawOval(x - radius, y - radius, 2 * radius, 2 * radius);
 
         // Draw crosshair
@@ -104,6 +120,6 @@ public class WaypointDrawable extends BasicDrawable implements Drawable {
         g2d.setColor(Color.BLACK);
         g2d.drawString(name, x - 15, y - radius - 10); // Name above the circle
         g2d.drawString(String.format("Key: %s", getKey()), x - 20, y + radius + 10);
-        g2d.drawString(String.format("Az: %.2f, El: %.2f", azimuth, elevation), x - 30, y + radius + 25);
+        g2d.drawString(String.format("Az: %.2f, El: %.2f", this.getAzimuth(), this.getElevation()), x - 30, y + radius + 25);
     }
 }

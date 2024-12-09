@@ -31,10 +31,10 @@ import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
-public class BasicDrawable implements Drawable, DrawableListener {
+public class BasicDrawable implements Drawable {
 
     protected static int idCounter = 0; // Auto-incrementing ID counter for instances
-    protected String key;
+    private String key;
     protected int id; // Unique ID for this instance
     protected BiConsumer<ActionType, String> parentCallback;
 
@@ -43,22 +43,23 @@ public class BasicDrawable implements Drawable, DrawableListener {
     protected final int maxPathLength = 20;
     protected Color color = Color.BLACK;
     protected boolean showPath = false;
-    protected float size = 1.0f;
-    protected float azimuth = 0.0f;
-    protected float elevation = 0.0f;
-    protected int centerX = 0;
-    protected int centerY = 0;
-    protected float azimuthScale = 1.0f;
-    protected float elevationScale = 1.0f;
-    protected float azimuthHeading = 0f;
-    protected float elevationHeading = 0f;
-    protected long startTime; // agent created
-    protected long lastTime; // agent closed
-    protected long maxLifetime = 100 ; //millisec
+    private float size = 1.0f;
+    private float azimuth = 0.0f;
+    private float elevation = 0.0f;
+    private int centerX = 0;
+    private int centerY = 0;
+    private float azimuthScale = 1.0f;
+    private float elevationScale = 1.0f;
+    private float azimuthHeading = 0f;
+    private float elevationHeading = 0f;
+    private long startTime; // agent created
+    private long timestamp;  // system or jaerts timestamp 
+    private long lastTime; // agent closed
+    private long maxLifetime = 100 ; //millisec
     protected boolean isOrphaned = false;
-    protected boolean isExpired = false;
+    private boolean isExpired = false;
     protected static FieldOfView fov;
-    protected List<EventCluster> clusters = new ArrayList<>();
+  
 
     // Default constructor, places object at (0,0) and auto-generates key
     public BasicDrawable() {
@@ -91,7 +92,7 @@ public class BasicDrawable implements Drawable, DrawableListener {
     
    
     public void extendLifetime(long incrementMillis) {
-        maxLifetime += incrementMillis; // Add reward time
+        setMaxLifetime(getMaxLifetime() + incrementMillis); // Add reward time
     }
     
     
@@ -120,7 +121,7 @@ public class BasicDrawable implements Drawable, DrawableListener {
     
 
  public long getLifetime()  {
-     return getTimestamp() - startTime;
+     return getTimestamp() - getStartTime();
  }
          
   
@@ -129,48 +130,37 @@ public class BasicDrawable implements Drawable, DrawableListener {
  //    return true; // Check if lifetime has expired
 //}
     
-     /**
-     * Clears the assigned clusters.
-     */
-    public void clearClusters() {
-        clusters.clear();
-    }
+   
    
     
     public Point2D.Float getChipLocation() {
-        float x = fov.getPixelsAtYaw(azimuth);
-        float y = fov.getPixelsAtPitch(elevation);
+        float x = fov.getPixelsAtYaw(getAzimuth());
+        float y = fov.getPixelsAtPitch(getElevation());
         return new Point2D.Float(x, y) ;        
     }
     
     protected void setExpired(boolean yes) {
-        isExpired = true;
+        setIsExpired(true);
     }
     
     @Override
     public boolean isExpired() {
-      return isExpired;
+      return isIsExpired();
     }
     
      protected void setMaxLifeTime(long max) {
-         maxLifetime = max;
+         setMaxLifetime(max);
      }
      
-    
-        // the cluster management shouldnt be down here in BasicDrawable!  TODO
-       // Helper method to get cluster keys as a list of strings
-    public List<String> getClusterKeys() {
-        return clusters.stream().map(EventCluster::getKey).collect(Collectors.toList());
-    }
-    
+
     // Drawable interface method to draw the drawable on the Graphics context
     @Override
     public void draw(Graphics g) {
         Graphics2D g2d = (Graphics2D) g;
 
         // Calculate position based on azimuth and elevation scales
-        centerX = g.getClipBounds().width / 2;
-        centerY = g.getClipBounds().height / 2;
+        setCenterX(g.getClipBounds().width / 2);
+        setCenterY(g.getClipBounds().height / 2);
    //     int x = centerX + (int) (azimuth * azimuthScale);
     //    int y = centerY - (int) (elevation * elevationScale);
         // Calculate screen coordinates based on polar coordinates and the transform broadcast
@@ -179,8 +169,8 @@ public class BasicDrawable implements Drawable, DrawableListener {
 
         // Draw the drawable as a circle
         g2d.setColor(color);
-        int pixelSizeX = (int) (size * getAzimuthScale());
-        int pixelSizeY = (int) (size * getElevationScale());
+        int pixelSizeX = (int) (getSize() * getAzimuthScale());
+        int pixelSizeY = (int) (getSize() * getElevationScale());
         g2d.drawOval(x - pixelSizeX / 2, y - pixelSizeY / 2, pixelSizeX, pixelSizeY);
 
         // Draw the path if enabled
@@ -219,12 +209,12 @@ public class BasicDrawable implements Drawable, DrawableListener {
     
     @Override
     public void onTransformChanged(float azimuthScale, float elevationScale, float azimuthHeading, float elevationHeading, int centerX, int centerY) {
-        this.azimuthScale = azimuthScale;
-        this.elevationScale = elevationScale;
-        this.azimuthHeading = azimuthHeading;
-        this.elevationHeading = elevationHeading;
-        this.centerX = centerX;
-        this.centerY = centerY;
+        this.setAzimuthScale(azimuthScale);
+        this.setElevationScale(elevationScale);
+        this.setAzimuthHeading(azimuthHeading);
+        this.setElevationHeading(elevationHeading);
+        this.setCenterX(centerX);
+        this.setCenterY(centerY);
     }
 
     @Override
@@ -279,15 +269,7 @@ public class BasicDrawable implements Drawable, DrawableListener {
         this.parentCallback = parentCallback;
     }
 
-    // Protected getters for subclasses
-    public float getAzimuthScale() {
-        return azimuthScale;
-    }
-
-    public float getElevationScale() {
-        return elevationScale;
-    }
-
+   
 
     public boolean isPathVisible() {
         return showPath;
@@ -309,19 +291,27 @@ public class BasicDrawable implements Drawable, DrawableListener {
         pathBuffer.clear();
         
         // Reset position and properties to default values (optional)
-        azimuth = 0.0f;
-        elevation = 0.0f;
+        setAzimuth(0.0f);
+        setElevation(0.0f);
         size = 5.0f;
         color = Color.RED;
         showPath = false;
 
         // Notify parent or manager, if a callback is set
         if (parentCallback != null) {
-            parentCallback.accept(ActionType.REMOVE, key);
+            parentCallback.accept(ActionType.REMOVE, getKey());
         }
     }
      
-     
+    // Protected getters for subclasses
+    public float getAzimuthScale() {
+        return azimuthScale;
+    }
+
+    public float getElevationScale() {
+        return elevationScale;
+    }
+  
  
     /**
      * @return the centerX
@@ -349,6 +339,112 @@ public class BasicDrawable implements Drawable, DrawableListener {
      */
     public float getElevationHeading() {
         return elevationHeading;
+    }
+
+    /**
+     * @param centerX the centerX to set
+     */
+    public void setCenterX(int centerX) {
+        this.centerX = centerX;
+    }
+
+    /**
+     * @param centerY the centerY to set
+     */
+    public void setCenterY(int centerY) {
+        this.centerY = centerY;
+    }
+
+    /**
+     * @param azimuthScale the azimuthScale to set
+     */
+    public void setAzimuthScale(float azimuthScale) {
+        this.azimuthScale = azimuthScale;
+    }
+
+    /**
+     * @param elevationScale the elevationScale to set
+     */
+    public void setElevationScale(float elevationScale) {
+        this.elevationScale = elevationScale;
+    }
+
+    /**
+     * @param azimuthHeading the azimuthHeading to set
+     */
+    public void setAzimuthHeading(float azimuthHeading) {
+        this.azimuthHeading = azimuthHeading;
+    }
+
+    /**
+     * @param elevationHeading the elevationHeading to set
+     */
+    public void setElevationHeading(float elevationHeading) {
+        this.elevationHeading = elevationHeading;
+    }
+
+    /**
+     * @return the startTime
+     */
+    public long getStartTime() {
+        return startTime;
+    }
+
+    /**
+     * @return the lastTime
+     */
+    public long getLastTime() {
+        return lastTime;
+    }
+
+    /**
+     * @return the maxLifetime
+     */
+    public long getMaxLifetime() {
+        return maxLifetime;
+    }
+
+    /**
+     * @param startTime the startTime to set
+     */
+    public void setStartTime(long startTime) {
+        this.startTime = startTime;
+    }
+
+    /**
+     * @param lastTime the lastTime to set
+     */
+    public void setLastTime(long lastTime) {
+        this.lastTime = lastTime;
+    }
+
+    /**
+     * @param maxLifetime the maxLifetime to set
+     */
+    public void setMaxLifetime(long maxLifetime) {
+        this.maxLifetime = maxLifetime;
+    }
+    
+
+    /**
+     * @return the isExpired
+     */
+    public boolean isIsExpired() {
+        return isExpired;
+    }
+
+    /**
+     * @param isExpired the isExpired to set
+     */
+    public void setIsExpired(boolean isExpired) {
+        this.isExpired = isExpired;
+    }
+
+    /**
+     * @param timestamp the timestamp to set
+     */
+    public void setTimestamp(long timestamp) {
+        this.timestamp = timestamp;
     }
     
 }

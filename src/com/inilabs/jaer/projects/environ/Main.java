@@ -23,26 +23,21 @@ import java.awt.BorderLayout;
 import javax.swing.JFrame;
 
 public class Main {
-   
-        
-        public static void main(String[] args) {
-        // Create a PolarSpaceDisplay
-        PolarSpaceDisplay display = new PolarSpaceDisplay();
+   public static void main(String[] args) {
+    WaypointManager manager = WaypointManager.getInstance();
+    PolarSpaceDisplay display = PolarSpaceDisplay.getInstance();
+    WaypointGUI waypointGUI = new WaypointGUI();
+    manager.setWaypointGUI(waypointGUI); // Link GUI to manager
+    
+    JFrame frame = new JFrame("Waypoint System Test");
+    frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    frame.setLayout(new BorderLayout());
+    frame.add(display, BorderLayout.CENTER);
+    frame.add(waypointGUI, BorderLayout.EAST);
 
-        // Create and attach a WaypointManager to the display
-        WaypointManager manager = WaypointManager.getInstance(display);
-
-        // Create a JFrame to host the display
-        JFrame frame = new JFrame("Waypoint System Test");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setLayout(new BorderLayout());
-        frame.add(display, BorderLayout.CENTER);
-
-        // Add a WaypointGUI if necessary
-        manager.showGUI(true);
-
-        frame.setSize(1000, 800);
-        frame.setVisible(true);
-        }
+    frame.setSize(1000, 600);
+    frame.setLocationRelativeTo(null);
+    frame.setVisible(true);
 }
 
+}

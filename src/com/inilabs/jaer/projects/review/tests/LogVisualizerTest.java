@@ -35,7 +35,7 @@ public class LogVisualizerTest {
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             frame.setSize(1200, 800);
 
-            PolarSpaceDisplay display = new PolarSpaceDisplay();
+            PolarSpaceDisplay display = PolarSpaceDisplay.getInstance();
             TrajectoryManager manager = new TrajectoryManager(display);
             LogVisualizerPanel panel = new LogVisualizerPanel(display, manager);
 

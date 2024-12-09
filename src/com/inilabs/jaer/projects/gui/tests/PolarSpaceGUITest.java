@@ -43,7 +43,7 @@ public class PolarSpaceGUITest {
         frame.setLayout(new BorderLayout());
 
         // Initialize PolarSpaceDisplay (the main panel to test)
-        polarSpaceDisplay = new PolarSpaceDisplay();
+        polarSpaceDisplay = PolarSpaceDisplay.getInstance();
         polarSpaceDisplay.setPreferredSize(new Dimension(600, 400));
 
         // Set initial heading and range

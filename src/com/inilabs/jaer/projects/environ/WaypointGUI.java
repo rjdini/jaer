@@ -18,133 +18,214 @@
  */
 package com.inilabs.jaer.projects.environ;
 
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
-
+import com.inilabs.jaer.projects.gui.BasicTestPanel;
+import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.io.*;
-import java.lang.reflect.Type;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.io.File;
+import java.io.IOException;
 
-public class WaypointGUI extends JFrame {
-    private final WaypointManager manager;
-    private final JTextField nameField = new JTextField(10);
-    private final JTextField azimuthField = new JTextField(5);
-    private final JTextField elevationField = new JTextField(5);
-    private final JButton colorButton = new JButton("Pick Color");
-    private Color selectedColor = Color.GREEN;
+public class WaypointGUI extends BasicTestPanel {
+    private JTextField nameField;
+    private JSpinner azimuthSpinner;
+    private JSpinner elevationSpinner;
+    private JButton addButton, editButton, listButton, deleteButton, saveButton, loadButton, colorButton;
+    private Color selectedColor = Color.WHITE; // Default color
+    private WaypointDrawable editingWaypoint;
+    private final WaypointManager manager = WaypointManager.getInstance();
 
-    public WaypointGUI(WaypointManager manager) {
-        this.manager = manager;
-        setTitle("Waypoint Manager");
-        setSize(600, 400);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+    public WaypointGUI() {
+        initialize();
+    }
+
+    private void initialize() {
         setLayout(new BorderLayout());
 
-        // Main panel
-        JPanel mainPanel = new JPanel(new GridLayout(0, 2));
-        mainPanel.add(new JLabel("Name:"));
-        mainPanel.add(nameField);
-        mainPanel.add(new JLabel("Azimuth:"));
-        mainPanel.add(azimuthField);
-        mainPanel.add(new JLabel("Elevation:"));
-        mainPanel.add(elevationField);
-        mainPanel.add(new JLabel("Color:"));
-        mainPanel.add(colorButton);
+        // Input Panel
+        JPanel inputPanel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
 
+        nameField = new JTextField(10);
+        azimuthSpinner = new JSpinner(new SpinnerNumberModel(0.0, -180.0, 180.0, 0.1));
+        elevationSpinner = new JSpinner(new SpinnerNumberModel(0.0, -90.0, 90.0, 0.1));
+
+        colorButton = new JButton("Choose Color");
+        colorButton.setPreferredSize(new Dimension(100, 20));        
         colorButton.addActionListener(e -> {
-            selectedColor = JColorChooser.showDialog(this, "Choose Waypoint Color", selectedColor);
-            colorButton.setBackground(selectedColor); // Reflect the selected color in the button
+            Color color = JColorChooser.showDialog(this, "Select a Color", selectedColor);
+            if (color != null) {
+                selectedColor = color;
+            }
         });
+       
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        inputPanel.add(new JLabel("Name:"), gbc);
+        gbc.gridx = 1;
+        inputPanel.add(nameField, gbc);
 
-        // Buttons
-        JPanel buttonPanel = new JPanel();
-        JButton addButton = new JButton("Add Waypoint");
-        JButton editButton = new JButton("Edit Waypoint");
-        JButton deleteButton = new JButton("Delete Waypoint");
-        JButton saveButton = new JButton("Save Waypoints");
-        JButton loadButton = new JButton("Load Waypoints");
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        inputPanel.add(new JLabel("Azimuth:"), gbc);
+        gbc.gridx = 1;
+        inputPanel.add(azimuthSpinner, gbc);
 
-        addButton.addActionListener(this::addWaypoint);
-        editButton.addActionListener(this::editWaypoint);
-        deleteButton.addActionListener(this::deleteWaypoint);
-        saveButton.addActionListener(this::saveWaypoints);
-        loadButton.addActionListener(this::loadWaypoints);
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        inputPanel.add(new JLabel("Elevation:"), gbc);
+        gbc.gridx = 1;
+        inputPanel.add(elevationSpinner, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        inputPanel.add(new JLabel("Color:"), gbc);
+        gbc.gridx = 1;
+        inputPanel.add(colorButton, gbc);
+
+        // Button Panel (Stacked Vertically)
+        JPanel buttonPanel = new JPanel(new GridLayout(5, 1, 5, 5));
+        addButton = new JButton("Add");
+        editButton = new JButton("Edit");
+        listButton = new JButton("List");
+        deleteButton = new JButton("Delete");
+        saveButton = new JButton("Save");
+        loadButton = new JButton("Load");
 
         buttonPanel.add(addButton);
         buttonPanel.add(editButton);
         buttonPanel.add(deleteButton);
+         buttonPanel.add(listButton);
         buttonPanel.add(saveButton);
         buttonPanel.add(loadButton);
 
-        add(mainPanel, BorderLayout.CENTER);
+        addButton.addActionListener(e -> addWaypoint());
+        editButton.addActionListener(e -> editWaypoint());
+        deleteButton.addActionListener(e -> deleteWaypoint());
+        listButton.addActionListener(e -> listWaypoints());
+        saveButton.addActionListener(e -> {
+            try {
+                saveWaypoints();
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        });
+        loadButton.addActionListener(e -> {
+            try {
+                loadWaypoints();
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        });
+
+        // Combine Panels
+        add(inputPanel, BorderLayout.NORTH);
         add(buttonPanel, BorderLayout.SOUTH);
     }
 
-    private void addWaypoint(ActionEvent e) {
-        try {
-            String name = nameField.getText();
-            float azimuth = Float.parseFloat(azimuthField.getText());
-            float elevation = Float.parseFloat(elevationField.getText());
-            WaypointDrawable waypoint = new WaypointDrawable(name, azimuth, elevation);
-            waypoint.setColor(selectedColor);
-            manager.addWaypoint(waypoint);
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "Invalid azimuth or elevation value.", "Error", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    private void editWaypoint(ActionEvent e) {
+    
+    private void addWaypoint() {
         String name = nameField.getText();
-        WaypointDrawable waypoint = manager.getWaypointByName(name);
-        if (waypoint != null) {
-            try {
-                waypoint.setAzimuth(Float.parseFloat(azimuthField.getText()));
-                waypoint.setElevation(Float.parseFloat(elevationField.getText()));
-                waypoint.setColor(selectedColor);
-                manager.updateWaypoint(waypoint); // Ensure the manager updates the waypoint correctly
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(this, "Invalid azimuth or elevation value.", "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        } else {
-            JOptionPane.showMessageDialog(this, "Waypoint not found.", "Error", JOptionPane.ERROR_MESSAGE);
+        float azimuth = ((Double) azimuthSpinner.getValue()).floatValue();
+        float elevation = ((Double) elevationSpinner.getValue()).floatValue();
+
+        if (name.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Name cannot be empty!", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
         }
+
+        WaypointDrawable waypoint = new WaypointDrawable(name, azimuth, elevation, selectedColor);
+        manager.addWaypoint(waypoint);
+        clearFields();
+        JOptionPane.showMessageDialog(this, "Waypoint added successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
     }
 
-    private void deleteWaypoint(ActionEvent e) {
-        String name = nameField.getText();
-        if (!name.isEmpty()) {
-            manager.removeWaypointByName(name); // Manager handles removal by name
-        } else {
-            JOptionPane.showMessageDialog(this, "Please enter a waypoint name to delete.", "Error", JOptionPane.ERROR_MESSAGE);
-        }
+    private void editWaypoint() {
+    if (editingWaypoint == null) {
+        JOptionPane.showMessageDialog(this, "No waypoint selected for editing!", "Error", JOptionPane.ERROR_MESSAGE);
+        return;
     }
 
-    private void saveWaypoints(ActionEvent e) {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setCurrentDirectory(new File(".")); // Set to working directory
-        if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
-            File file = fileChooser.getSelectedFile();
-            manager.saveWaypointsToFile(file);
-        }
-    }
+    String name = nameField.getText();
+    float azimuth = ((Double) azimuthSpinner.getValue()).floatValue();
+    float elevation = ((Double) elevationSpinner.getValue()).floatValue();
+   // Color color = colorChooser.getColor();
 
-    private void loadWaypoints(ActionEvent e) {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setCurrentDirectory(new File(".")); // Set to working directory
-        if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-            File file = fileChooser.getSelectedFile();
-            manager.loadWaypointsFromFile(file);
+    editingWaypoint.setName(name);
+    editingWaypoint.setAzimuth(azimuth);
+    editingWaypoint.setElevation(elevation);
+    editingWaypoint.setColor(selectedColor);
+
+    manager.updateWaypoint(editingWaypoint); // Update in manager
+    clearFields();
+    editingWaypoint = null;
+    JOptionPane.showMessageDialog(this, "Waypoint updated successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+}
+
+    
+    private void listWaypoints() {
+       
+    StringBuilder waypointList = new StringBuilder("Waypoints:\n");
+    for (WaypointDrawable waypoint : manager.getWaypoints().values()) {
+        waypointList.append("Name: ").append(waypoint.getName())
+                    .append(", Azimuth: ").append(waypoint.getAzimuth())
+                    .append(", Elevation: ").append(waypoint.getElevation())
+                    .append(", Color: ").append(waypoint.getColor().toString())
+                    .append("\n");
+    }
+    if (waypointList.toString().equals("Waypoints:\n")) {
+        JOptionPane.showMessageDialog(this, "No waypoints found.", "Waypoint List", JOptionPane.INFORMATION_MESSAGE);
+    } else {
+        JOptionPane.showMessageDialog(this, waypointList.toString(), "Waypoint List", JOptionPane.INFORMATION_MESSAGE);
+    }
+}
+    
+    
+    
+    private void deleteWaypoint() {
+        if (editingWaypoint == null) {
+            JOptionPane.showMessageDialog(this, "No waypoint selected for deletion!", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
         }
+
+        manager.removeWaypoint(editingWaypoint.getKey());
+        clearFields();
+        editingWaypoint = null;
+        JOptionPane.showMessageDialog(this, "Waypoint deleted successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
     }
 
     public void populateFields(WaypointDrawable waypoint) {
+        editingWaypoint = waypoint;
         nameField.setText(waypoint.getName());
-        azimuthField.setText(String.valueOf(waypoint.getAzimuth()));
-        elevationField.setText(String.valueOf(waypoint.getElevation()));
+        azimuthSpinner.setValue((double) waypoint.getAzimuth());
+        elevationSpinner.setValue((double) waypoint.getElevation());
         selectedColor = waypoint.getColor();
-        colorButton.setBackground(selectedColor); // Reflect the waypoint's color in the button
+    }
+    
+    
+    private void saveWaypoints() throws IOException {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setCurrentDirectory(new File("."));
+        if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+            manager.saveWaypointsToFile(fileChooser.getSelectedFile());
+        }
+    }
+
+    private void loadWaypoints() throws IOException {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setCurrentDirectory(new File("."));
+        if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+            manager.loadWaypointsFromFile(fileChooser.getSelectedFile().getAbsolutePath());
+        }
+    }
+
+    private void clearFields() {
+        nameField.setText("");
+        azimuthSpinner.setValue(0.0);
+        elevationSpinner.setValue(0.0);
+        selectedColor = Color.WHITE;
     }
 }
-

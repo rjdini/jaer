@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory;
 
 public class JoystickController implements JoystickReader.JoystickListener {
     private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(JoystickController.class);
-    private static DirectGimbalController gimbal;
+    private DirectGimbalController gimbal;
     private float yaw = 0.0f;
     private float pitch = 0.0f;
     private float roll = 0.0f;
@@ -37,6 +37,7 @@ public class JoystickController implements JoystickReader.JoystickListener {
         if (instance == null) {
             instance = new JoystickController(gimbal);
             instance.gimbal = gimbal;
+            instance.start();
         }
         return instance;
     }
@@ -52,7 +53,7 @@ public class JoystickController implements JoystickReader.JoystickListener {
     @Override
     public void onAxisChange(JoystickReader.Axis axis, float value) {
         switch (axis) {
-            case YAW -> yaw = value * 180.0f; // Map normalized [-1, 1] to [-180, 180] degrees
+            case YAW -> yaw = value * 90.0f; // Map normalized [-1, 1] to [-180, 180] degrees
             case PITCH -> pitch = value * 90.0f; // Map normalized [-1, 1] to [-90, 90] degrees
             case ROLL -> roll = value * 45.0f; // Map normalized [-1, 1] to [-45, 45] degrees
             default -> System.err.println("Unknown axis: " + axis);
