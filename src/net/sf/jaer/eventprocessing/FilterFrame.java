@@ -178,7 +178,6 @@ public class FilterFrame<PanelType extends FilterPanel> extends javax.swing.JFra
     private void initComponents() {
 
         modeButtonGroup = new javax.swing.ButtonGroup();
-        hideHighlightBG = new javax.swing.ButtonGroup();
         toolBar1 = new javax.swing.JToolBar();
         disableFilteringToggleButton = new javax.swing.JToggleButton();
         resetAllButton = new javax.swing.JButton();
@@ -187,14 +186,10 @@ public class FilterFrame<PanelType extends FilterPanel> extends javax.swing.JFra
         updateIntervalLabel = new javax.swing.JLabel();
         updateIntervalField = new javax.swing.JTextField();
         selectFiltersJB = new javax.swing.JButton();
-        tipLabel = new javax.swing.JLabel();
         jPanel1 = new javax.swing.JPanel();
-        filterJPanel = new javax.swing.JPanel();
-        clearFilterJB = new javax.swing.JButton();
+        tipLabel = new javax.swing.JLabel();
         highlightTF = new javax.swing.JTextField();
-        highlightRB = new javax.swing.JRadioButton();
-        hideOthersRB = new javax.swing.JRadioButton();
-        simpleCB = new javax.swing.JCheckBox();
+        hideOthersCB = new javax.swing.JCheckBox();
         scrollPane = new javax.swing.JScrollPane();
         filtersPanel = new javax.swing.JPanel();
         mainMenuBar = new javax.swing.JMenuBar();
@@ -271,11 +266,11 @@ public class FilterFrame<PanelType extends FilterPanel> extends javax.swing.JFra
 
         updateIntervalPanel.setLayout(new javax.swing.BoxLayout(updateIntervalPanel, javax.swing.BoxLayout.LINE_AXIS));
 
-        updateIntervalLabel.setText("Update interval (ms)");
+        updateIntervalLabel.setText("updateIntervalMs");
         updateIntervalPanel.add(updateIntervalLabel);
 
         updateIntervalField.setColumns(8);
-        updateIntervalField.setToolTipText("Sets the maximum update interval for filters that notify observers, e.g. RectangularClusterTracker");
+        updateIntervalField.setToolTipText("Sets the maximum update interval for filters that notify observers");
         updateIntervalField.setMaximumSize(new java.awt.Dimension(50, 30));
         updateIntervalField.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -300,74 +295,41 @@ public class FilterFrame<PanelType extends FilterPanel> extends javax.swing.JFra
 
         getContentPane().add(toolBar1);
 
-        tipLabel.setText("<html>Enabled filters are processed from top to bottom");
-        getContentPane().add(tipLabel);
-
         jPanel1.setAlignmentX(0.0F);
         jPanel1.setLayout(new javax.swing.BoxLayout(jPanel1, javax.swing.BoxLayout.X_AXIS));
 
-        filterJPanel.setBorder(new javax.swing.border.LineBorder(new java.awt.Color(0, 0, 0), 1, true));
-        filterJPanel.setLayout(new javax.swing.BoxLayout(filterJPanel, javax.swing.BoxLayout.LINE_AXIS));
+        tipLabel.setText("<html>Enabled filters are <br>processed from top to bottom");
+        tipLabel.setMaximumSize(new java.awt.Dimension(300, 36));
+        jPanel1.add(tipLabel);
 
-        clearFilterJB.setText("x");
-        clearFilterJB.setToolTipText("Clear the highlights");
-        clearFilterJB.setAlignmentX(0.5F);
-        clearFilterJB.setIconTextGap(1);
-        clearFilterJB.setMargin(new java.awt.Insets(1, 1, 1, 1));
-        clearFilterJB.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                clearFilterJBActionPerformed(evt);
+        highlightTF.setText("highlight...");
+        highlightTF.setToolTipText("highlight filters/parameters");
+        highlightTF.setMaximumSize(new java.awt.Dimension(200, 30));
+        highlightTF.addFocusListener(new java.awt.event.FocusAdapter() {
+            public void focusGained(java.awt.event.FocusEvent evt) {
+                highlightTFFocusGained(evt);
             }
         });
-        filterJPanel.add(clearFilterJB);
-
-        highlightTF.setToolTipText("highlight filters/parameters");
-        highlightTF.setMaximumSize(new java.awt.Dimension(100, 30));
         highlightTF.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 highlightTFActionPerformed(evt);
             }
         });
         highlightTF.addKeyListener(new java.awt.event.KeyAdapter() {
-            public void keyTyped(java.awt.event.KeyEvent evt) {
-                highlightTFKeyTyped(evt);
+            public void keyPressed(java.awt.event.KeyEvent evt) {
+                highlightTFKeyPressed(evt);
             }
         });
-        filterJPanel.add(highlightTF);
+        jPanel1.add(highlightTF);
 
-        hideHighlightBG.add(highlightRB);
-        highlightRB.setSelected(true);
-        highlightRB.setText("Highlight");
-        highlightRB.setToolTipText("Highlight  properties that contain search string");
-        highlightRB.setEnabled(false);
-        highlightRB.addActionListener(new java.awt.event.ActionListener() {
+        hideOthersCB.setText("Hide others");
+        hideOthersCB.setToolTipText("If selected, hides other properties, if not selected, just highlights the ones that match");
+        hideOthersCB.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                highlightRBActionPerformed(evt);
+                hideOthersCBActionPerformed(evt);
             }
         });
-        filterJPanel.add(highlightRB);
-
-        hideHighlightBG.add(hideOthersRB);
-        hideOthersRB.setText("Hide others");
-        hideOthersRB.setToolTipText("Hide properties that don't match string");
-        hideOthersRB.setEnabled(false);
-        hideOthersRB.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                hideOthersRBActionPerformed(evt);
-            }
-        });
-        filterJPanel.add(hideOthersRB);
-
-        simpleCB.setText("Simple");
-        simpleCB.setToolTipText("Only show Preferred properties (commonly used)");
-        simpleCB.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                simpleCBActionPerformed(evt);
-            }
-        });
-        filterJPanel.add(simpleCB);
-
-        jPanel1.add(filterJPanel);
+        jPanel1.add(hideOthersCB);
 
         getContentPane().add(jPanel1);
 
@@ -676,10 +638,9 @@ public class FilterFrame<PanelType extends FilterPanel> extends javax.swing.JFra
             FileInputStream fis = new FileInputStream(f);
             Preferences.importPreferences(fis);  // we import the tree into *this* preference node, which is not the one exported (which is root node)
             prefs.put("FilterFrame.lastFile", f.getCanonicalPath());
-            log.info("imported preferences from " + f.toPath().toString());
+            log.info("imported preferences from " + f);
             recentFiles.addFile(f);
             renewContents();
-            JOptionPane.showMessageDialog(rootPane, String.format("<html>Loaded Preferences from <br>\t%s<br>and reconstructed the entire FilterChain", f.toPath()));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -793,6 +754,10 @@ public class FilterFrame<PanelType extends FilterPanel> extends javax.swing.JFra
         return null;
     }
 
+    private void highlightTFFocusGained(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_highlightTFFocusGained
+        highlightTF.setText(null);
+    }//GEN-LAST:event_highlightTFFocusGained
+
     private void resetAllButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_resetAllButtonActionPerformed
         filterChain.reset();
     }//GEN-LAST:event_resetAllButtonActionPerformed
@@ -807,54 +772,22 @@ public class FilterFrame<PanelType extends FilterPanel> extends javax.swing.JFra
         highlightTF.requestFocusInWindow();
     }//GEN-LAST:event_highlightMIActionPerformed
 
-    private void clearFilterJBActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_clearFilterJBActionPerformed
-        highlightTF.setText("");
-        highlightOrShowOnly("");
-    }//GEN-LAST:event_clearFilterJBActionPerformed
-
-    private void highlightTFKeyTyped(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_highlightTFKeyTyped
+    private void highlightTFKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_highlightTFKeyPressed
         // incremental search
         String s = highlightTF.getText();
         highlightOrShowOnly(s);
-    }//GEN-LAST:event_highlightTFKeyTyped
+    }//GEN-LAST:event_highlightTFKeyPressed
 
-    private void simpleCBActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_simpleCBActionPerformed
-        for (FilterPanel p : filterPanels) {
-            if (p.isControlsVisible()) {
-                p.showPropertyHighlightsOrVisibility(highlightTF.getText(), hideOthersRB.isSelected(), simpleCB.isSelected());
-            }
-        }
-    }//GEN-LAST:event_simpleCBActionPerformed
+    private void hideOthersCBActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_hideOthersCBActionPerformed
+        highlightOrShowOnly(highlightTF.getText());
+    }//GEN-LAST:event_hideOthersCBActionPerformed
 
-    private void highlightRBActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_highlightRBActionPerformed
-        for (FilterPanel p : filterPanels) {
-            if (p.isControlsVisible()) {
-                p.showPropertyHighlightsOrVisibility(highlightTF.getText(), hideOthersRB.isSelected(), simpleCB.isSelected());
-            }
-        }
-    }//GEN-LAST:event_highlightRBActionPerformed
-
-    private void hideOthersRBActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_hideOthersRBActionPerformed
-        for (FilterPanel p : filterPanels) {
-            if (p.isControlsVisible()) {
-                p.showPropertyHighlightsOrVisibility(highlightTF.getText(), hideOthersRB.isSelected(), simpleCB.isSelected());
-            }
-        }
-    }//GEN-LAST:event_hideOthersRBActionPerformed
-
-    private void highlightOrShowOnly(String searchString) {
-        if (searchString == null || searchString.isBlank()) {
-            highlightRB.setEnabled(false);
-            hideOthersRB.setEnabled(false);
-        } else {
-            highlightRB.setEnabled(true);
-            hideOthersRB.setEnabled(true);
-        }
+    private void highlightOrShowOnly(String s) {
         FilterPanel p = getSelectedFilterPanel();
         if (p == null) {
-            highlightFilters(searchString);
+            highlightFilters(s);
         } else {
-            p.showPropertyHighlightsOrVisibility(searchString, hideOthersRB.isSelected(), simpleCB.isSelected());
+            p.highlightProperties(s, hideOthersCB.isSelected());
         }
     }
 
@@ -959,7 +892,7 @@ public class FilterFrame<PanelType extends FilterPanel> extends javax.swing.JFra
             } else if (f.getClass().getSimpleName().toLowerCase().contains(s.toLowerCase())) {
                 b.setTitleColor(Color.red);
                 highlightedFilters.add(f);
-            } else {
+            }else{
                 b.setTitleColor(Color.black);
             }
             getFilterPanelForFilter(f).repaint();
@@ -986,18 +919,14 @@ public class FilterFrame<PanelType extends FilterPanel> extends javax.swing.JFra
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JRadioButtonMenuItem acquisitionModeMenuItem;
-    private javax.swing.JButton clearFilterJB;
     private javax.swing.JMenuItem customizeMenuItem;
     private javax.swing.JToggleButton disableFilteringToggleButton;
     private javax.swing.JMenuItem exitMenuItem;
     private javax.swing.JMenu fileMenu;
-    private javax.swing.JPanel filterJPanel;
     protected javax.swing.JPanel filtersPanel;
     private javax.swing.JMenu helpMenu;
-    private javax.swing.ButtonGroup hideHighlightBG;
-    private javax.swing.JRadioButton hideOthersRB;
+    private javax.swing.JCheckBox hideOthersCB;
     private javax.swing.JMenuItem highlightMI;
-    private javax.swing.JRadioButton highlightRB;
     private javax.swing.JTextField highlightTF;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JSeparator jSeparator1;
@@ -1017,7 +946,6 @@ public class FilterFrame<PanelType extends FilterPanel> extends javax.swing.JFra
     private javax.swing.JMenuItem saveAsMenuItem;
     private javax.swing.JScrollPane scrollPane;
     private javax.swing.JButton selectFiltersJB;
-    private javax.swing.JCheckBox simpleCB;
     private javax.swing.JLabel tipLabel;
     private javax.swing.JToolBar toolBar1;
     private javax.swing.JTextField updateIntervalField;

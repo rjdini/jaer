@@ -11,7 +11,6 @@ import com.jogamp.opengl.GLAutoDrawable;
 import java.awt.Color;
 import net.sf.jaer.Description;
 import net.sf.jaer.DevelopmentStatus;
-import net.sf.jaer.Preferred;
 import net.sf.jaer.chip.AEChip;
 import net.sf.jaer.event.BasicEvent;
 import net.sf.jaer.event.EventPacket;
@@ -28,8 +27,8 @@ import net.sf.jaer.util.DrawGL;
 @DevelopmentStatus(DevelopmentStatus.Status.Stable)
 public class JaerAviWriter extends AbstractAviWriter {
 
-    @Preferred private boolean showTimeFactor = getBoolean("showTimeFactor", false);
-    private int fontSize = getInt("fontSize", 12);
+    private boolean showTimeFactor = getBoolean("showTimeFactor", false);
+    private float showTimeFactorTextScale = getFloat("showTimeFactorTextScale", .2f);
     private float timeExpansionFactor = 1;
     
     private volatile boolean writeFrameNowFlag=false;

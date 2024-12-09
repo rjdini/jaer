@@ -31,11 +31,9 @@ import net.sf.jaer.eventprocessing.EventFilter;
 import net.sf.jaer.eventprocessing.FilterChain;
 import net.sf.jaer.eventprocessing.FilterFrame;
 import net.sf.jaer.eventprocessing.filter.BackgroundActivityFilter;
-import net.sf.jaer.eventprocessing.filter.CellStatsProber;
 import net.sf.jaer.eventprocessing.filter.Info;
 import net.sf.jaer.eventprocessing.filter.RefractoryFilter;
 import net.sf.jaer.eventprocessing.filter.RotateFilter;
-import net.sf.jaer.eventprocessing.filter.SpatioTemporalCorrelationFilter;
 import net.sf.jaer.eventprocessing.filter.XYTypeFilter;
 import net.sf.jaer.graphics.AEChipRenderer;
 import net.sf.jaer.graphics.AEViewer;
@@ -166,12 +164,11 @@ public class AEChip extends Chip2D {
         addDefaultEventFilter(XYTypeFilter.class);
         addDefaultEventFilter(RotateFilter.class);
 //        addDefaultEventFilter(RepetitiousFilter.class);
-        addDefaultEventFilter(SpatioTemporalCorrelationFilter.class);
+        addDefaultEventFilter(BackgroundActivityFilter.class);
 //        addDefaultEventFilter(SubSampler.class);
         addDefaultEventFilter(RefractoryFilter.class);
         addDefaultEventFilter(HotPixelFilter.class);
         addDefaultEventFilter(Info.class);
-        addDefaultEventFilter(CellStatsProber.class);
         addDefaultEventFilter(JaerAviWriter.class);
 
         filterChain = new FilterChain(this);
