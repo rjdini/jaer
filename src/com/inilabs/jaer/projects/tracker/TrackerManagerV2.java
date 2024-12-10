@@ -103,7 +103,7 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
         
          Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
         
-         polarSpaceGUI = getPolarSpaceGUI();
+         polarSpaceGUI = new PolarSpaceGUI();
          polarSpaceGUI.getPolarSpaceDisplay().addDrawable(fov);
          spatialAttention = SpatialAttention.getInstance();
          

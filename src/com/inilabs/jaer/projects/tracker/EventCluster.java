@@ -52,7 +52,7 @@ public class EventCluster extends AgentDrawable implements Expirable, Runnable, 
  * Because RCT is a heavy jaer filter class, its clusters will not run natively in the PolarSpace environment.]
  * Therefore RCT clusters and test clusters are enclosed by common ClusterAdapter, which is then encapsulated by EventCluster.  
  * 
- * Note that RCT clsuters (and hopefully test clusters in future) are continually updated in background (eg by RCT).
+ * Note that RCT clusters (and hopefully test clusters in future) are continually updated in background (eg by RCT).
  * So - they are 'live'.
  * 
  * @param cluster The Cluster object to adapt.
@@ -87,8 +87,9 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter, lon
 //    // Other initialization
 //}
     
-    public void close() {
-      agentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(), getEnclosedClusterKeyAsList());
+@Override   
+ public void close() {
+      AgentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(), getEnclosedClusterKeyAsList());
     }
  
     // Constructors
@@ -151,7 +152,7 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter, lon
         return list;
     }
     
-    
+   
     private void move() {
    if ( enclosedCluster != null ) {
     setAzimuth(enclosedCluster.getAzimuth());

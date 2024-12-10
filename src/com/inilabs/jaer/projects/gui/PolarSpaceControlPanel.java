@@ -30,6 +30,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import com.inilabs.jaer.projects.logging.AgentLogger;
 import com.inilabs.jaer.projects.motor.KeyboardController;
+import java.util.Hashtable;
 
 public class PolarSpaceControlPanel extends JPanel {
 
@@ -48,19 +49,21 @@ public class PolarSpaceControlPanel extends JPanel {
     // Sliders for azimuth and elevation headings
 private JSlider azimuthHeadingSlider;
 private JSlider elevationHeadingSlider;
-private JSlider azimuthWaypointSlider;
-private JSlider elevationWaypointSlider;
+public JSlider azimuthWaypointSlider;
+public JSlider elevationWaypointSlider;
 private JSlider supportQualitySlider;
 
 // Reset button
 private JButton resetHeadingButton;
-private JButton resetWaypointButton;
+public JButton resetWaypointButton;
 
 private float defaultWaypointAzimuth;
 private float defaultWaypointElevation;
 
 private  static SpatialAttention spatialAttention  = SpatialAttention.getInstance();
 private  static KeyboardController keyboardController  = new KeyboardController();
+
+
 
 
 public PolarSpaceControlPanel(PolarSpaceDisplay polarDisplay, ActionListener closeAction) {
@@ -153,7 +156,23 @@ private JPanel createWaypointPanel() {
     defaultWaypointAzimuth = spatialAttention.getWaypointAzimuth();
     azimuthWaypointSlider = createSlider(-180, 180, (int)defaultWaypointAzimuth,  e -> updateAzimuthWaypoint());
     azimuthWaypointSlider.setMajorTickSpacing(60); // Major ticks every 20 units
-    azimuthWaypointSlider.setMinorTickSpacing(30);
+    azimuthWaypointSlider.setMinorTickSpacing(20);
+    azimuthWaypointSlider.setPaintTicks(true);
+    azimuthWaypointSlider.setPaintLabels(true);
+    
+       // Add labels to the slider
+    Hashtable<Integer, JLabel> azimuthLabelTable = new Hashtable<>();
+    azimuthLabelTable.put(-180, new JLabel("-180"));
+    azimuthLabelTable.put(-120, new JLabel("-120"));
+    azimuthLabelTable.put(-60, new JLabel("-60"));
+    azimuthLabelTable.put(0, new JLabel("0"));
+    azimuthLabelTable.put(60, new JLabel("60"));
+    azimuthLabelTable.put(120, new JLabel("120"));
+    azimuthLabelTable.put(180, new JLabel("180"));
+    azimuthWaypointSlider.setLabelTable(azimuthLabelTable);
+
+    
+    
     azimuthPanel.add(azimuthWaypointSlider, BorderLayout.CENTER);
     wayPointPanel.add(azimuthPanel);
     
@@ -164,6 +183,21 @@ private JPanel createWaypointPanel() {
     elevationWaypointSlider = createSlider(-90, 90,  (int)defaultWaypointElevation, e -> updateElevationWaypoint());
     elevationWaypointSlider.setMajorTickSpacing(30); // Major ticks every 20 units
     elevationWaypointSlider.setMinorTickSpacing(10);
+    elevationWaypointSlider.setPaintTicks(true);
+    elevationWaypointSlider.setPaintLabels(true);
+    
+       // Add labels to the slider
+    Hashtable<Integer, JLabel>elevationLabelTable = new Hashtable<>();
+    elevationLabelTable.put(-90, new JLabel("-90"));
+    elevationLabelTable.put(-60, new JLabel("-60"));
+    elevationLabelTable.put(-30, new JLabel("-30"));
+    elevationLabelTable.put(0, new JLabel("0"));
+    elevationLabelTable.put(30, new JLabel("30"));
+    elevationLabelTable.put(60, new JLabel("60"));
+    elevationLabelTable.put(90, new JLabel("90"));
+    elevationWaypointSlider.setLabelTable(elevationLabelTable);
+    
+    
     elevationPanel.add(elevationWaypointSlider, BorderLayout.CENTER);
     wayPointPanel.add(elevationPanel);
 
@@ -193,6 +227,21 @@ private JPanel createHeadingGroupPanel() {
     azimuthHeadingSlider = createSlider(-180, 180, 0, e -> updateAzimuthHeading());
     azimuthHeadingSlider.setMajorTickSpacing(60); // Major ticks every 20 units
     azimuthHeadingSlider.setMinorTickSpacing(10);
+    
+    azimuthHeadingSlider.setPaintTicks(true);
+    azimuthHeadingSlider.setPaintLabels(true);
+    
+       // Add labels to the slider
+    Hashtable<Integer, JLabel> azimuthLabelTable = new Hashtable<>();
+    azimuthLabelTable.put(-180, new JLabel("-180"));
+    azimuthLabelTable.put(-120, new JLabel("-120"));
+    azimuthLabelTable.put(-60, new JLabel("-60"));
+    azimuthLabelTable.put(0, new JLabel("0"));
+    azimuthLabelTable.put(60, new JLabel("60"));
+    azimuthLabelTable.put(120, new JLabel("120"));
+    azimuthLabelTable.put(180, new JLabel("180"));
+    azimuthHeadingSlider.setLabelTable(azimuthLabelTable);
+    
     azimuthPanel.add(azimuthHeadingSlider, BorderLayout.CENTER);
     headingGroupPanel.add(azimuthPanel);
     
@@ -202,6 +251,20 @@ private JPanel createHeadingGroupPanel() {
     elevationHeadingSlider = createSlider(-90, 90, 0, e -> updateElevationHeading());
     elevationHeadingSlider.setMajorTickSpacing(30); // Major ticks every 20 units
     elevationHeadingSlider.setMinorTickSpacing(10);
+    elevationHeadingSlider.setPaintTicks(true);
+    elevationHeadingSlider.setPaintLabels(true);
+    
+       // Add labels to the slider
+    Hashtable<Integer, JLabel>elevationLabelTable = new Hashtable<>();
+    elevationLabelTable.put(-90, new JLabel("-90"));
+    elevationLabelTable.put(-60, new JLabel("-60"));
+    elevationLabelTable.put(-30, new JLabel("-30"));
+    elevationLabelTable.put(0, new JLabel("0"));
+    elevationLabelTable.put(30, new JLabel("30"));
+    elevationLabelTable.put(60, new JLabel("60"));
+    elevationLabelTable.put(90, new JLabel("90"));
+    elevationHeadingSlider.setLabelTable(elevationLabelTable);
+    
     elevationPanel.add(elevationHeadingSlider, BorderLayout.CENTER);
     headingGroupPanel.add(elevationPanel);
 
@@ -265,7 +328,7 @@ private JPanel createButtonPanel(ActionListener closeAction) {
 }
 
 
-private JPanel createGimbalControlPanel() {
+public JPanel createGimbalControlPanel() {
     JPanel gimbalPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
 
     // Keyboard Control Toggle Button

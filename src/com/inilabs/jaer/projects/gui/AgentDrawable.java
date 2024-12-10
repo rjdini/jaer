@@ -21,25 +21,18 @@ package com.inilabs.jaer.projects.gui;
 
 import com.inilabs.jaer.projects.logging.AgentLogger;
 import com.inilabs.jaer.projects.logging.EventType;
-import com.inilabs.jaer.projects.tracker.EventCluster;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.stream.Collectors;
+
 
 public class AgentDrawable extends BasicDrawable implements Drawable {
-private final CopyOnWriteArrayList<EventCluster> clusters = new CopyOnWriteArrayList<>();
-   
 
+ 
     public AgentDrawable() {
         super();
         init();
-        // *** the constuctor of EventCluster si broken by this looging call - ?? reason?
-    //    AgentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
+       AgentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), dummyClusterList);
     }
 
     private void init() {
@@ -47,15 +40,7 @@ private final CopyOnWriteArrayList<EventCluster> clusters = new CopyOnWriteArray
         setColor(Color.BLACK);
     }
 
-    public CopyOnWriteArrayList<EventCluster>  getClusters() {
-        return clusters;
-    }
-    
-    
-    public List<String> getClusterKeys() {
-        return clusters.stream().map(EventCluster::getKey).collect(Collectors.toList());
-    }
-    
+
     public void setShowPath(boolean showPath) {
         this.showPath = showPath;
     }
@@ -106,10 +91,9 @@ private final CopyOnWriteArrayList<EventCluster> clusters = new CopyOnWriteArray
         if (showPath) {
             drawPath(g2d);
         }
-
-    //    AgentLogger.logAgentEvent(EventType.DRAW, getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
-
+  
+    @Override
     protected void drawPath(Graphics2D g2d) {
         g2d.setColor(color);
         float[] previousPosition = {0,0};
@@ -127,11 +111,9 @@ private final CopyOnWriteArrayList<EventCluster> clusters = new CopyOnWriteArray
         }
     }
 
-   
-    
+    @Override 
     public void close() {
         setLastTime(getTimestamp());
-        getClusters().clear();
-        AgentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
+        AgentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(), dummyClusterList);
     }
 }

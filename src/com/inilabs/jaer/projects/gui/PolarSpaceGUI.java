@@ -133,4 +133,19 @@ public class PolarSpaceGUI extends JFrame {
     public PolarSpaceDisplay polarDisplay() {
         throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
     }
+    
+     public static void main(String[] args) {
+        // Use SwingUtilities to ensure thread safety
+        SwingUtilities.invokeLater(() -> {
+            // Create and configure the PolarSpaceGUI
+            PolarSpaceGUI polarSpaceGUI = new PolarSpaceGUI();
+            polarSpaceGUI.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            polarSpaceGUI.setTitle("Polar Space GUI");
+            polarSpaceGUI.setVisible(true);
+
+            // Optional: Center the window on the screen
+            polarSpaceGUI.setLocationRelativeTo(null);
+        });
+    }
+    
 }

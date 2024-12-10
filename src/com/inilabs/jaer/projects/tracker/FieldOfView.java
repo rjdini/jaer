@@ -50,7 +50,7 @@ public class FieldOfView implements Drawable, PropertyChangeListener {
     private float lensOffsetHeightPixels = 0f;
     private float centerChipX = chipWidthPixels/2f - lensOffsetWidthPixels;
      private float centerChipY = (chipHeightPixels/2f) - lensOffsetHeightPixels;
-    private float FOVX = 30.0f;
+    private float FOVX = 30.0f;      // small lens ~ 30deg
     private float FOVY = FOVX * (getChipHeightPixels() / getChipWidthPixels());
 
     // Orientation (yaw, pitch, roll) in degrees

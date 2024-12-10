@@ -20,7 +20,6 @@ package com.inilabs.jaer.projects.review;
 
 import com.inilabs.jaer.projects.gui.BasicDrawable;
 import com.inilabs.jaer.projects.gui.Drawable;
-import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
 import java.awt.*;
 
 public class TrajectoryPointDrawable extends BasicDrawable implements Drawable {
@@ -35,20 +34,8 @@ public class TrajectoryPointDrawable extends BasicDrawable implements Drawable {
         this.setColor(Color.BLUE); // Default color
     }
 
-    public float getAzimuth() {
-        return getAzimuth();
-    }
-
-    public float getElevation() {
-        return getElevation();
-    }
-
     public long getTime() {
         return timestamp;
-    }
-
-    public void setColor(Color color) {
-        this.color = color;
     }
 
     @Override

@@ -82,10 +82,6 @@ public class PolarSpaceDisplay extends JPanel {
         setElevationHeading(0.0f); // Heading elevation wrt RS4 origin 
         azimuthRange = 60.0f; // Azimuth range on either side of the heading
         elevationRange = 60.0f; // Elevation range on either side of the heading
-        //      width = getWidth();  // display width from JPanel
-        //      height = getHeight(); // displayHeight from JPanel
-        //      centerX = width / 2; // display CenterX
-        //      centerY = height / 2;  // dispay CenterY
     }
 
     private void initializeDisplay() {
@@ -140,7 +136,7 @@ public class PolarSpaceDisplay extends JPanel {
         WaypointDrawable closestWaypoint = null;
         float minDistance = Float.MAX_VALUE;
 
-        for (WaypointDrawable waypoint : WaypointManager.getInstance().getWaypoints().values()) {
+        for (WaypointDrawable waypoint : WaypointManager.getInstance().getAllWaypoints().values()) {
             float distance = (float) Math.sqrt(
                     Math.pow(waypoint.getAzimuth() - azimuth, 2)
                     + Math.pow(waypoint.getElevation() - elevation, 2)

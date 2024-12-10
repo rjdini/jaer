@@ -20,7 +20,6 @@
 package com.inilabs.jaer.projects.gui;
 
 import com.inilabs.jaer.projects.tracker.FieldOfView;
-import com.inilabs.jaer.projects.tracker.EventCluster;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -29,7 +28,6 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
 
 public class BasicDrawable implements Drawable {
 
@@ -59,6 +57,8 @@ public class BasicDrawable implements Drawable {
     protected boolean isOrphaned = false;
     private boolean isExpired = false;
     protected static FieldOfView fov;
+    protected  List<String> dummyClusterList = new ArrayList<>();
+    
   
 
     // Default constructor, places object at (0,0) and auto-generates key

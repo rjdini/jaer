@@ -4691,6 +4691,7 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
                 succeeded = true;
             }
 
+
         } while ((succeeded == false) && (suffixNumber++ <= 5));
         if (succeeded == false) {
             log.warning("AEViewer.startLogging(): could not open a unigue new file for logging after trying up to " + filename);

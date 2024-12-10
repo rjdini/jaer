@@ -18,20 +18,12 @@
  */
 package com.inilabs.jaer.projects.cog;
 
-import com.inilabs.jaer.gimbal.GimbalBase;
+import com.inilabs.jaer.projects.environ.WaypointDrawable;
 import com.inilabs.jaer.projects.environ.WaypointManager;
-import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
 import com.inilabs.jaer.projects.motor.DirectGimbalController;
 import com.inilabs.jaer.projects.motor.JoystickController;
 import com.inilabs.jaer.projects.tracker.TrackerAgentDrawable;
 import com.inilabs.jaer.projects.tracker.TrackerManagerEngine;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -45,13 +37,13 @@ public class SpatialAttention {
     private float azimuth = 0; // Current azimuth for manual control
     private float roll = 0; // Current roll for manual control
     private float elevation = 0; // Current elevation for manual control
-    private float waypointAzimuth = -10f; // Current azimuth for manual control
-    private float waypointElevation = 0f; // Current elevation for manual control
+    private float waypointAzimuth = 0f; // Current azimuth for manual control
+    private float waypointElevation = -35f; // Current elevation for manual control
 
     private Timer updateTimer;
 
     private boolean enableGimbalPose = true;
-    private double supportQualityThreshold = 90.0;
+    private double supportQualityThreshold = 50.0;
 
     private static final long BREAK_CONTACT_DURATION = 2000; // Threshold in milliseconds
     private long lastSuccessfulUpdate = System.currentTimeMillis();
@@ -67,6 +59,7 @@ public class SpatialAttention {
 
     private final JoystickController joystickController;
     private final WaypointManager waypointManager;
+    
 
     private static SpatialAttention instance;
 
@@ -74,9 +67,7 @@ public class SpatialAttention {
         this.waypointManager = WaypointManager.getInstance();
         this.gimbal = DirectGimbalController.getInstance();
         this.joystickController = JoystickController.getInstance(gimbal);
-        
         this.scheduler = Executors.newSingleThreadScheduledExecutor();
-
         Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
     }
 
@@ -120,14 +111,15 @@ public class SpatialAttention {
         // However - large moves of the gimbal would lead to generation false trackers, so these moveets occur within a saccade.
         // when TrackerManagerEngine has isSaccade true,  it does not process incomming clusters (both RCT and Test).
         // In future we could make this more sophisticated - eg continue to attend to 'imagined' test targets.
-
+       
         if (enableGimbalPose) { // override from PolarSpaceControlPanel
             // Check if the system is in a saccade state
             if (isSaccade) {
                 log.debug("Ignoring incoming data due to saccade.");
                 return;
             }
-
+            
+            log.debug("bestTrackerAgent {} ", getBestTrackerAgent());
             if (getBestTrackerAgent() != null
                     && (getBestTrackerAgent().getSupportQuality() > getSupportQualityThreshold())) {
 
@@ -142,12 +134,30 @@ public class SpatialAttention {
             } else {
                 // Check if the time since the last successful update exceeds the threshold
                 if (System.currentTimeMillis() - lastSuccessfulUpdate >= BREAK_CONTACT_DURATION) {
-                    goToWaypoint(getWaypointAzimuth(), getWaypointElevation());
+                    goToWaypoint("street");
                 }
             }
         }
     }
 
+    
+    public void updateToNextWaypoint() {
+        WaypointDrawable nextWaypoint = waypointManager.getNextWaypoint();
+        if (nextWaypoint == null) {
+            log.info("No waypoints available.");
+            return;
+        }
+        log.info("Moving to waypoint: {}", nextWaypoint);
+        goToWaypoint(nextWaypoint.getAzimuth(), nextWaypoint.getElevation());
+    }
+
+    
+    private void goToWaypoint(String name) {
+        WaypointDrawable wp = waypointManager.getWaypointByName(name);
+        goToWaypoint( wp.getAzimuth(), wp.getElevation());
+    }
+    
+    
     private void goToWaypoint(float azimuth, float elevation) {
         // Check if already at the waypoint
         if (azimuth == gimbal.getGimbalPose().getYaw() && elevation == gimbal.getGimbalPose().getPitch()) {
@@ -158,7 +168,7 @@ public class SpatialAttention {
         // Enter saccade state
         isSaccade = true;
         TrackerManagerEngine.setIsSaccade(isSaccade);
-        log.debug("Entering saccade state: Moving to waypoint azimuth: {}, elevation: {}", azimuth, elevation);
+        log.info("Entering saccade state: Moving to waypoint azimuth: {}, elevation: {}", azimuth, elevation);
 
         gimbal.setGimbalPose(azimuth, 0f, elevation);
 

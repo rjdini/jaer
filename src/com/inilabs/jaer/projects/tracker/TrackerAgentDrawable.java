@@ -36,14 +36,14 @@ import org.slf4j.LoggerFactory;
 public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Runnable, Drawable {
 
     // This logger logs class-specific performance issues, not the event logger
-    private static final Logger logger = LoggerFactory.getLogger(TrackerAgentDrawable.class);
+    private static final Logger log = LoggerFactory.getLogger(TrackerAgentDrawable.class);
     private static final AgentLogger agentLogger = AgentLogger.getInstance();
     private static final float QUALITY_THRESHOLD = 0.5f; // Threshold for cluster support quality
     private float optimizationCost = 0f;
   //  private final long startTime = System.currentTimeMillis(); // Creation time
   //  private long expirationTime; // Time at which the agent expires
 
-    private final CopyOnWriteArrayList<EventCluster> clusters = new CopyOnWriteArrayList<>();
+    private CopyOnWriteArrayList<EventCluster> clusters = new CopyOnWriteArrayList<>();
 
     private float lastAzimuth;
     private float lastElevation;
@@ -53,6 +53,7 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
 
     private boolean supportQualityTestEnabled = false;
     private double mockSupportQuality = 50;
+      private boolean loggingEnabled = true;
     
     // private List<EventCluster> clusters = new ArrayList<>();
     //  private float azimuth; // Current azimuth position
@@ -66,7 +67,7 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
         this.maxLifetime = lifetimeMillis; // Set initial expiration
         this. lastMovementTime = getTimestamp();
       
-        TrackerAgentDrawable.logger.info("TrackerAgentDrawable created with key: {} at startTime: {}", getKey(), startTime);
+        log.debug("TrackerAgentDrawable created with key: {} at startTime: {}", getKey(), startTime);
         AgentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
     
@@ -74,8 +75,15 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
     super();    
 }
     
-
-    private boolean loggingEnabled = true;
+    
+  public CopyOnWriteArrayList<EventCluster>  getClusters() {
+        return clusters;
+    }
+    
+    
+    public List<String> getClusterKeys() {
+        return clusters.stream().map(EventCluster::getKey).collect(Collectors.toList());
+    }   
 
     public void setLogging(boolean enabled) {
         this.loggingEnabled = enabled;
@@ -124,7 +132,6 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
     double qualityScore = elapsedLifeTimeFactor 
                         + numberOfClusters 
                         + clusterContribution;
-
     return qualityScore / 100;
 }
 
@@ -147,7 +154,7 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
     // Check if the cluster already exists in the list
     for (EventCluster existingCluster : clusters) {
         if (existingCluster.getKey().equals(eventCluster.getKey())) {
-            logger.debug("Cluster with key {} already exists in agent {}. Skipping addition.", 
+            log.debug("Cluster with key {} already exists in agent {}. Skipping addition.", 
                         eventCluster.getKey(), getKey());
             return; // Cluster already exists, so do not add it again
         }
@@ -162,12 +169,12 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
         removeFarthestCluster();
     }
 
-    logger.debug("Agent: {} added eventCluster: {}", getKey(), eventCluster);
+    log.debug("Agent: {} added eventCluster: {}", getKey(), eventCluster);
 }
     
     public synchronized void removeCluster(EventCluster eventCluster) {
         clusters.remove(eventCluster);
-        logger.debug("Cluster removed from agent {}: eventCluster: {}", getKey(), eventCluster.getKey());
+        log.debug("Cluster removed from agent {}: eventCluster: {}", getKey(), eventCluster.getKey());
     }
 
  
@@ -304,15 +311,15 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
 
         setAzimuth(sumAzimuth / clusters.size());
         setElevation(sumElevation / clusters.size());
-        logger.debug("Agent {} position updated to Azimuth = {}, Elevation = {}", getKey(), getAzimuth(), getElevation());
+        log.debug("Agent {} position updated to Azimuth = {}, Elevation = {}", getKey(), getAzimuth(), getElevation());
     }
 
     @Override
     public void close() {
         setLastTime(getTimestamp());
         clusters.clear();
-        logger.info("Agent {} closed at lastTime: {}", getKey(), getLastTime());
-        agentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
+        log.debug("Agent {} closed at lastTime: {}", getKey(), (long)getLastTime());
+        AgentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
     
 
@@ -347,7 +354,7 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
             drawPath(g2d);
         }
 
-        logger.trace("Agent {} draw operation completed.", getKey());
+        log.trace("Agent {} draw operation completed.", getKey());
     }
 
     

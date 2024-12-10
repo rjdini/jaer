@@ -169,7 +169,7 @@ public class WaypointGUI extends BasicTestPanel {
     private void listWaypoints() {
        
     StringBuilder waypointList = new StringBuilder("Waypoints:\n");
-    for (WaypointDrawable waypoint : manager.getWaypoints().values()) {
+    for (WaypointDrawable waypoint : manager.getAllWaypoints().values()) {
         waypointList.append("Name: ").append(waypoint.getName())
                     .append(", Azimuth: ").append(waypoint.getAzimuth())
                     .append(", Elevation: ").append(waypoint.getElevation())

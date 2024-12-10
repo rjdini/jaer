@@ -30,6 +30,7 @@ import java.awt.event.MouseEvent;
 import java.io.*;
 import java.lang.reflect.Type;
 import java.util.*;
+import java.util.stream.Collectors;
 import javax.swing.JColorChooser;
 import javax.swing.JOptionPane;
 
@@ -117,6 +118,8 @@ public class WaypointManager {
         }
     }
 
+    
+    
     public synchronized void updateWaypoint(WaypointDrawable waypoint) {
         waypoints.put(waypoint.getKey(), waypoint);
         display.removeDrawable(waypoint.getKey());
@@ -166,6 +169,11 @@ public class WaypointManager {
         return closestWaypoint;
     }
 
+    public synchronized void removeWaypointByKey(String key) {
+    waypoints.remove(key);
+}
+    
+    
     public synchronized boolean removeWaypointByName(String name) {
         WaypointDrawable waypoint = waypoints.values()
                 .stream()
@@ -182,6 +190,7 @@ public class WaypointManager {
         }
         return false; // Waypoint not found
     }
+    
 
     public synchronized WaypointDrawable getWaypointByKey(String key) {
         return waypoints.get(key);
@@ -191,10 +200,30 @@ public class WaypointManager {
         return waypoints.get("Waypoint_" + name);
     }
 
-    public synchronized Map<String, WaypointDrawable> getWaypoints() {
-        return waypoints;
+    public synchronized WaypointDrawable getNextWaypoint() {
+    if (waypoints.isEmpty()) {
+        return null;
+    }
+    // ***********  temp return first WP. TODO Manger should decide best next WP from its list.
+    return waypoints.values().iterator().next(); // Get the first value
+}
+   
+    public synchronized Map<String, WaypointDrawable> getAllWaypoints() {
+    return Collections.unmodifiableMap(waypoints);
+}
+    
+ public synchronized List<String> getAllWaypointKeys() {
+        return List.copyOf(waypoints.keySet());
     }
 
+    public synchronized List<String> getAllWaypointNames() {
+        return waypoints.values()
+                .stream()
+                .map(WaypointDrawable::getName)
+                .collect(Collectors.toUnmodifiableList());
+    }    
+    
+  
     public void saveWaypointsToFile(File filePath) throws IOException {
         try (Writer writer = new FileWriter(filePath)) {
             gson.toJson(waypoints.values(), writer);
