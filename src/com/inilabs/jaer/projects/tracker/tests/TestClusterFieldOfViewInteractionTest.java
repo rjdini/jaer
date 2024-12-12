@@ -2,6 +2,7 @@ package com.inilabs.jaer.projects.tracker.tests;
 
 import com.inilabs.jaer.projects.tracker.FieldOfView;
 import com.inilabs.jaer.projects.tracker.TestCluster;
+import java.awt.Color;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,7 +77,7 @@ public class TestClusterFieldOfViewInteractionTest {
         float elevation = 3.0f;
     
         
-        TestCluster cluster = new TestCluster(azimuth, elevation);
+        TestCluster cluster = new TestCluster(azimuth, elevation, Color.GREEN);
 
         float deltaAzimuth = azimuth - fov.getAxialYaw();
         float deltaElevation = elevation - fov.getAxialPitch();
@@ -107,7 +108,7 @@ public class TestClusterFieldOfViewInteractionTest {
 
         float azimuth = 15.0f;
         float elevation = -7.0f;
-        TestCluster cluster = new TestCluster(azimuth, elevation);
+        TestCluster cluster = new TestCluster(azimuth, elevation,Color.GREEN);
 
         float deltaAzimuth = azimuth - poseAzimuth;
         float deltaElevation = elevation - poseElevation;

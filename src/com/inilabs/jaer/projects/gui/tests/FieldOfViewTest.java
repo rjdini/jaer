@@ -20,8 +20,7 @@
 package com.inilabs.jaer.projects.gui.tests;
 
 import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
-import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
-import com.inilabs.jaer.gimbal.FieldOfView;
+import com.inilabs.jaer.projects.tracker.FieldOfView;
 
 import javax.swing.*;
 import java.awt.*;

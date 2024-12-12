@@ -454,7 +454,10 @@ public class FieldOfView implements Drawable, PropertyChangeListener {
     public void showPath(boolean yes) {
         this.setShowPath(yes);
     }
-
+    
+    public boolean isPathVisible() {
+        return showPath;
+    }
 
     @Override
     public float getAzimuth() {

@@ -51,14 +51,14 @@ public class TargetAgentDrawable extends AgentDrawable implements Runnable {
 
     public TargetAgentDrawable() {
         super();
-        this.startTime = getTimestamp();
+        this.startTime = getSystemTimestamp();
         this.lastTime = startTime;
         this.maxLifeTime = DEFAULT_LIFETIME;
         this.velocityAzimuth = DEFAULT_VELOCITY;
         this.velocityElevation = DEFAULT_VELOCITY;
 
         // Log agent creation
-        AgentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
+        AgentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), getColor(), getClusterKeys());
     }
 
      public CopyOnWriteArrayList<EventCluster>  getClusters() {
@@ -88,18 +88,18 @@ public class TargetAgentDrawable extends AgentDrawable implements Runnable {
         move();
 
         // Check if the agent has exceeded its max lifetime
-        long currentTime = getTimestamp();
+        long currentTime = getSystemTimestamp();
         float elapsedTime = (currentTime - startTime) / 1000.0f;
         if (elapsedTime > maxLifeTime) {
             close();
         }
 
         // Log run event
-        AgentLogger.logAgentEvent(EventType.RUN, getKey(), getAzimuth(), getElevation(), getClusterKeys());
+        AgentLogger.logAgentEvent(EventType.RUN, getKey(), getAzimuth(), getElevation(), getColor(), getClusterKeys());
     }
 
     private void move() {
-        long currentTime = getTimestamp();
+        long currentTime = getSystemTimestamp();
         float deltaTime = (currentTime - lastTime) / 1000.0f;
         lastTime = currentTime;
 
@@ -109,14 +109,14 @@ public class TargetAgentDrawable extends AgentDrawable implements Runnable {
     }
 
     public void close() {
-        lastTime = getTimestamp();
+        lastTime = getSystemTimestamp();
         clusters.clear();
         removeFromDisplay();
         if (callback != null) {
             callback.onAgentAction(ActionType.REMOVE, getKey());
         }
         // Log close event
-        AgentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
+        AgentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(), getColor(), getClusterKeys());
     }
 
     private void removeFromDisplay() {
@@ -133,7 +133,7 @@ public class TargetAgentDrawable extends AgentDrawable implements Runnable {
             cluster.draw(g);
         }
         // Log draw event
-        AgentLogger.logAgentEvent(EventType.DRAW, getKey(), getAzimuth(), getElevation(), getClusterKeys());
+        AgentLogger.logAgentEvent(EventType.DRAW, getKey(), getAzimuth(), getElevation(), getColor(), getClusterKeys());
         logger.trace("Agent {} draw operation completed.", getKey());
     }
     

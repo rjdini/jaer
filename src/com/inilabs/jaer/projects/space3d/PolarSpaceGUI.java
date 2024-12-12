@@ -19,7 +19,8 @@
 
 package com.inilabs.jaer.projects.space3d;
 
-import com.inilabs.jaer.gimbal.FieldOfView;
+//import com.inilabs.jaer.gimbal.FieldOfView;
+import com.inilabs.jaer.projects.tracker.FieldOfView;
 import javax.swing.*;
 import java.awt.*;
 import javax.swing.event.ChangeEvent;

@@ -54,7 +54,6 @@ public class TrackerManagerEngineTest {
         gui.setVisible(true);
         gui.getPolarSpaceDisplay().repaint();
         
-          AgentLogger.initialize();
          AgentLogger. setIsSystemTimestamp(true);
     }
 }

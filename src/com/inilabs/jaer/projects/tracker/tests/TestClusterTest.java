@@ -19,8 +19,9 @@
 
 package com.inilabs.jaer.projects.tracker.tests;
 
-import com.inilabs.jaer.gimbal.FieldOfView;
+import com.inilabs.jaer.projects.tracker.FieldOfView;
 import com.inilabs.jaer.projects.tracker.TestCluster;
+import java.awt.Color;
 
 import java.awt.geom.Point2D;
 
@@ -44,7 +45,7 @@ public class TestClusterTest {
         float testElevation = 15.0f;
 
         // Instantiate TestCluster
-        TestCluster cluster = new TestCluster(testAzimuth, testElevation);
+        TestCluster cluster = new TestCluster(testAzimuth, testElevation, Color.GREEN);
 
         // Validate properties
         assert cluster.getAzimuth() == testAzimuth :
