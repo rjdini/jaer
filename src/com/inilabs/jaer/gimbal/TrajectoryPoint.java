@@ -18,6 +18,8 @@
  */
 package com.inilabs.jaer.gimbal;
 
+import com.inilabs.jaer.projects.tracker.FieldOfView;
+
 /**
  *
  * @author rjd
