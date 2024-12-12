@@ -1005,13 +1005,13 @@ public class DavisConfig extends Biasgen implements DavisDisplayConfigInterface,
 
     public class VideoControl extends Observable implements Observer, HasPreference, HasPropertyTooltips {
 
-        public boolean displayEvents = getChip().getPrefs().getBoolean(getPreferencesKey() + "VideoControl.displayEvents", true);
-        public boolean displayFrames = getChip().getPrefs().getBoolean(getPreferencesKey() + "VideoControl.displayFrames", true);
+        public boolean displayEvents = getChip().getPrefs().getBoolean(getPreferencesHeader() + "displayEvents", true);
+        public boolean displayFrames = getChip().getPrefs().getBoolean(getPreferencesHeader() + "displayFrames", true);
 
-        public boolean separateAPSByColor = getChip().getPrefs().getBoolean(getPreferencesKey() + "VideoControl.separateAPSByColor", false);
-        public boolean autoWhiteBalance = getChip().getPrefs().getBoolean(getPreferencesKey() + "VideoControl.autoWhiteBalance", true);
-        public boolean colorCorrection = getChip().getPrefs().getBoolean(getPreferencesKey() + "VideoControl.colorCorrection", true);
-        private boolean monochrome = getChip().getPrefs().getBoolean(getPreferencesKey() + "VideoControl.monochrome", true);
+        public boolean separateAPSByColor = getChip().getPrefs().getBoolean(getPreferencesHeader() + "separateAPSByColor", false);
+        public boolean autoWhiteBalance = getChip().getPrefs().getBoolean(getPreferencesHeader() + "autoWhiteBalance", true);
+        public boolean colorCorrection = getChip().getPrefs().getBoolean(getPreferencesHeader() + "colorCorrection", true);
+        private boolean monochrome = getChip().getPrefs().getBoolean(getPreferencesHeader() + "monochrome", true);
 
         private final PropertyTooltipSupport tooltipSupport = new PropertyTooltipSupport();
 
@@ -1030,8 +1030,8 @@ public class DavisConfig extends Biasgen implements DavisDisplayConfigInterface,
                     "Time constant in ms for autocontrast control. This is the lowpasss filter time constant for min and max image values to automatically scale image to 0-1 range.");
         }
 
-        private String getPreferencesKey() {
-            return getChip().prefsHeader() + ".";
+        private String getPreferencesHeader() {
+            return "";
         }
 
         /**
@@ -1167,8 +1167,8 @@ public class DavisConfig extends Biasgen implements DavisDisplayConfigInterface,
 
         @Override
         public void loadPreference() {
-            setDisplayFrames(getChip().getPrefs().getBoolean(getPreferencesKey() + "VideoControl.displayFrames", true));
-            setDisplayEvents(getChip().getPrefs().getBoolean(getPreferencesKey() + "VideoControl.displayEvents", true));
+            setDisplayFrames(getChip().getPrefs().getBoolean(getPreferencesHeader() + "displayFrames", true));
+            setDisplayEvents(getChip().getPrefs().getBoolean(getPreferencesHeader() + "displayEvents", true));
 
             setSeparateAPSByColor(getChip().getPrefs().getBoolean(getPreferencesKey() + "VideoControl.separateAPSByColor", false));
             setAutoWhiteBalance(getChip().getPrefs().getBoolean(getPreferencesKey() + "VideoControl.autoWhiteBalance", true));
@@ -1177,8 +1177,8 @@ public class DavisConfig extends Biasgen implements DavisDisplayConfigInterface,
 
         @Override
         public void storePreference() {
-            getChip().getPrefs().putBoolean(getPreferencesKey() + "VideoControl.displayEvents", isDisplayEvents());
-            getChip().getPrefs().putBoolean(getPreferencesKey() + "VideoControl.displayFrames", isDisplayFrames());
+            getChip().getPrefs().putBoolean(getPreferencesHeader() + "displayEvents", isDisplayEvents());
+            getChip().getPrefs().putBoolean(getPreferencesHeader() + "displayFrames", isDisplayFrames());
 
             getChip().getPrefs().putBoolean(getPreferencesKey() + "VideoControl.separateAPSByColor", isSeparateAPSByColor());
             getChip().getPrefs().putBoolean(getPreferencesKey() + "VideoControl.autoWhiteBalance", isAutoWhiteBalance());

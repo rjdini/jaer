@@ -160,7 +160,7 @@ public class JAERViewer {
                 if (windowSaver != null) {
                     try {
                         windowSaver.saveSettings();
-                    } catch (IOException e) {
+                    } catch (Exception e) {
                         e.printStackTrace();
                     }
                 }
@@ -186,7 +186,18 @@ public class JAERViewer {
                     } catch (IllegalArgumentException e2) {
                         log.warning("tried to store too many classes in last chip classes");
                     }
+                    log.info("saving possible open data logging");
+                    try {
+                        for (AEViewer v : viewers) {
+                            if(v.getLoggingFile()!=null){
+                                v.stopLogging(true);
+                            }
+                        }
+                    } catch (Exception e) {
+                        log.warning(String.format("stopping logging, caught Exception %s",e.toString()));
+                    } 
                 }
+                
             }
         });
     }
@@ -640,7 +651,7 @@ public class JAERViewer {
         log.info("Java logging is configured by the command line option -Djava.util.logging.config.file=<filename>."
                 + " \nThe current value of java.util.logging.config.file is " + System.getProperty("java.util.logging.config.file")
                 + "\nEdit this file to configure logging." + "\nThe value of java.io.tmpdir is " + System.getProperty("java.io.tmpdir"));
-        prefs = Preferences.userNodeForPackage(JAERViewer.class);
+        prefs = JaerConstants.PREFS_ROOT;
         log.info("Preferences come from root located at " + prefs.absolutePath());
         Logger root = log;
         while (root.getParent() != null) {

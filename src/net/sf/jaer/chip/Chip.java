@@ -18,13 +18,16 @@ import java.io.InputStream;
 import java.util.Observable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 
 import net.sf.jaer.Description;
+import net.sf.jaer.JaerConstants;
 import net.sf.jaer.aemonitor.AEMonitorInterface;
 import net.sf.jaer.biasgen.Biasgen;
 import net.sf.jaer.biasgen.BiasgenHardwareInterface;
 import net.sf.jaer.hardwareinterface.HardwareInterface;
+import net.sf.jaer.eventprocessing.filter.PreferencesMover;
 import net.sf.jaer.util.RemoteControl;
 
 /**
@@ -48,7 +51,7 @@ public class Chip extends Observable {
     /** The root preferences for this Chip.
      * @see Chip#getPrefs()
      */
-    private Preferences prefs=Preferences.userNodeForPackage(Chip.class);
+    private Preferences prefs=null; // constructed in constructor
 
     /** Preferences key which is used to store the preferences boolean that preferred values have been loaded at least
      * once for this Chip.
@@ -114,21 +117,56 @@ public class Chip extends Observable {
 
     /** Creates a new instance of Chip */
     public Chip() {
-//        try {
+        try {
 //            if (!prefs.nodeExists(getClass().getPackage().getName())) {
 //                log.info("no existing Preferences node for " + getClass().getCanonicalName());
 //            }
-            setPrefs(Preferences.userNodeForPackage(getClass())); // set prefs here based on actual class
-//        } catch (BackingStoreException ex) {
-//            log.warning(ex.toString());
-//        }
-       defaultFirmwareBixFileForBlankDevice  = getPrefs().get(DEFAULT_FIRMWARE_BIX_FILE_FOR_BLANK_DEVICE, null);
-       try {
-            remoteControl = new RemoteControl();
-            log.info("Created "+remoteControl+" for control of "+this);
-        } catch (IOException e) {
-            log.warning("couldn't make remote control for "+this+" : "+e);
+
+            if (Preferences.userRoot().nodeExists(prefsNodeNameOriginal()) && !Preferences.userRoot().nodeExists(prefsNodeName())) {
+                setPrefs(Preferences.userRoot().node(prefsNodeNameOriginal())); // set prefs here based on actual class
+//                PreferencesMover.moveChipPreferences(getPrefs());
+                log.warning(String.format("For chip %s, older prefs %s and not newer prefs %s existed, using older %s",  getClass().getSimpleName(), prefsNodeNameOriginal(), prefsNodeName(), prefs.absolutePath()));
+            } else if (Preferences.userNodeForPackage(Chip.class).nodeExists(prefsNodeName())) {
+                setPrefs(Preferences.userRoot().node(prefsNodeName()));
+                log.info(String.format("Chip-specific Preference node %s for chip %s exists, will use it", prefs.absolutePath(), getClass().getSimpleName()));
+            } else {
+                setPrefs(Preferences.userRoot().node(prefsNodeName())); // set prefs here based on actual class
+                log.info(String.format("Made new Preference node %s for chip %s", prefs.absolutePath(), getClass().getSimpleName()));
+            }
+        } catch (BackingStoreException ex) {
+            log.warning(String.format("Got exception when checking if Preference node exists: %s", ex.toString()));
         }
+        
+        if (PreferencesMover.hasOldPreferences(this)) {
+            log.warning(String.format("Chip %s has old style preferences", this.getClass().getSimpleName()));
+            PreferencesMover.migratePreferencesDialog(null, this);
+        }
+
+        try {
+            remoteControl = new RemoteControl();
+            log.info("Created " + remoteControl + " for control of " + this);
+        } catch (IOException e) {
+            log.warning("couldn't make remote control for " + this + " : " + e);
+        }
+        defaultFirmwareBixFileForBlankDevice = getPrefs().get(DEFAULT_FIRMWARE_BIX_FILE_FOR_BLANK_DEVICE, null);
+    }
+
+    /**
+     * Name of unique Preferences node for this Chip, so that all Preferences
+     * are isolated to the Chip, not just the package
+     *
+     * @return getClass().getPackageName().replace('.', '/')+"/"+getClass().getSimpleName(), e.g.,  chip eu.seebetter.ini.chips.davis.Davis346Blue
+     */
+    public String prefsNodeName() {
+        return JaerConstants.PREFS_ROOT_CHIPS.node(getClass().getSimpleName()).absolutePath();
+    }
+
+    /** The original preference node name for a Chip, which was the chip package, which contains typically many chips
+     * 
+     * @return getClass().getPackageName().replace('.', '/'), e.g. chip eu.seebetter.ini.chips.davis
+     */
+    public String prefsNodeNameOriginal() {
+        return getClass().getPackageName().replace('.', '/');
     }
 
     /** Check if this Chip has default preferences, and if so and they have not yet been loaded, loads them into the Preferences node
@@ -247,7 +285,7 @@ public class Chip extends Observable {
      */
     public void setPrefs(Preferences prefs) {
         this.prefs = prefs;
-//        log.info(this+" has prefs="+prefs);
+        log.fine(this+" has prefs="+prefs);
     }
 
     /** This remote control can be used for remote (via UDP) control of the Chip, e.g. the biases. */

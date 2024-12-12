@@ -25,6 +25,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.Point2D;
 import java.beans.BeanInfo;
+import java.beans.IntrospectionException;
 import java.beans.Introspector;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
@@ -39,6 +40,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.swing.AbstractButton;
@@ -49,6 +51,7 @@ import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
+import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSlider;
@@ -66,6 +69,7 @@ import javax.swing.event.ChangeListener;
 import ncsa.hdf.view.ViewProperties;
 
 import net.sf.jaer.util.EngineeringFormat;
+import net.sf.jaer.util.XMLFileFilter;
 
 /**
  * A panel for a filter that has Integer/Float/Boolean/String/enum getter/setter
@@ -202,6 +206,8 @@ import net.sf.jaer.util.EngineeringFormat;
  */
 public class FilterPanel extends javax.swing.JPanel implements PropertyChangeListener {
 
+    private FilterFrame filterFrame = null;
+
     private interface HasSetter {
 
         void set(Object o);
@@ -232,14 +238,16 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         initComponents();
     }
 
-    public FilterPanel(EventFilter f) {
+    public FilterPanel(EventFilter f, FilterFrame filterFrame) {
 //        log.info("building FilterPanel for "+f);
 //        UIManager.getLookAndFeelDefaults()
 //                .put("defaultFont", new Font("Arial", Font.PLAIN, 11));
-        this.setFilter(f);
+        setFilter(f);
+        setFilterFrame(filterFrame);
         initComponents();
         Dimension d = enableResetControlsHelpPanel.getPreferredSize();
         enableResetControlsHelpPanel.setMaximumSize(new Dimension(200, d.height)); // keep from stretching
+        exportImportPanel.setMaximumSize(new Dimension(200, d.height)); // keep from stretching
         String cn = getFilter().getClass().getName();
         int lastdot = cn.lastIndexOf('.');
         String name = cn.substring(lastdot + 1);
@@ -508,7 +516,7 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
                         EventFilter2D enclFilter = (EventFilter2D) (r.invoke(getFilter()));
                         if (enclFilter != null) {
 //                            log.info("EventFilter "+filter.getClass().getSimpleName()+" encloses EventFilter2D "+enclFilter.getClass().getSimpleName());
-                            FilterPanel enclPanel = new FilterPanel(enclFilter);
+                            FilterPanel enclPanel = new FilterPanel(enclFilter, filterFrame);
                             this.add(enclPanel);
                             controls.add(enclPanel);
                             enclosedFilterPanels.put(enclFilter, enclPanel);
@@ -1703,12 +1711,24 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
+        jPanel1 = new javax.swing.JPanel();
         enableResetControlsHelpPanel = new javax.swing.JPanel();
         enabledCheckBox = new javax.swing.JCheckBox();
         resetButton = new javax.swing.JButton();
         showControlsToggleButton = new javax.swing.JToggleButton();
+        exportImportPanel1 = new javax.swing.JPanel();
+        filler2 = new javax.swing.Box.Filler(new java.awt.Dimension(10, 0), new java.awt.Dimension(10, 0), new java.awt.Dimension(30, 32767));
+        copyB = new javax.swing.JButton();
+        pasteB = new javax.swing.JButton();
+        exportImportPanel = new javax.swing.JPanel();
+        filler1 = new javax.swing.Box.Filler(new java.awt.Dimension(10, 0), new java.awt.Dimension(10, 0), new java.awt.Dimension(30, 32767));
+        exportB = new javax.swing.JButton();
+        importB = new javax.swing.JButton();
 
         setLayout(new javax.swing.BoxLayout(this, javax.swing.BoxLayout.Y_AXIS));
+
+        jPanel1.setAlignmentX(0.0F);
+        jPanel1.setLayout(new javax.swing.BoxLayout(jPanel1, javax.swing.BoxLayout.X_AXIS));
 
         enableResetControlsHelpPanel.setToolTipText("General controls for this EventFilter");
         enableResetControlsHelpPanel.setAlignmentX(0.0F);
@@ -1747,7 +1767,73 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         });
         enableResetControlsHelpPanel.add(showControlsToggleButton);
 
-        add(enableResetControlsHelpPanel);
+        jPanel1.add(enableResetControlsHelpPanel);
+
+        exportImportPanel1.setMaximumSize(new java.awt.Dimension(98, 17));
+        exportImportPanel1.setMinimumSize(new java.awt.Dimension(98, 17));
+        exportImportPanel1.setPreferredSize(new java.awt.Dimension(98, 17));
+        exportImportPanel1.setLayout(new javax.swing.BoxLayout(exportImportPanel1, javax.swing.BoxLayout.X_AXIS));
+        exportImportPanel1.add(filler2);
+
+        copyB.setFont(new java.awt.Font("Tahoma", 0, 9)); // NOI18N
+        copyB.setText("Copy");
+        copyB.setToolTipText("Export the preferences for this filter to an XML preferences file");
+        copyB.setAlignmentX(0.5F);
+        copyB.setMargin(new java.awt.Insets(1, 5, 1, 5));
+        copyB.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                copyBActionPerformed(evt);
+            }
+        });
+        exportImportPanel1.add(copyB);
+
+        pasteB.setFont(new java.awt.Font("Tahoma", 0, 9)); // NOI18N
+        pasteB.setText("Paste");
+        pasteB.setToolTipText("Import the preferences for this filter from an XML preferences file");
+        pasteB.setAlignmentX(0.5F);
+        pasteB.setMargin(new java.awt.Insets(1, 5, 1, 5));
+        pasteB.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                pasteBActionPerformed(evt);
+            }
+        });
+        exportImportPanel1.add(pasteB);
+
+        jPanel1.add(exportImportPanel1);
+
+        exportImportPanel.setMaximumSize(new java.awt.Dimension(98, 17));
+        exportImportPanel.setMinimumSize(new java.awt.Dimension(98, 17));
+        exportImportPanel.setPreferredSize(new java.awt.Dimension(98, 17));
+        exportImportPanel.setLayout(new javax.swing.BoxLayout(exportImportPanel, javax.swing.BoxLayout.X_AXIS));
+        exportImportPanel.add(filler1);
+
+        exportB.setFont(new java.awt.Font("Tahoma", 0, 9)); // NOI18N
+        exportB.setText("Export");
+        exportB.setToolTipText("Export the preferences for this filter to an XML preferences file");
+        exportB.setAlignmentX(0.5F);
+        exportB.setMargin(new java.awt.Insets(1, 5, 1, 5));
+        exportB.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                exportBActionPerformed(evt);
+            }
+        });
+        exportImportPanel.add(exportB);
+
+        importB.setFont(new java.awt.Font("Tahoma", 0, 9)); // NOI18N
+        importB.setText("Import");
+        importB.setToolTipText("Import the preferences for this filter from an XML preferences file");
+        importB.setAlignmentX(0.5F);
+        importB.setMargin(new java.awt.Insets(1, 5, 1, 5));
+        importB.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                importBActionPerformed(evt);
+            }
+        });
+        exportImportPanel.add(importB);
+
+        jPanel1.add(exportImportPanel);
+
+        add(jPanel1);
     }// </editor-fold>//GEN-END:initComponents
     boolean controlsVisible = false;
 
@@ -1842,12 +1928,26 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         setControlsVisible(controlsVisible);
     }
 
-    public EventFilter getFilter() {
+    final public EventFilter getFilter() {
         return filter;
     }
 
-    public void setFilter(EventFilter filter) {
+    final public void setFilter(EventFilter filter) {
         this.filter = filter;
+    }
+
+    /**
+     * @return the filterFrame
+     */
+    final public FilterFrame getFilterFrame() {
+        return filterFrame;
+    }
+
+    /**
+     * @param filterFrame the filterFrame to set
+     */
+    final public void setFilterFrame(FilterFrame filterFrame) {
+        this.filterFrame = filterFrame;
     }
 
     /**
@@ -1890,9 +1990,56 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         setControlsVisible(showControlsToggleButton.isSelected());
     }//GEN-LAST:event_showControlsToggleButtonActionPerformed
 
+    private void exportBActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_exportBActionPerformed
+        exportPrefsDialog();
+    }//GEN-LAST:event_exportBActionPerformed
+
+    private void importBActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_importBActionPerformed
+        importPrefsDialog();
+    }//GEN-LAST:event_importBActionPerformed
+
+
+    private void copyBActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_copyBActionPerformed
+        try {
+            EventFilter.CopiedProps copiedProps = filter.copyProperties();
+            getFilterFrame().setCopiedProps(copiedProps);
+            filter.showPlainMessageDialogInSwingThread(String.format("Copied %s", copiedProps), "Copy succeeded");
+        } catch (IntrospectionException | IllegalAccessException | InvocationTargetException ex) {
+            Logger.getLogger(FilterPanel.class.getName()).log(Level.SEVERE, null, ex);
+            filter.showWarningDialogInSwingThread(String.format("Error copying: %s", ex.toString()), "Error");
+        }
+    }//GEN-LAST:event_copyBActionPerformed
+
+    private void pasteBActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_pasteBActionPerformed
+        EventFilter.CopiedProps copiedProps = getFilterFrame().getCopiedProps();
+        if (copiedProps == null || copiedProps.isEmpty()) {
+            log.warning("no copied properties to paste");
+            filter.showWarningDialogInSwingThread("No properties to paste", "Error");
+            return;
+        }
+        try {
+            filter.pasteProperties(copiedProps);
+            getFilterFrame().rebuildPanel(this);
+            filter.showPlainMessageDialogInSwingThread(String.format("Pasted %d properties", copiedProps.properties.size()), "Paste suceeded");
+
+        } catch (IntrospectionException | IllegalAccessException | InvocationTargetException | ClassCastException ex) {
+            Logger.getLogger(FilterPanel.class.getName()).log(Level.SEVERE, null, ex);
+            filter.showWarningDialogInSwingThread(String.format("Error pasting: %s", ex.toString()), "Error");
+        }
+    }//GEN-LAST:event_pasteBActionPerformed
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton copyB;
     protected javax.swing.JPanel enableResetControlsHelpPanel;
     protected javax.swing.JCheckBox enabledCheckBox;
+    private javax.swing.JButton exportB;
+    private javax.swing.JPanel exportImportPanel;
+    private javax.swing.JPanel exportImportPanel1;
+    private javax.swing.Box.Filler filler1;
+    private javax.swing.Box.Filler filler2;
+    private javax.swing.JButton importB;
+    private javax.swing.JPanel jPanel1;
+    private javax.swing.JButton pasteB;
     private javax.swing.JButton resetButton;
     private javax.swing.JToggleButton showControlsToggleButton;
     // End of variables declaration//GEN-END:variables
