@@ -34,9 +34,7 @@ public class SpatialAttentionTest {
         SpatialAttention spatialAttention = SpatialAttention.getInstance();
 
         // Create a mock TrackerAgentDrawable
-        TrackerAgentDrawable mockTrackerAgent = new TrackerAgentDrawable();
-        mockTrackerAgent.setAzimuth(0); // Initial azimuth
-        mockTrackerAgent.setElevation(10); // Constant elevation
+        TrackerAgentDrawable mockTrackerAgent = new TrackerAgentDrawable(0,10,2000);
         mockTrackerAgent.enableSupportQualltyTests(true);
         mockTrackerAgent.setMockSupportQuality(50); // Arbitrary high quality to surpass threshold
 

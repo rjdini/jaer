@@ -24,8 +24,6 @@ import java.util.stream.Collectors;
 public class LogEventFormatter {
        private static boolean isSystemTimestamp = true ;
        
-       
-
 
     /**
      * Formats agent-specific log events as JSON.
@@ -35,17 +33,17 @@ public class LogEventFormatter {
      * @param key       The unique identifier for the agent.
      * @param azimuth   The azimuth value of the agent.
      * @param elevation The elevation value of the agent.
+     * @param serializedColor The serialized color of the agent.
      * @param clusters  A list of cluster keys associated with the agent.
      * @return A JSON-formatted log string.
      */
-    public static String formatAgentLogEvent(EventType eventType, long timestamp, String key, float azimuth, float elevation, List<String> clusters) {
+    public static String formatAgentLogEvent(EventType eventType, long timestamp, String key, float azimuth, float elevation, String serializedColor, List<String> clusters) {
         String clustersList = clusters.stream().map(String::valueOf).collect(Collectors.joining(", "));
         return String.format(
-            "{\"jaerts\": \"%d\", \"event\": \"%s\", \"key\": \"%s\", \"azim\": %.2f, \"elev\": %.2f, \"clust\": [%s]}",
-            timestamp, eventType.name().toLowerCase(), key, azimuth, elevation, clustersList);
+            "{\"jaerts\": \"%d\", \"event\": \"%s\", \"key\": \"%s\", \"azim\": %.2f, \"elev\": %.2f, \"color\":  %s, \"clust\": [%s]}",
+            timestamp, eventType.name().toLowerCase(), key, azimuth, elevation, serializedColor, clustersList);
     }
 
- 
     /**
      * Formats a general system log event as JSON.
      *

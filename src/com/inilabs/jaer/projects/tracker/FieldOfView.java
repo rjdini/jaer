@@ -101,7 +101,7 @@ public class FieldOfView implements Drawable, PropertyChangeListener {
     }
     
     public void init(){
-           AgentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
+           AgentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), getColor(), getClusterKeys());
            
     }
 
@@ -113,7 +113,7 @@ public class FieldOfView implements Drawable, PropertyChangeListener {
 //    }
 
     public void close() {
-        AgentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
+        AgentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(),  getColor(), getClusterKeys());
     }
     
     // dummy to conform to Drawable - not relevant to FOV
@@ -155,7 +155,7 @@ public class FieldOfView implements Drawable, PropertyChangeListener {
         setAxialYaw(yaw);
         setAxialRoll(roll);
         setAxialPitch(pitch);
-         AgentLogger.logAgentEvent(EventType.MOVE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
+         AgentLogger.logAgentEvent(EventType.MOVE, getKey(), getAzimuth(), getElevation(),  getColor(), getClusterKeys());
     } 
     
      public float[] getPose( ) {

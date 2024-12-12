@@ -24,18 +24,17 @@ import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
 import com.inilabs.jaer.projects.logging.AgentLogger;
 import com.inilabs.jaer.projects.logging.EventType;
 import com.inilabs.jaer.projects.tracker.EventCluster;
-import com.inilabs.jaer.projects.tracker.TrackerAgentDrawable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.Graphics;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
 public class TargetAgentDrawable extends AgentDrawable implements Runnable {
     private AgentCallback callback;
-    private final List<EventCluster> clusters = new ArrayList<>();
     private boolean isLogging = false;
     private static final float DEFAULT_LIFETIME = 100.0f;
     private static final float DEFAULT_VELOCITY = 0.0f;
@@ -47,6 +46,8 @@ public class TargetAgentDrawable extends AgentDrawable implements Runnable {
     private float velocityElevation;
     private PolarSpaceDisplay display;
     private static final Logger logger = LoggerFactory.getLogger(TargetAgentDrawable.class);
+    
+    private CopyOnWriteArrayList<EventCluster> clusters = new CopyOnWriteArrayList<>();
 
     public TargetAgentDrawable() {
         super();
@@ -60,9 +61,14 @@ public class TargetAgentDrawable extends AgentDrawable implements Runnable {
         AgentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
 
-    public String getKey() {
-        return this.getKey();
+     public CopyOnWriteArrayList<EventCluster>  getClusters() {
+        return clusters;
     }
+    
+    public List<String> getClusterKeys() {
+        return clusters.stream().map(EventCluster::getKey).collect(Collectors.toList());
+    }   
+
 
     public void setCallback(AgentCallback callback) {
         this.callback = callback;

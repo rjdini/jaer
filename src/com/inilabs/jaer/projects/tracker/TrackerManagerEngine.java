@@ -127,6 +127,7 @@ private void processClusters(List<? extends ClusterAdapter> clusters) {
         if (cluster.isExpired()) {
             if (polarSpaceDisplay != null) {
                 polarSpaceDisplay.removeDrawable(cluster.getKey());
+                cluster.close();
             }
             return true; // Remove expired cluster
         }
@@ -216,36 +217,14 @@ private void processClusters(List<? extends ClusterAdapter> clusters) {
     }
     // Remove expired agents
     for (String key : agentsToRemove) {
+        agents.get(key).close();
         agents.remove(key);
     }
 
     // Step 3: Update best tracker agent
     updateBestTrackerAgentList();
 }
-
-    
-    
-private void updateBestTrackerAgent() {
-    TrackerAgentDrawable newBestAgent = agents.values().stream()
-        .max(Comparator.comparingDouble(TrackerAgentDrawable::getSupportQuality))
-        .orElse(null);
-
-    if (lastBestAgent != null && lastBestAgent != newBestAgent) {
-        lastBestAgent.revertColor(); // Revert color of the previous best tracker
-    }
-
-    if (newBestAgent != null) {
-        newBestAgent.setColor(Color.RED); // Highlight the new best tracker
-    }
-
-    lastBestAgent = newBestAgent;
-    currentBestAgent = newBestAgent;
-
-    if (newBestAgent != null) {
-        log.info("Updated BestAgent: {}", newBestAgent.getKey());
-    }
-}
-    
+   
     
     public void shutdown() {
         scheduler.shutdownNow(); // Stop periodic processing
@@ -268,9 +247,7 @@ private void updateBestTrackerAgent() {
 }
     
     private TrackerAgentDrawable createNewAgent(EventCluster cluster) {
-        TrackerAgentDrawable agent = new TrackerAgentDrawable(defaultAgentLifeTimeMillis);
-        agent.setAzimuth(cluster.getAzimuth());
-        agent.setElevation(cluster.getElevation());
+        TrackerAgentDrawable agent = new TrackerAgentDrawable(cluster.getAzimuth(), cluster.getElevation(), defaultAgentLifeTimeMillis);
         agent.setSize(4f);
         addAgent(agent);
 
@@ -305,6 +282,7 @@ private void updateBestTrackerAgent() {
             if (polarSpaceDisplay != null) {
                 polarSpaceDisplay.removeDrawable(leastSignificantAgent.getKey());
             }
+          leastSignificantAgent.close();
         }
     }
     
@@ -405,6 +383,7 @@ private void updateBestTrackerAgent() {
     public void removeAgent(TrackerAgentDrawable drawable) {
         trackerAgentDrawables.remove(drawable);
         removeDrawableFromDisplay(drawable);
+        drawable.close();
     }
     
         

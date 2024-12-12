@@ -22,6 +22,7 @@ import com.inilabs.jaer.projects.gui.AgentDrawable;
 import com.inilabs.jaer.projects.logging.AgentLogger;
 import com.inilabs.jaer.projects.logging.EventType;
 import com.inilabs.jaer.projects.logging.ListAppender;
+import java.awt.Color;
 import org.apache.logging.log4j.LogManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -62,10 +63,11 @@ public class AgentDrawableLogTest {
         String key = "TestAgent";
         float azimuth = 10.0f;
         float elevation = 5.0f;
+        Color color = Color.magenta;
         List<String> clusters = List.of("Cluster1", "Cluster2");
 
         // Act
-        AgentLogger.logAgentEvent(EventType.CREATE, key, azimuth, elevation, clusters);
+        AgentLogger.logAgentEvent(EventType.CREATE, key, azimuth, elevation, color, clusters);
 
         // Retrieve log messages captured by ListAppender
         List<String> logMessages = listAppender.getMessages();

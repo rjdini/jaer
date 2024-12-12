@@ -15,10 +15,11 @@ public class TestCluster implements ClusterAdapter {
     private FieldOfView fov = FieldOfView.getInstance();
  
 
-    public TestCluster(float azimuth, float elevation) {
+    public TestCluster(float azimuth, float elevation, Color color) {
         this.id = id+1;
         this.azimuth = azimuth;
         this.elevation = elevation;
+        this.color = color;
         this.location.setLocation(
                    fov.getPixelsAtYaw(azimuth), // chip / fov  pixel location x
                   fov.getPixelsAtPitch(elevation) // chip / fov pixel location y

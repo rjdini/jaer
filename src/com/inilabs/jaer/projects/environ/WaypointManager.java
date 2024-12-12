@@ -22,6 +22,8 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
+import com.inilabs.jaer.projects.utils.ColorAdapter;
+import com.inilabs.jaer.projects.utils.NoSuperclassExclusionStrategy;
 import org.slf4j.LoggerFactory;
 
 import java.awt.Color;

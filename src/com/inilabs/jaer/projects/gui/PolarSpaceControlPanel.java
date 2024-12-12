@@ -29,8 +29,8 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import com.inilabs.jaer.projects.logging.AgentLogger;
-import com.inilabs.jaer.projects.motor.KeyboardController;
 import java.util.Hashtable;
+import org.slf4j.LoggerFactory;
 
 public class PolarSpaceControlPanel extends JPanel {
 
@@ -60,21 +60,19 @@ public JButton resetWaypointButton;
 private float defaultWaypointAzimuth;
 private float defaultWaypointElevation;
 
-private  static SpatialAttention spatialAttention  = SpatialAttention.getInstance();
-private  static KeyboardController keyboardController  = new KeyboardController();
+private  SpatialAttention spatialAttention  = SpatialAttention.getInstance();
 
-
+private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(PolarSpaceControlPanel.class);
 
 
 public PolarSpaceControlPanel(PolarSpaceDisplay polarDisplay, ActionListener closeAction) {
     this.polarDisplay = polarDisplay;
   //  setLayout(new BorderLayout(5, 5)); // Use BorderLayout for main layout
-    AgentLogger.initialize();
 
     // Register SpatialAttention as a KeyListener
     polarDisplay.setFocusable(true); // Ensure polarDisplay can receive focus
     polarDisplay.requestFocusInWindow(); // Request focus for polarDisplay
-    polarDisplay.addKeyListener(keyboardController);
+    
 
     // West Panel
     JPanel westPanel = new JPanel(new BorderLayout(5, 5)); // Use BorderLayout    
@@ -89,15 +87,15 @@ public PolarSpaceControlPanel(PolarSpaceDisplay polarDisplay, ActionListener clo
     waypointPanel.setPreferredSize(new Dimension(400, 200));
     centerPanel.add(spatialAttentionPanel, BorderLayout.NORTH);
     centerPanel.add(waypointPanel, BorderLayout.SOUTH);
-    centerPanel.setBackground(Color.RED);
+ //   centerPanel.setBackground(Color.RED);
 
     // East Panel: Logging Controls and Keyboard Control
     JPanel eastPanel = new JPanel(new BorderLayout(5, 5)); // Use BorderLayout for better organization
     // Create a container for logging and gimbal controls
     JPanel loggingAndGimbalPanel = new JPanel(new BorderLayout(5, 5));
     loggingAndGimbalPanel.add(createLoggingPanel(), BorderLayout.NORTH);
-    loggingAndGimbalPanel.add(createGimbalControlPanel(), BorderLayout.CENTER);
-    loggingAndGimbalPanel.add(createKeyboardControlPanel(), BorderLayout.SOUTH);
+    loggingAndGimbalPanel.add(createGimbalControlPanel(), BorderLayout.SOUTH);
+  
     // Add the combined panel and keyboard controls to the east panel
     eastPanel.add(loggingAndGimbalPanel, BorderLayout.NORTH);
     eastPanel.add(createButtonPanel(closeAction), BorderLayout.SOUTH);
@@ -352,55 +350,38 @@ public JPanel createGimbalControlPanel() {
     return gimbalPanel;
 }
 
+private JPanel createLoggingPanel() {
+    JPanel loggingPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
 
-private JPanel createKeyboardControlPanel() {
-    JPanel keyboardPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
+    // Create Toggle Button
+    JToggleButton loggingToggleButton = new JToggleButton("Start Logging");
+    loggingToggleButton.setPreferredSize(new Dimension(150, 30));
+    loggingToggleButton.setOpaque(true); // Ensure the background is painted
+    loggingToggleButton.setBackground(Color.GREEN); // Default color
 
-    // Keyboard Control Toggle Button
-    JButton keyboardControlButton = new JButton("Keyboard Control OFF");
-    keyboardControlButton.setBackground(Color.RED);
-    keyboardControlButton.setOpaque(true);
-    keyboardController.setEnableKeyboardControl(false);
-    keyboardControlButton.addActionListener(e -> {
-   
-        if (!keyboardController.isEnableKeyboardControl()) {
-            keyboardController.setEnableKeyboardControl(true);
-            keyboardControlButton.setText("Keyboard Control ON");
-            keyboardControlButton.setBackground(Color.GREEN);
-            polarDisplay.setFocusable(true);
-            polarDisplay.requestFocusInWindow(); // Ensure focus for keyboard input
+    // Add Action Listener to toggle logging state
+     // Add Action Listener to toggle logging state
+    loggingToggleButton.addActionListener(e -> {
+        if (loggingToggleButton.isSelected()) {
+            // Logging started
+            loggingToggleButton.setOpaque(true); // Ensure the background is painted
+            loggingToggleButton.setBackground(Color.RED); // Force color to RED
+            loggingToggleButton.setText("Stop Logging");
+            startLogging();
         } else {
-            keyboardController.setEnableKeyboardControl(false);
-            keyboardControlButton.setText("Keyboard Control OFF");
-            keyboardControlButton.setBackground(Color.RED);
+            // Logging stopped
+            loggingToggleButton.setText("Start Logging");
+            loggingToggleButton.setBackground(Color.GREEN); // Reset to LIGHT_GRAY
+            stopLogging();
         }
     });
 
-    keyboardPanel.add(keyboardControlButton);
-    return keyboardPanel;
-}
-
-
-
-
-
-
-
-private JPanel createLoggingPanel() {
-    JPanel loggingPanel = new JPanel(new GridLayout(2, 1, 5, 5));
-
-    // Start Logging Button
-    startLoggingButton = new JButton("Start Logging");
-    startLoggingButton.addActionListener(e -> startLogging());
-    loggingPanel.add(startLoggingButton);
-
-    // Stop Logging Button
-    stopLoggingButton = new JButton("Stop Logging");
-    stopLoggingButton.addActionListener(e -> stopLogging());
-    loggingPanel.add(stopLoggingButton);
+    // Add the toggle button to the panel
+    loggingPanel.add(loggingToggleButton);
 
     return loggingPanel;
 }
+
 
 private void synchronizeSliders() {
     azimuthRangeSlider.addChangeListener(e -> {
@@ -513,11 +494,14 @@ private void resetHeading() {
     private void startLogging() {
         // Implement logging start logic
         AgentLogger.setGUILoggingEnabled(true);
+        log.info("Logging started");
     }
 
     private void stopLogging() {
+        
         // Implement logging stop logic
         AgentLogger.setGUILoggingEnabled(false);
+        log.info("Logging stopped");
     }
 
     private class PathToggleListener implements ActionListener {
@@ -529,6 +513,5 @@ private void resetHeading() {
     }
 
     public void shutdown() {
-        AgentLogger.shutdown();
     }
 }

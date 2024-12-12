@@ -23,21 +23,33 @@ import com.inilabs.jaer.projects.gui.Drawable;
 import java.awt.*;
 
 public class TrajectoryPointDrawable extends BasicDrawable implements Drawable {
- 
-    private long timestamp; // Timestamp -- either jaer timestamp, or systtime in millisec
     private Color color;
+ 
+  
+   
 
-    public TrajectoryPointDrawable(float azimuth, float elevation, long timestamp) {
+    public TrajectoryPointDrawable(float azimuth, float elevation, Color color, long timestamp) {
         this.setAzimuth(azimuth);
         this.setElevation(elevation);
         this.setTimestamp(timestamp);
-        this.setColor(Color.BLUE); // Default color
+        this.setColor(color); // Default color
     }
 
-    public long getTime() {
+    public long getTimestamp() {
         return timestamp;
     }
+    
+    @Override
+    public Color getColor() {
+        return this.color;
+    }
 
+    @Override 
+    public void setColor(Color color) {
+        this.color = color;
+    }
+    
+    
     @Override
     public void draw(Graphics g) {
         Graphics2D g2d = (Graphics2D) g;
@@ -45,7 +57,7 @@ public class TrajectoryPointDrawable extends BasicDrawable implements Drawable {
         int x = getCenterX() + (int) ((getAzimuth() - getAzimuthHeading()) * getAzimuthScale());
         int y = getCenterY() - (int) ((getElevation() - getElevationHeading()) * getElevationScale());
 
-        g2d.setColor(color);
+        g2d.setColor(getColor());
         int size = 5; // Fixed size for individual points
         g2d.fillOval(x - size / 2, y - size / 2, size, size);
 
@@ -55,7 +67,7 @@ public class TrajectoryPointDrawable extends BasicDrawable implements Drawable {
 
     @Override
     public String toString() {
-        return String.format("Azimuth: %.2f, Elevation: %.2f, Time: %d", getAzimuth(), getElevation(), timestamp);
+        return String.format("Azimuth: %.2f, Elevation: %.2f, Color: %s, Time: %d", getAzimuth(), getElevation(), getColor().toString(), timestamp);
     }
 }
 

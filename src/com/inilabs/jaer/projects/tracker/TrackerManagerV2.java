@@ -34,6 +34,7 @@ import com.inilabs.jaer.projects.logging.LoggingStatePropertyChangeFilter;
 import com.inilabs.jaer.projects.motor.DirectGimbalController;
 import java.util.Timer;
 import java.util.stream.Collectors;
+import net.sf.jaer.graphics.AEViewer;
 
 
 
@@ -72,7 +73,7 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
    private final SpatialAttention spatialAttention;
    
     private final int numberClustersAdded = 5 ; // sets the number of clusters generated for testing
-    private TMExerciser exerciser = new TMExerciser();
+    private final TMExerciser exerciser = new TMExerciser();
     private TrackerAgentDrawable primaryTrackerAgent;
      EngineeringFormat fmt = new EngineeringFormat();
      
@@ -82,7 +83,6 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
 
     public TrackerManagerV2(AEChip chip) {
         super(chip);
-
         FilterChain filterChain = new FilterChain(chip);
         loggingStateFilter = new LoggingStatePropertyChangeFilter(chip); 
         loggingStateFilter.getSupport().addPropertyChangeListener(this);
@@ -108,7 +108,6 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
          spatialAttention = SpatialAttention.getInstance();
          
          engine = new TrackerManagerEngine();
-        AgentLogger.initialize();
          polarSpaceGUI.getPolarSpaceDisplay().setHeading(0, 0);
     }
     
@@ -272,7 +271,7 @@ return primaryTrackerAgent ;
 
     @Override
     public void initFilter() {
-      //  panTilt.resetFilter();
+         AgentLogger.initialize(chip.getAeViewer());
     }
 
     public void annotate(float[][][] frame) {

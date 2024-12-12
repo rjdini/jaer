@@ -21,6 +21,9 @@ package com.inilabs.jaer.projects.logging;
 
 import com.inilabs.jaer.gimbal.GimbalBase;
 import com.inilabs.jaer.projects.cog.SpatialAttention;
+import com.inilabs.jaer.projects.tracker.TrackerManagerV2;
+import com.inilabs.jaer.projects.utils.ColorAdapter;
+import java.awt.Color;
 import java.beans.PropertyChangeEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +36,7 @@ import net.sf.jaer.graphics.AEViewer;
 public class AgentLogger {
 
    
-    private static final Logger datalog = LoggerFactory.getLogger(AgentLogger.class);
+    private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(AgentLogger.class);
     private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
     private static boolean loggingEnabled = true;
     private static boolean jaerLoggingEnabled = false;
@@ -44,6 +47,7 @@ public class AgentLogger {
     private static int aerLoggingSessionNumber = 0;
     private static int guiLoggingSessionNumber = 0;
     private static boolean isSystemTimestamp = false;
+    private static AEViewer aeViewer;
     
     private static AgentLogger instance ;
     
@@ -72,8 +76,9 @@ public class AgentLogger {
      *    This approach avoids the static initializer and ensures controlled initialization and shutdown of logging without triggering exceptions.
      *    
      *    Initializes the logger by logging the LOGGER_START event.
+     *  @param viewer  used to access the jaer logging methods
      */
-    public static void initialize() {
+    public static void initialize(AEViewer viewer) {
         if (!initialized) {
             initialized = true;
             loggingEnabled = true;
@@ -81,9 +86,14 @@ public class AgentLogger {
             loggingEnabled = false;
             jaerLoggingEnabled = false;
             guiLoggingEnabled = false;
+            aeViewer = viewer;
+            if (aeViewer == null) {
+              log.error("AEViewer is null ");
+            }
         }
     }
 
+    
     /**
      * Shuts down the logger by logging the LOGGER_CLOSE event if logging is enabled.
      */
@@ -132,7 +142,9 @@ public class AgentLogger {
             // sequence critical
             jaerLoggingEnabled = true;
             updateLoggingEnabled();
-            logJAEREvent( EventType.JAER_START_LOG,  aerLoggingSessionNumber, "see jaer_stop_log");
+            String filename = getJAERFilename();
+            if(filename==null){filename="null";}
+            logJAEREvent( EventType.JAER_START_LOG,  aerLoggingSessionNumber, filename);
         } 
         else {
             String filename = getJAERFilename();
@@ -153,14 +165,30 @@ public class AgentLogger {
                // sequence critical
                guiLoggingEnabled = true;
               updateLoggingEnabled();
-               logGUIEvent( EventType.GUI_START_LOG,  guiLoggingSessionNumber, "from PolarSpaceGUI");   
+               logGUIEvent( EventType.GUI_START_LOG,  guiLoggingSessionNumber, "from PolarSpaceGUI");
+               startJAERLogging();
         } else {
                // sequence critical
               logGUIEvent( EventType.GUI_STOP_LOG,  guiLoggingSessionNumber, "from PolarSpaceGUI");    
+              stopJAERLogging();
               guiLoggingEnabled = false;
               updateLoggingEnabled();
         }
     }
+    
+    public static void startJAERLogging() {
+       aeViewer.startLogging();
+       setJAERFilename(aeViewer.getLoggingFile().getName());
+       setJAERLoggingEnabled(true);
+    }
+    
+    
+    public static void stopJAERLogging() {
+        aeViewer.stopLogging(false);  // suppress the filechooser, accept default filename
+        setJAERLoggingEnabled(false);
+    }
+    
+    
 
     /**
      * Checks if logging is enabled.
@@ -169,13 +197,31 @@ public class AgentLogger {
         return loggingEnabled;
     }
 
-    public static void logAgentEvent(EventType eventType, String key, float azimuth, float elevation, List<String> clusters) {
+    
+    public static void logAgentEvent(EventType eventType, String key, float azimuth,  float elevation, Color color, List<String> clusters) {
     if (loggingEnabled) {
         long timestamp = getTimestamp();
-        String logMessage = LogEventFormatter.formatAgentLogEvent(eventType, timestamp, key, azimuth, elevation, clusters);
-        datalog.info(logMessage);
+
+        // Use the ColorAdapter to serialize the color
+        ColorAdapter colorAdapter = new ColorAdapter();
+        String serializedColor = colorAdapter.serialize(color, Color.class, null).getAsString();
+
+        // Format the log message
+        String logMessage = LogEventFormatter.formatAgentLogEvent(
+            eventType,
+            timestamp,
+            key,
+            azimuth,
+            elevation,
+            serializedColor, // Include the serialized color in the log
+            clusters
+        );
+
+        // Log the message
+        log.info(logMessage);
     }
 }
+
     
     /**
      * Logs a general system event in JSON format with an event type, datetime, and message if logging is enabled.
@@ -185,7 +231,7 @@ public class AgentLogger {
             long timestamp = getTimestamp();
             String datetime = LocalDateTime.now().format(ISO_FORMATTER);
             String logMessage = LogEventFormatter.formatSystemLogEvent(eventType, datetime, timestamp, message);
-            datalog.info(logMessage);
+            log.info(logMessage);
         }
     }
     
@@ -194,7 +240,7 @@ public class AgentLogger {
             long timestamp = getTimestamp();
             String datetime = LocalDateTime.now().format(ISO_FORMATTER);
             String logMessage = LogEventFormatter.formatJAERLogEvent(eventType, datetime, timestamp, sessionNumber, filename);
-            datalog.info(logMessage);
+            log.info(logMessage);
         }
     }
 
@@ -203,7 +249,7 @@ public class AgentLogger {
             long timestamp = getTimestamp();
             String datetime = LocalDateTime.now().format(ISO_FORMATTER);
             String logMessage = LogEventFormatter.formatJAERLogEvent(eventType, datetime, timestamp, sessionNumber, message);
-            datalog.info(logMessage);
+            log.info(logMessage);
         }
     }
      

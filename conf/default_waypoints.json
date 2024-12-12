@@ -5,6 +5,12 @@
     "elevation": 0.0,
     "color": -52480
   },
+   {
+    "name": "birds",
+    "azimuth": -10.0,
+    "elevation": -10.0,
+    "color": -52480
+  },
     {
     "name": "street",
     "azimuth": -10.0,
@@ -19,7 +25,7 @@
   },
   {
     "name": "lukas",
-    "azimuth": -30.0,
+    "azimuth": -60.0,
     "elevation": 10.0,
     "color": -52480
   }

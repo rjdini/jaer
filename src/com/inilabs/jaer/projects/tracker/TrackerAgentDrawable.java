@@ -60,28 +60,24 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
     //  private float elevation; // Current elevation position
     public static final int MAX_CLUSTERS = 4;
 
-    public TrackerAgentDrawable(long lifetimeMillis) {
-        new TrackerAgentDrawable();   
-        this.startTime = getTimestamp();
+    public TrackerAgentDrawable(float azimuth, float elevation, long lifetimeMillis) {
+        super();
+        this.setAzimuth(azimuth);
+        this.setElevation(elevation);
         this.setColor(Color.BLACK);
+        this.startTime = getSystemTimestamp();
         this.maxLifetime = lifetimeMillis; // Set initial expiration
-        this. lastMovementTime = getTimestamp();
-      
+        this. lastMovementTime = getSystemTimestamp();
         log.debug("TrackerAgentDrawable created with key: {} at startTime: {}", getKey(), startTime);
-        AgentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
+        AgentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), getColor(), getClusterKeys());
     }
-    
-    public TrackerAgentDrawable() {
-    super();    
-}
-    
+  
     
   public CopyOnWriteArrayList<EventCluster>  getClusters() {
         return clusters;
     }
     
-    
-    public List<String> getClusterKeys() {
+    public final List<String> getClusterKeys() {
         return clusters.stream().map(EventCluster::getKey).collect(Collectors.toList());
     }   
 
@@ -185,7 +181,7 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
             lastMovementTime = System.currentTimeMillis(); // Update movement timestamp
         }
             moveToCentroid(); // Move the agent
-            agentLogger.logAgentEvent(EventType.MOVE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
+            agentLogger.logAgentEvent(EventType.MOVE, getKey(), getAzimuth(), getElevation(),  getColor(), getClusterKeys());
     }
     
      private void checkTrackerAgentExpired() {
@@ -196,7 +192,7 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
     
      @Override
     public long getLifetime()  {
-     return getTimestamp() - startTime;
+     return getSystemTimestamp() - startTime;
  }
     
     @Override
@@ -316,10 +312,10 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
 
     @Override
     public void close() {
-        setLastTime(getTimestamp());
+        setLastTime(getSystemTimestamp());
+        AgentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(),  getColor(), getClusterKeys());
         clusters.clear();
         log.debug("Agent {} closed at lastTime: {}", getKey(), (long)getLastTime());
-        AgentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(), getClusterKeys());
     }
     
 

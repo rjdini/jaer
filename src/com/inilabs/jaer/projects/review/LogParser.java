@@ -16,30 +16,41 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
-
 package com.inilabs.jaer.projects.review;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.inilabs.jaer.projects.tracker.TrackerManagerV2;
+import com.inilabs.jaer.projects.utils.ColorAdapter;
+import java.awt.Color;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import org.slf4j.LoggerFactory;
 
 public class LogParser {
+   private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(LogParser.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
+    // Define supported event types
+    private Set<String> supportedEvents = Set.of("move", "create", "close");
+    private Color color;
 
     /**
      * Parses a newline-delimited JSON log file into sessions.
      *
      * @param filePath The path to the JSON log file.
-     * @return A map of sessions, each containing a map of tracker names to their trajectories and relationships.
+     * @return A map of sessions, each containing a map of tracker names to
+     * their trajectories and relationships.
      * @throws IOException If the file cannot be read or parsed.
      */
     public Map<String, Map<String, TrajectoryDrawable>> parseLogFile(String filePath) throws IOException {
         Map<String, Map<String, TrajectoryDrawable>> sessions = new LinkedHashMap<>();
+        ColorAdapter colorAdapter = new ColorAdapter(); // Use the ColorAdapter for deserialization
 
         File file = new File(filePath);
         try (Scanner scanner = new Scanner(file)) {
@@ -56,11 +67,11 @@ public class LogParser {
                         String eventType = node.has("event") ? node.get("event").asText() : null;
 
                         // Skip unsupported events
-                        if (eventType == null || !eventType.equals("move")) {
-                            System.err.println("Skipping invalid or unsupported event: " + node.toString());
+                        // Check for unsupported events
+                        if (!supportedEvents.contains(eventType)) {
+                            log.info("Skipping invalid or unsupported event: {}", node.toString());
                             continue;
                         }
-
                         String session = node.has("session") ? node.get("session").asText() : "default";
                         String trackerName = node.has("key") ? node.get("key").asText() : null;
 
@@ -73,6 +84,15 @@ public class LogParser {
                         float elev = node.has("elev") ? node.get("elev").floatValue() : 0.0f;
                         long time = node.has("jaerts") ? node.get("jaerts").asLong() : 0L;
 
+                        // Deserialize color using ColorAdapter
+                        // Deserialize color using ColorAdapter
+                //        color = Color.RED;
+                        if (node.has("color")) {
+                            JsonElement colorJson = jsonNodeToJsonElement(node.get("color")); // Convert JsonNode to JsonElement
+                            color = colorAdapter.deserialize(colorJson, Color.class, null);
+                            System.out.println("*********   color = " + color.toString());
+                        }
+
                         // Process clusters if present
                         List<String> clusters = new ArrayList<>();
                         if (node.has("clust") && node.get("clust").isArray()) {
@@ -84,7 +104,7 @@ public class LogParser {
                         }
 
                         // Create trajectory point
-                        TrajectoryPointDrawable point = new TrajectoryPointDrawable(azim, elev, time);
+                        TrajectoryPointDrawable point = new TrajectoryPointDrawable(azim, elev, color, time);
 
                         // Ensure session exists
                         sessions.putIfAbsent(session, new LinkedHashMap<>());
@@ -109,6 +129,10 @@ public class LogParser {
         return sessions;
     }
 
+    private JsonElement jsonNodeToJsonElement(JsonNode node) {
+        return new Gson().fromJson(node.toString(), JsonElement.class);
+    }
+
     /**
      * Preprocesses a log line to ensure JSON compliance.
      *
@@ -116,29 +140,29 @@ public class LogParser {
      * @return The preprocessed log line.
      */
     private String preprocessLine(String line) {
-    // Pattern to match the clust field
-    Pattern pattern = Pattern.compile("clust\": \\[(.*?)\\]");
-    Matcher matcher = pattern.matcher(line);
+        // Pattern to match the clust field
+        Pattern pattern = Pattern.compile("clust\": \\[(.*?)\\]");
+        Matcher matcher = pattern.matcher(line);
 
-    StringBuffer result = new StringBuffer();
+        StringBuffer result = new StringBuffer();
 
-    while (matcher.find()) {
-        String content = matcher.group(1).trim();
-        if (content.isEmpty()) {
-            matcher.appendReplacement(result, "clust\": []");
-        } else {
-            String[] items = content.split(",");
-            String quotedItems = Arrays.stream(items)
-                    .map(String::trim)
-                    .map(item -> "\"" + item + "\"") // Wrap items in quotes
-                    .reduce((a, b) -> a + "," + b)
-                    .orElse("");
-            matcher.appendReplacement(result, "clust\": [" + quotedItems + "]");
+        while (matcher.find()) {
+            String content = matcher.group(1).trim();
+            if (content.isEmpty()) {
+                matcher.appendReplacement(result, "clust\": []");
+            } else {
+                String[] items = content.split(",");
+                String quotedItems = Arrays.stream(items)
+                        .map(String::trim)
+                        .map(item -> "\"" + item + "\"") // Wrap items in quotes
+                        .reduce((a, b) -> a + "," + b)
+                        .orElse("");
+                matcher.appendReplacement(result, "clust\": [" + quotedItems + "]");
+            }
         }
-    }
-    matcher.appendTail(result);
+        matcher.appendTail(result);
 
-    return result.toString();
-}
+        return result.toString();
+    }
 
 }

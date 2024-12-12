@@ -17,21 +17,29 @@
  * MA 02110-1301  USA
  */
 
-package com.inilabs.jaer.projects.environ;
-import com.google.gson.*;
-import java.awt.Color;
-import java.lang.reflect.Type;
+package com.inilabs.jaer.projects.utils;
 
-public class ColorAdapter implements JsonSerializer<Color>, JsonDeserializer<Color> {
-    @Override
-    public JsonElement serialize(Color color, Type type, JsonSerializationContext context) {
-        // Serialize to an RGB integer
-        return new JsonPrimitive(color.getRGB());
+import com.inilabs.jaer.projects.environ.*;
+import com.google.gson.ExclusionStrategy;
+import com.google.gson.FieldAttributes;
+
+public class NoSuperclassExclusionStrategy implements ExclusionStrategy {
+
+    private final Class<?> targetClass;
+
+    public NoSuperclassExclusionStrategy(Class<?> targetClass) {
+        this.targetClass = targetClass;
     }
 
     @Override
-    public Color deserialize(JsonElement json, Type type, JsonDeserializationContext context) {
-        // Deserialize from an RGB integer
-        return new Color(json.getAsInt());
+    public boolean shouldSkipField(FieldAttributes f) {
+        // Exclude fields that are not declared in the target class
+        return !f.getDeclaringClass().equals(targetClass);
+    }
+
+    @Override
+    public boolean shouldSkipClass(Class<?> clazz) {
+        return false; // Do not skip entire classes
     }
 }
+

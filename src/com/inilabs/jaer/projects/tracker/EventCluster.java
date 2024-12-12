@@ -60,20 +60,20 @@ public class EventCluster extends AgentDrawable implements Expirable, Runnable, 
  */
 public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter, long lifetimeMillis) {
     // Optionally include transformation logic
-    EventCluster eventCluster = new EventCluster();
+    EventCluster eventCluster = new EventCluster(clusterAdapter.getAzimuth(), clusterAdapter.getElevation(), clusterAdapter.getColor());
     eventCluster.enclosedCluster = clusterAdapter; 
-    eventCluster.setAzimuth(clusterAdapter.getAzimuth());
-    eventCluster.setElevation(clusterAdapter.getElevation());
-    eventCluster.startTime = eventCluster.getTimestamp();
+    eventCluster.size = clusterAdapter.getSize();
+    eventCluster.startTime = eventCluster.getSystemTimestamp();
     eventCluster.maxLifetime = lifetimeMillis ; 
-    eventCluster.color=Color.BLACK;
-    eventCluster.size = 2f;
     return eventCluster;
 }
 
- public EventCluster() {
-    super();    
-     AgentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), getEnclosedClusterKeyAsList());
+ private EventCluster(float azimuth, float elevation , Color color) {
+    super();
+    this.setAzimuth(azimuth);
+    this.setElevation(elevation);
+    this.setColor(color);
+   AgentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(),  getColor(), getEnclosedClusterKeyAsList());
 }
 
 //
@@ -89,7 +89,7 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter, lon
     
 @Override   
  public void close() {
-      AgentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(), getEnclosedClusterKeyAsList());
+      AgentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(),  getColor(), getEnclosedClusterKeyAsList());
     }
  
     // Constructors
@@ -157,7 +157,7 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter, lon
    if ( enclosedCluster != null ) {
     setAzimuth(enclosedCluster.getAzimuth());
     setElevation(enclosedCluster.getElevation());
-    this.agentLogger.logAgentEvent(EventType.MOVE, getKey(), getAzimuth(), getElevation(), getEnclosedClusterKeyAsList());
+    this.agentLogger.logAgentEvent(EventType.MOVE, getKey(), getAzimuth(), getElevation(),  getColor(), getEnclosedClusterKeyAsList());
     }
 }
     
@@ -170,7 +170,7 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter, lon
     
     @Override
     public long getLifetime()  {
-     return getTimestamp() - startTime;
+     return getSystemTimestamp() - startTime;
  }
     
     public synchronized void run() {

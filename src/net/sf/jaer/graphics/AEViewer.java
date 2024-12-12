@@ -597,7 +597,7 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
 
             remoteControl.addCommandListener(this, REMOTE_START_LOGGING + " <filename>", "starts logging ae data to a file");
             remoteControl.addCommandListener(this, REMOTE_STOP_LOGGING, "stops logging ae data to a file");
-            remoteControl.addCommandListener(this, REMOTE_TOGGLE_SYNCHRONIZED_LOGGING, "starts synchronized logging ae data to a set of files with aeidx filename automatically timstamped"); // TODO allow sync logging to a chosen file - change startLogging to do sync logging if viewers are synchronized
+            remoteControl.addCommandListener(this, REMOTE_TOGGLE_SYNCHRONIZED_LOGGING, "starts synchronized logging ae data to a set of files with aeidx filename automatically timestamped"); // TODO allow sync logging to a chosen file - change startLogging to do sync logging if viewers are synchronized
             remoteControl.addCommandListener(this, REMOTE_ZERO_TIMESTAMPS, "zeros timestamps on all AEViewers");
             remoteControl.addCommandListener(this, REMOTE_OPEN_FILE + " <filename>", "<filename> open file for playback");
             remoteControl.addCommandListener(this, REMOTE_PAUSE, "pause player");

@@ -16,7 +16,6 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
-
 package com.inilabs.jaer.projects.review;
 
 import com.inilabs.jaer.projects.gui.BasicDrawable;
@@ -30,6 +29,7 @@ import java.util.Collections;
 import java.util.List;
 
 public class TrajectoryDrawable extends BasicDrawable implements Drawable {
+
     private final String trackerName;
     private final List<TrajectoryPointDrawable> points;
     private final List<String> clusters; // List of associated clusters
@@ -77,7 +77,9 @@ public class TrajectoryDrawable extends BasicDrawable implements Drawable {
     }
 
     public void draw(Graphics g) {
-        if (points.isEmpty()) return;
+        if (points.isEmpty()) {
+            return;
+        }
 
         Graphics2D g2d = (Graphics2D) g;
 
@@ -85,8 +87,7 @@ public class TrajectoryDrawable extends BasicDrawable implements Drawable {
         TrajectoryPointDrawable previousPoint = null;
         for (int i = 0; i < points.size(); i++) {
             TrajectoryPointDrawable currentPoint = points.get(i);
-
-            // Draw a line connecting to the previous point
+            g2d.setColor(currentPoint.getColor());            // Draw a line connecting to the previous point
             if (previousPoint != null) {
                 int x1 = getCenterX() + (int) ((previousPoint.getAzimuth() - getAzimuthHeading()) * getAzimuthScale());
                 int y1 = getCenterY() - (int) ((previousPoint.getElevation() - getElevationHeading()) * getElevationScale());
@@ -119,4 +120,3 @@ public class TrajectoryDrawable extends BasicDrawable implements Drawable {
         }
     }
 }
-

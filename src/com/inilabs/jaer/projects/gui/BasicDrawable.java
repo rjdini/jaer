@@ -51,7 +51,7 @@ public class BasicDrawable implements Drawable {
     private float azimuthHeading = 0f;
     private float elevationHeading = 0f;
     private long startTime; // agent created
-    private long timestamp;  // system or jaerts timestamp 
+    protected long timestamp;  // system or jaerts timestamp 
     private long lastTime; // agent closed
     private long maxLifetime = 100 ; //millisec
     protected boolean isOrphaned = false;
@@ -65,7 +65,7 @@ public class BasicDrawable implements Drawable {
     public BasicDrawable() {
         this.id = ++idCounter;
         this.key = getClass().getSimpleName() + "_" + id;
-        this.startTime = getTimestamp();
+        this.startTime = getSystemTimestamp();
         this.fov = FieldOfView.getInstance();
     }
 
@@ -75,7 +75,7 @@ public class BasicDrawable implements Drawable {
         this.key = key != null ? key : getClass().getSimpleName() + "_" + id;
         this.azimuth = initialAzimuth;
         this.elevation = initialElevation;
-       this.startTime = getTimestamp();
+       this.startTime = getSystemTimestamp();
        this.fov = FieldOfView.getInstance();
     }
  
@@ -86,7 +86,7 @@ public class BasicDrawable implements Drawable {
      *
      * @return The current timestamp in milliseconds.
      */
-    protected long getTimestamp() {
+    protected long getSystemTimestamp() {
         return System.currentTimeMillis();
     }
     
@@ -121,7 +121,7 @@ public class BasicDrawable implements Drawable {
     
 
  public long getLifetime()  {
-     return getTimestamp() - getStartTime();
+     return getSystemTimestamp() - getStartTime();
  }
          
   

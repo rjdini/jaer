@@ -32,7 +32,7 @@ public class AgentDrawable extends BasicDrawable implements Drawable {
     public AgentDrawable() {
         super();
         init();
-       AgentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), dummyClusterList);
+  //     AgentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), getColor(), dummyClusterList);
     }
 
     private void init() {
@@ -113,7 +113,7 @@ public class AgentDrawable extends BasicDrawable implements Drawable {
 
     @Override 
     public void close() {
-        setLastTime(getTimestamp());
-        AgentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(), dummyClusterList);
+        setLastTime(getSystemTimestamp());
+        AgentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(), getColor(), dummyClusterList);
     }
 }

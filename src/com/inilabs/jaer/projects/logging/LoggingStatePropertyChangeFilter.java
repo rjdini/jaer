@@ -18,7 +18,6 @@
  */
 package com.inilabs.jaer.projects.logging;
 
-import com.inilabs.jaer.projects.logging.tests.HelloWorldLogger;
 import java.beans.PropertyChangeEvent;
 import net.sf.jaer.chip.AEChip;
 import net.sf.jaer.event.BasicEvent;
@@ -35,7 +34,7 @@ public class LoggingStatePropertyChangeFilter extends EventFilter2D {
     private boolean loggingEnabled = false;
     private String JAERLoggingFilename = null;
  
- private static final Logger logger = LoggerFactory.getLogger(LoggingStatePropertyChangeFilter.class);
+ private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(LoggingStatePropertyChangeFilter.class);
  
     public LoggingStatePropertyChangeFilter(AEChip chip) {
         super(chip);
@@ -65,18 +64,24 @@ public class LoggingStatePropertyChangeFilter extends EventFilter2D {
         }
         switch (evt.getPropertyName()) {
             case AEViewer.EVENT_LOGGING_STARTED: 
-                AgentLogger.setJAERLoggingEnabled(true);
-                logger.info(evt.toString());
-                log.info(evt.toString());
+                if(!AgentLogger.isLoggingEnabled()) { // dont interfere with an already running GUI job
+                 JAERLoggingFilename =  chip.getAeViewer().getLoggingFile().getName();
+                 chip.getAeViewer().getLoggingFile();
+                 //  set default file name.
+                 AgentLogger.setJAERFilename(JAERLoggingFilename);
+                 AgentLogger.setJAERLoggingEnabled(true);
+                log.info("Jaer Logging started: {} Filename: {}", evt.toString(), JAERLoggingFilename);
+                }
                 break;
             
             case AEViewer.EVENT_LOGGING_STOPPED:
-                 //  file name is available only at close, of course...
+                   if(!AgentLogger.isLoggingEnabled()) { // dont interfere with an already running GUI job
                 JAERLoggingFilename =  chip.getAeViewer().getLoggingFile().getName();
+                 //  chosen file name is available only at close.  TODO - prefer to keep default
                 AgentLogger.setJAERFilename(JAERLoggingFilename);
                 AgentLogger.setJAERLoggingEnabled(false);
-                 logger.info(evt.toString());
-                 log.info(evt.toString());
+                 log.info("Jaer Logging stopped: {} Filename: {}", evt.toString(), JAERLoggingFilename);
+                   }
                  break;
                 
             default:

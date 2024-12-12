@@ -18,6 +18,7 @@
  */
 package com.inilabs.jaer.projects.tracker;
 
+import java.awt.Color;
 import java.util.LinkedList;
 import java.util.Random;
 import org.slf4j.LoggerFactory;
@@ -57,7 +58,7 @@ private LinkedList<TestCluster> clusterList = null; // Persistent list to store 
                 float elevation = offsetElevation + (float) (Math.random() * 20 - 10); // Range: [offset - 10, offset + 10]
 
                 // Create and add TestCluster
-                TestCluster testCluster = new TestCluster(azimuth, elevation);
+                TestCluster testCluster = new TestCluster(azimuth, elevation, Color.GREEN);
                 log.info("Created Test cluster: ID={}, Azimuth={}, Elevation={}",
                         testCluster.getKey(), testCluster.getAzimuth(), testCluster.getElevation());
                 clusterList.add(testCluster);
@@ -106,7 +107,7 @@ public  LinkedList<TestCluster>  getMultipleTestClusters( float centerAzim, floa
         float elevation = (float)(Math.random() * 20 - 10); // Range: [-10, 10]
 
         // Create TestCluster
-        TestCluster testCluster = new TestCluster(azimuth+centerAzim, elevation+centerElev);
+        TestCluster testCluster = new TestCluster(azimuth+centerAzim, elevation+centerElev, Color.GREEN);
 
       log.info("Test cluster: ID={}, Azimuth={}, Elevation={}",
                  testCluster.getKey(), testCluster.getAzimuth(), testCluster.getElevation());
@@ -126,7 +127,7 @@ public  LinkedList<TestCluster> getTestClustersHorizontal() {
         float elevation = (float)(Math.random() * 10 - 5); // Range: [-10, 10]
 
         // Create random testCluster around current azimuth
-        TestCluster testCluster = new TestCluster(currentAzimuth+azimuth, currentElevation+elevation);
+        TestCluster testCluster = new TestCluster(currentAzimuth+azimuth, currentElevation+elevation, Color.GREEN);
         
         log.info("Test cluster: ID={}, Azimuth={}, Elevation={}",
                  testCluster.getKey(), testCluster.getAzimuth(), testCluster.getElevation());
@@ -168,7 +169,7 @@ public  LinkedList<TestCluster> getTestClustersCircular() {
         float elevation = baseElevation + (float) (Math.random() * 20 - 10); // Random offset [-1, 1]
 
         // Create TestCluster
-        TestCluster testCluster = new TestCluster(baseAzimuth+azimuth, baseElevation+elevation);
+        TestCluster testCluster = new TestCluster(baseAzimuth+azimuth, baseElevation+elevation, Color.GREEN);
 
         // Add the cluster to the list
         clusterList.add(testCluster);

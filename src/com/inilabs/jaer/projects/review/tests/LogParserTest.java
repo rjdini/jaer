@@ -16,44 +16,75 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
-
-
 package com.inilabs.jaer.projects.review.tests;
 
 import com.inilabs.jaer.projects.review.LogParser;
 import com.inilabs.jaer.projects.review.TrajectoryDrawable;
 import com.inilabs.jaer.projects.review.TrajectoryPointDrawable;
+import org.junit.jupiter.api.Test;
 
+import java.awt.Color;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 public class LogParserTest {
-    public static void main(String[] args) {
-        String filePath = "./data/AgentLogger_TEST.json"; // Update to your file location if needed
 
-        try {
-            LogParser parser = new LogParser();
-            Map<String, Map<String, TrajectoryDrawable>> sessions = parser.parseLogFile(filePath);
-
-            // Display parsed sessions and their trajectories
-            for (String session : sessions.keySet()) {
-                System.out.println("Session: " + session);
-                Map<String, TrajectoryDrawable> trackers = sessions.get(session);
-
-                for (String tracker : trackers.keySet()) {
-                    System.out.println("  Tracker: " + tracker);
-                    List<TrajectoryPointDrawable> points = trackers.get(tracker).getPoints();
-
-                    for (TrajectoryPointDrawable point : points) {
-                        System.out.println("    Point: Azimuth=" + point.getAzimuth() +
-                                ", Elevation=" + point.getElevation() +
-                                ", Time=" + point.getTime());
-                    }
-                }
+    @Test
+    public void testParseLogFileWithColor() throws IOException {
+        // Create a sample log file
+        String sampleLog = """
+            {
+                "event": "move",
+                "session": "testSession",
+                "key": "tracker1",
+                "azim": 45.0,
+                "elev": 30.0,
+                "jaerts": 123456789,
+                "color": -16776961,
+                "clust": ["cluster1", "cluster2"]
             }
-        } catch (Exception e) {
-            System.err.println("Error parsing log file: " + e.getMessage());
-            e.printStackTrace();
+            """;
+
+        // Write the sample log to a temporary file
+        Path tempLogFile = Files.createTempFile("testLog", ".json");
+        try (FileWriter writer = new FileWriter(tempLogFile.toFile())) {
+            writer.write(sampleLog);
         }
+
+        // Parse the log file
+        LogParser parser = new LogParser();
+        Map<String, Map<String, TrajectoryDrawable>> sessions = parser.parseLogFile(tempLogFile.toString());
+
+        // Validate the parsed data
+        assertNotNull(sessions, "Sessions should not be null");
+        assertTrue(sessions.containsKey("testSession"), "Session 'testSession' should exist");
+
+        Map<String, TrajectoryDrawable> session = sessions.get("testSession");
+        assertNotNull(session, "Session data should not be null");
+        assertTrue(session.containsKey("tracker1"), "Tracker 'tracker1' should exist");
+
+        TrajectoryDrawable tracker = session.get("tracker1");
+        assertNotNull(tracker, "Tracker should not be null");
+        assertEquals(1, tracker.getPoints().size(), "Tracker should have exactly one point");
+
+        TrajectoryPointDrawable point = tracker.getPoints().get(0);
+        assertNotNull(point, "Trajectory point should not be null");
+        assertEquals(45.0f, point.getAzimuth(), 0.001, "Azimuth should match");
+        assertEquals(30.0f, point.getElevation(), 0.001, "Elevation should match");
+        assertEquals(123456789L, point.getTimestamp(), "Timestamp should match");
+        assertEquals(new Color(-16776961), point.getColor(), "Color should match");
+
+        List<String> clusters = tracker.getClusters();
+        assertNotNull(clusters, "Clusters should not be null");
+        assertEquals(List.of("cluster1", "cluster2"), clusters, "Clusters should match");
+
+        // Clean up temporary file
+        Files.delete(tempLogFile);
     }
 }

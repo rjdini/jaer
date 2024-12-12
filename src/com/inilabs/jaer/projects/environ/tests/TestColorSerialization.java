@@ -21,7 +21,7 @@ package com.inilabs.jaer.projects.environ.tests;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.inilabs.jaer.projects.environ.ColorAdapter;
+import com.inilabs.jaer.projects.utils.ColorAdapter;
 import java.awt.Color;
 
 public class TestColorSerialization {

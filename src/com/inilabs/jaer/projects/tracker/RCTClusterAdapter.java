@@ -18,7 +18,6 @@
  */
 package com.inilabs.jaer.projects.tracker;
 
-import com.inilabs.jaer.projects.tracker.ClusterAdapter;
 import java.awt.Color;
 import java.awt.geom.Point2D;
 import net.sf.jaer.eventprocessing.tracking.RectangularClusterTracker;
@@ -38,6 +37,7 @@ public class RCTClusterAdapter implements ClusterAdapter {
         this.fov = fov;
     }
 
+    @Override
     public float getSize() {    // in degrees
         return ( fov.getFOVX() / fov.getChipWidthPixels()) * cluster.getMeasuredRadius();
     }
@@ -58,7 +58,7 @@ public class RCTClusterAdapter implements ClusterAdapter {
         return( getTimestamp() -  startTime);
     }
   
-  
+  @Override
   public Color getColor() {
       return this.cluster.getColor();
   }
