@@ -40,6 +40,7 @@ import net.sf.jaer.aemonitor.AEMonitorInterface;
 import net.sf.jaer.aemonitor.AEPacketRaw;
 import net.sf.jaer.aemonitor.AEPacketRawPool;
 import net.sf.jaer.chip.AEChip;
+import net.sf.jaer.chip.Chip;
 import net.sf.jaer.event.EventPacket;
 import net.sf.jaer.eventprocessing.EventFilter;
 import net.sf.jaer.eventprocessing.FilterChain;
@@ -86,7 +87,7 @@ public class CypressFX3 implements AEMonitorInterface, ReaderBufferControl, USBI
     /**
      * Used to store preferences, e.g. buffer sizes and number of buffers.
      */
-    protected static Preferences prefs = Preferences.userNodeForPackage(CypressFX3.class);
+    protected static Preferences prefs = JaerConstants.PREFS_ROOT_HARDWARE;
 
     protected static final Logger log = Logger.getLogger("net.sf.jaer");
     protected AEChip chip;
@@ -644,14 +645,17 @@ public class CypressFX3 implements AEMonitorInterface, ReaderBufferControl, USBI
 
         if (deviceHandle != null) {
             try {
+                log.info("Doing USB reset on device before releasing it");
                 int status = LibUsb.resetDevice(deviceHandle); // add a reset after open according to https://stackoverflow.com/questions/39856832/libusb-get-string-descriptor-ascii-timeout-error
                 if (status != LibUsb.SUCCESS) {
                     throw new HardwareInterfaceException("failed to reset device: " + LibUsb.errorName(status));
                 }
+                log.info("Releasing device handle");
                 status = LibUsb.releaseInterface(deviceHandle, 0);
                 if (status != LibUsb.SUCCESS) {
                     throw new HardwareInterfaceException("open(): failed to releaseInterface: " + LibUsb.errorName(status));
                 }
+                
                 LibUsb.close(deviceHandle);
             } catch (IllegalStateException | HardwareInterfaceException e) {
                 log.warning(String.format("Error releasing interface: %s", e.toString()));
@@ -806,6 +810,7 @@ public class CypressFX3 implements AEMonitorInterface, ReaderBufferControl, USBI
         // System.out.println(String.format("SPI Config sent with modAddr=%d, paramAddr=%d, value=%d.\n", moduleAddr,
         // paramAddr, param));
         sendVendorRequest(CypressFX3.VR_FPGA_CONFIG, moduleAddr, paramAddr, configBytes);
+        getChip().getSupport().firePropertyChange(Chip.EVENT_HARDWARE_CHANGE, false, true);
 //                
 //		int returnedParam = 0;
 //
@@ -1003,7 +1008,7 @@ public class CypressFX3 implements AEMonitorInterface, ReaderBufferControl, USBI
                     open();
                 } catch (final HardwareInterfaceException e) {
                     // TODO Auto-generated catch block
-                    e.printStackTrace();
+                    log.warning(e.toString());
                 }
             }
 
@@ -1227,7 +1232,7 @@ public class CypressFX3 implements AEMonitorInterface, ReaderBufferControl, USBI
                 getChip().getFilterChain().filterPacket(realTimePacket);
             } catch (final Exception e) {
                 CypressFX3.log.warning(e.toString() + ": disabling all filters");
-                e.printStackTrace();
+//                e.printStackTrace();
                 for (final EventFilter f : getChip().getFilterChain()) {
                     f.setFilterEnabled(false);
                 }
@@ -1317,6 +1322,7 @@ public class CypressFX3 implements AEMonitorInterface, ReaderBufferControl, USBI
         if (!isOpen()) {
             return;
         }
+        log.info(String.format("Setting event acquisition = %s",enable));
         // Start reader before sending data enable commands.
         setInEndpointEnabled(enable);
         if (enable) {

@@ -83,14 +83,11 @@ import java.util.logging.ConsoleHandler;
 
 import org.apache.commons.io.FileUtils;
 
-import ch.unizh.ini.jaer.chip.cochlea.CochleaAMS1c;
 import ch.unizh.ini.jaer.chip.retina.*;
 import eu.seebetter.ini.chips.davis.*;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
-import javax.swing.ActionMap;
-import javax.swing.InputMap;
-import javax.swing.KeyStroke;
+import java.awt.geom.Point2D;
 import net.sf.jaer.JAERViewer;
 import net.sf.jaer.JaerConstants;
 import net.sf.jaer.JaerUpdaterFrame;
@@ -266,7 +263,8 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
         WAITING, LIVE, PLAYBACK, SEQUENCING, REMOTE, FILTER_INPUT
     }
     volatile private PlayMode playMode = PlayMode.WAITING;
-    public static Preferences prefs = Preferences.userNodeForPackage(AEViewer.class);
+    /** The Preferences node for the AEViewer, which has it's own node in the preferences tree, below the package */
+    public Preferences prefs = JaerConstants.PREFS_ROOT.node("AEViewer");
     static Logger log = Logger.getLogger("net.sf.jaer");
     //    private PropertyChangeSupport support = new PropertyChangeSupport(this); // already has support as Componenent!!!
     EventExtractor2D extractor = null;
@@ -283,11 +281,16 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
     public File lastLoggingFolder = null;//changed pol
     File lastImageFile = null;
     File currentFile = null;
-    private FrameRater frameRater = new FrameRater();
+    private FrameRater frameRater = null; // constructed in constructor since it needs prefs
     ChipCanvas chipCanvas;
     volatile boolean loggingEnabled = false;
-    /** The file that AE data is currently being logged to. Note it can change when the user finally selects the file to save the data to.*/
-    private File loggingFile;
+    /**
+     * The file that AE data is currently being logged to. Note it can change
+     * when the user finally selects the file to save the data to.
+     *
+     * @see #startLogging(String,String)
+     */
+    private File loggingFile = null;
     AEFileOutputStream loggingOutputStream;
     private boolean activeRenderingEnabled = prefs.getBoolean("AEViewer.activeRenderingEnabled", true);
     private boolean renderBlankFramesEnabled = prefs.getBoolean("AEViewer.renderBlankFramesEnabled", false);
@@ -315,15 +318,13 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
      */
     public static String[] DEFAULT_CHIP_CLASS_NAMES = {
         DEFAULT_CHIP_CLASS,
-        //        DAVIS240B.class.getName(),
         DVS128.class.getName(),
         DAVIS240C.class.getName(),
-        Davis346blue.class.getName(),
         Davis346red.class.getName(),
         Davis346redColor.class.getName(),
-        //        Davis640.class.getName(),
+        Davis346blue.class.getName(),
         DVXplorer.class.getName(),
-        CochleaAMS1c.class.getName(),
+//        CochleaAMS1c.class.getName(),
         DVS640.class.getName(),
         DVS1280x720SD.class.getName()
     };
@@ -384,11 +385,11 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
         Logger.getLogger("").addHandler(loggingHandler);
 
         log.info("AEViewer starting up...");
-        
+
+        frameRater = new FrameRater(); // needs preferences, so make it here
         // log prefs info to debug location of prefs
         // unfortunately this returns null always, seems no way to find out
 //        log.info(String.format("Preferences storage is located at %s",System.getProperty("java.util.prefs.userRoot")));
-
         if (chipClassName == null) {
             aeChipClassName = prefs.get("AEViewer.aeChipClassName", DEFAULT_CHIP_CLASS);
         } else {
@@ -644,6 +645,10 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
             aemon.close();
         }
 
+        if(aePlayer!=null){
+            aePlayer.stopPlayback();
+        }
+        
         if (aeServerSocket != null) {
             log.info("closing " + aeServerSocket);
             try {
@@ -794,6 +799,8 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
         deviceMenu.removeAll();
         chipClasses = new ArrayList<Class>();
         deviceMenu.addSeparator();
+        deviceMenu.add(renewChipMI);
+        deviceMenu.addSeparator();
         deviceMenu.add(customizeDevicesMenuItem);
         getChipClassPrefs();
         ArrayList<String> notFoundClasses = new ArrayList<String>();
@@ -802,7 +809,7 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
                 Class c = FastClassFinder.forName(deviceClassName);
                 chipClasses.add(c);
                 JRadioButtonMenuItem b = new JRadioButtonMenuItem(deviceClassName);
-                deviceMenu.insert(b, deviceMenu.getItemCount() - 2);
+                deviceMenu.insert(b, deviceMenu.getItemCount() - 4); // change if more items added at end of AEChip menu, e.g. renewChipMI
                 b.addActionListener((ActionEvent evt) -> {
                     try {
                         String name1 = evt.getActionCommand();
@@ -1374,6 +1381,13 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
         });
 
     }
+    
+    /** Sets a flag that rendering this current packet is skipped.
+     * Can be used by event filters to skip rendering if results are boring.
+     */
+    public void fastForward(){
+        viewLoop.fastForward=true;
+    }
 
     void fixBiasgenControls() {
 
@@ -1550,6 +1564,7 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
 
         Graphics2D g = null;
         volatile boolean singleStepEnabled = false, doSingleStep = false;
+        volatile boolean fastForward = false; // flag set by fastForward() by e.g. EventFilter to skip packet rendering
         int numRawEvents, numFilteredEvents;
         private EngineeringFormat engFmt = new EngineeringFormat();
         private long beforeTime = 0, afterTime;
@@ -1582,6 +1597,7 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
             while (stop == false/*&& !isInterrupslsted()*/) { // the only way to break out of the run loop is either setting stop true or by some uncaught exception.
                 setTitleAccordingToState();
                 fpsDelay(); // delay at start so all the below that breaks out of loop still has a delay to avoid CPU hog
+                // unless fastForward is set, in which case there is no delay
                 if (!isPaused() || (isSingleStep() && !isInterrupted())) { // we check interrupted to make sure we are not getting data after being interrupted
                     // if !paused we always get data. below, if singleStepEnabled, we set paused after getting data.
                     // when the user unpauses via menu, we disable singleStepEnabled
@@ -1624,6 +1640,11 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
                         numEvents = cookedPacket.getSize();
 
                         cookedPacket = filterPacket(cookedPacket);
+                        if(fastForward){ // maybe a filter set this flag.
+                            // in fpsDelay we also skip the pause, and reset the fastForward flag
+                            continue;
+                        }
+                        
 
                     }
                     chip.setLastData(cookedPacket);// set the rendered data for use by various methods
@@ -1816,7 +1837,7 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
                         log.warning("while acquiring data caught " + e.toString());
                         if (aemon != null) {
                             aemon.close(); // TODO check if this is OK -tobi
-                        }//                                e.printStackTrace();
+                        }
                         nullifyHardware();
 //                        stopMe();
 
@@ -1942,7 +1963,8 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
             // filter events, do processing on them in rendering loop here
             if ((filterChain.getProcessingMode() == FilterChain.ProcessingMode.RENDERING) || (getPlayMode() != PlayMode.LIVE)) {
                 try {
-                    return filterChain.filterPacket(inputPacket);
+                    EventPacket p=filterChain.filterPacket(inputPacket);
+                    return p;
                 } catch (Exception e) {
                     log.warning("Caught " + e + ", disabling all filters. See following stack trace.");
                     log.log(Level.SEVERE, e.toString(), e);
@@ -2573,6 +2595,12 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
             if (Thread.interrupted()) {
                 return; // clear the interrupt flag here to make sure we don't just pass through with no one clearing the flag
             }
+            
+            if(viewLoop.fastForward){
+                viewLoop.fastForward=false;
+                takeAfter(); // count this packet for rendering speed measuurement
+                return;
+            }
 
             delayMs = Math.round(desiredPeriodMs - ((float) lastdt / 1000000));
             if (delayMs < 0) {
@@ -2708,7 +2736,6 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
         jSeparator18 = new javax.swing.JPopupMenu.Separator();
         zoomInMenuItem = new javax.swing.JMenuItem();
         zoomOutMenuItem = new javax.swing.JMenuItem();
-        zoomCenterMenuItem = new javax.swing.JMenuItem();
         unzoomMenuItem = new javax.swing.JMenuItem();
         graphicsSubMenu = new javax.swing.JMenu();
         viewActiveRenderingEnabledMenuItem = new javax.swing.JCheckBoxMenuItem();
@@ -2738,6 +2765,8 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
         setMarkOutMI = new javax.swing.JMenuItem();
         clearMarksMI = new javax.swing.JMenuItem();
         deviceMenu = new javax.swing.JMenu();
+        jSeparator3 = new javax.swing.JPopupMenu.Separator();
+        renewChipMI = new javax.swing.JMenuItem();
         deviceMenuSpparator = new javax.swing.JSeparator();
         customizeDevicesMenuItem = new javax.swing.JMenuItem();
         interfaceMenu = new javax.swing.JMenu();
@@ -3248,7 +3277,7 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
 
         zoomInMenuItem.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_EQUALS, java.awt.event.InputEvent.CTRL_DOWN_MASK));
         zoomInMenuItem.setText("Zoom in");
-        zoomInMenuItem.setToolTipText("Zooms in around mouse point. Also Ctl+mouse wheel");
+        zoomInMenuItem.setToolTipText("Zooms in around mouse point. Also Ctl+mouse wheel. Right click and drag to pan.");
         zoomInMenuItem.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 zoomInMenuItemActionPerformed(evt);
@@ -3258,7 +3287,7 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
 
         zoomOutMenuItem.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_MINUS, java.awt.event.InputEvent.CTRL_DOWN_MASK));
         zoomOutMenuItem.setText("Zoom out");
-        zoomOutMenuItem.setToolTipText("Zooms out around mouse point. Also Ctl+mouse wheel");
+        zoomOutMenuItem.setToolTipText("Zooms out around mouse point. Also Ctl+mouse wheel. Right click and drag to pan.");
         zoomOutMenuItem.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 zoomOutMenuItemActionPerformed(evt);
@@ -3266,19 +3295,9 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
         });
         viewMenu.add(zoomOutMenuItem);
 
-        zoomCenterMenuItem.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_END, 0));
-        zoomCenterMenuItem.setText("Center display here");
-        zoomCenterMenuItem.setToolTipText("Centers display on mouse point");
-        zoomCenterMenuItem.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                zoomCenterMenuItemActionPerformed(evt);
-            }
-        });
-        viewMenu.add(zoomCenterMenuItem);
-
         unzoomMenuItem.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_0, java.awt.event.InputEvent.CTRL_DOWN_MASK));
         unzoomMenuItem.setText("Unzoom");
-        unzoomMenuItem.setToolTipText("Goes to default display zooming");
+        unzoomMenuItem.setToolTipText("<html>Default display zooming, with border (see View/Filtering options/Set border space...). <p> Right click and drag to pan. <p> Ctl+wheel to zoom.");
         unzoomMenuItem.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 unzoomMenuItemActionPerformed(evt);
@@ -3494,6 +3513,16 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
         deviceMenu.setMnemonic('a');
         deviceMenu.setText("AEChip");
         deviceMenu.setToolTipText("Specifies which AEChip class is used either for playback or live interfacnig to a device");
+        deviceMenu.add(jSeparator3);
+
+        renewChipMI.setText("Renew AEChip");
+        renewChipMI.setToolTipText("Construct new instance of selected AEChip");
+        renewChipMI.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                renewChipMIActionPerformed(evt);
+            }
+        });
+        deviceMenu.add(renewChipMI);
         deviceMenu.add(deviceMenuSpparator);
 
         customizeDevicesMenuItem.setMnemonic('C');
@@ -3797,7 +3826,7 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
                                 "AEChip error", JOptionPane.INFORMATION_MESSAGE);
 
                     } catch (Exception e) {
-                        e.printStackTrace();
+//                        e.printStackTrace();
                         JOptionPane.showMessageDialog(this,
                                 String.format("Error setting AEChip to  %s: got exception %s", cn, e.toString()),
                                 "AEChip error", JOptionPane.ERROR_MESSAGE);
@@ -4127,9 +4156,9 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
                 }
             } else if (control && !(shift || alt)) {
                 if (rotation > 0) {
-                    chipCanvas.zoomOut(); // wheel down
+                    chipCanvas.zoomOutAround(evt.getPoint()); // wheel down
                 } else if (rotation < 0) {
-                    chipCanvas.zoomIn(); //wheel up
+                    chipCanvas.zoomInAround(evt.getPoint()); //wheel up
                 }
                 if (isPaused()) {
                     interruptViewloop();
@@ -4478,8 +4507,8 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
                     biasgen = chip.getBiasgen();
                 } catch (Exception e) {
                     StringWriter writer = new StringWriter();
-                    PrintWriter printWriter = new PrintWriter(writer);
-                    e.printStackTrace(printWriter);
+//                    PrintWriter printWriter = new PrintWriter(writer);
+//                    e.printStackTrace(printWriter);
 
                     log.warning("Caught exception when trying to set up Biasgen: " + e.toString() + " - Stacktrace: " + writer.toString());
                 }
@@ -4578,6 +4607,10 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
             log.warning("tried to log to null filename, aborting");
             return null;
         }
+        if (loggingFile != null) {
+            log.warning(String.format("Already logging to file %s", loggingFile.getAbsolutePath()));
+            return loggingFile;
+        }
         if (!filename.toLowerCase().endsWith(AEDataFile.DATA_FILE_EXTENSION)
                 && !filename.toLowerCase().endsWith(AEDataFile.DATA_FILE_EXTENSION_AEDAT2)
                 && !filename.toLowerCase().endsWith(AEDataFile.OLD_DATA_FILE_EXTENSION)) {
@@ -4618,7 +4651,6 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
             getSupport().firePropertyChange(EVENT_LOGGING_STARTED, null, loggingFile);
 
             //            aemon.resetTimestamps();
-
         } catch (FileNotFoundException e) {
             loggingFile = null;
             log.log(Level.WARNING, "In trying open a logging output file, caught: " + e.toString(), e);
@@ -4635,7 +4667,7 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
      * Starts logging data to a default data logging file.
      *
      * @return the file that is logged to.
-     * @see #getLoggingFile() 
+     * @see #getLoggingFile()
      */
     synchronized public File startLogging() {
         //        if(playMode!=PlayMode.LIVE) return null;
@@ -5312,22 +5344,16 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
 	}//GEN-LAST:event_refreshInterfaceMenuItemComponentShown
 
 	private void zoomInMenuItemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_zoomInMenuItemActionPerformed
-            chip.getCanvas().zoomIn();
+            chip.getCanvas().zoomInAround(null);
             if (isPaused())
                 interruptViewloop();
 	}//GEN-LAST:event_zoomInMenuItemActionPerformed
 
 	private void zoomOutMenuItemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_zoomOutMenuItemActionPerformed
-            chip.getCanvas().zoomOut();
+            chip.getCanvas().zoomOutAround(null);
             if (isPaused())
                 interruptViewloop();
 	}//GEN-LAST:event_zoomOutMenuItemActionPerformed
-
-	private void zoomCenterMenuItemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_zoomCenterMenuItemActionPerformed
-            chip.getCanvas().zoomCenter();
-            if (isPaused())
-                interruptViewloop();
-	}//GEN-LAST:event_zoomCenterMenuItemActionPerformed
 
 	private void showConsoleOutputButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_showConsoleOutputButtonActionPerformed
             //    log.info("opening logging output window");
@@ -5755,6 +5781,8 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
             int newSpace = Integer.parseInt(borderString);
             if (newSpace != borderSpaceNow) {
                 chip.getCanvas().setBorderSpacePixels(newSpace);
+                setBorderSpaceMenuItem.setText(String.format("Set border space (currently %d)",newSpace));
+                repaint();
             }
         } catch (NumberFormatException e) {
             log.warning(e.toString());
@@ -5881,6 +5909,21 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
         log.info(getRenderer().getDescription());
         showActionText(getRenderer().getDescription());
     }//GEN-LAST:event_showRenderingModeMIActionPerformed
+
+    private void renewChipMIActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_renewChipMIActionPerformed
+        try {
+            Class cl = chip.getClass();
+            try {
+                setCursor(new Cursor(Cursor.WAIT_CURSOR));
+                setAeChipClass(cl);
+            } finally {
+                setCursor(Cursor.getDefaultCursor());
+            }
+        } catch (Exception e) {
+            log.log(Level.SEVERE, e.toString(), e);
+        }
+
+    }//GEN-LAST:event_renewChipMIActionPerformed
 
     private ArrayList<LoggingLevelButton> loggingLevelRadioButtons = null;
     private final Level[] loggingLevels = {Level.OFF, Level.SEVERE, Level.WARNING, Level.INFO, Level.FINE, Level.FINER, Level.FINEST, Level.ALL};
@@ -6058,7 +6101,7 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
                 }
             } catch (IOException e) {
                 log.warning(e.toString());
-                e.printStackTrace();
+//                e.printStackTrace();
             } catch (InterruptedException ex) {
                 log.warning("opening dropped file " + draggedFile + " interrupted");
             }
@@ -6138,9 +6181,12 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
     public void setLoggingButton(javax.swing.JToggleButton b) {
         loggingButton = b;
     }
-    
-    /** Returns the current AE data logging file. Note that this file can change if the user selects a different final file destination or name than the original default one.
-     * 
+
+    /**
+     * Returns the current AE data logging file. Note that this file can change
+     * if the user selects a different final file destination or name than the
+     * original default one.
+     *
      * @return the loggingFile
      */
     public File getLoggingFile() {
@@ -6378,6 +6424,29 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
     public void setJaerUpdaterFrame(JaerUpdaterFrame jaerUpdaterFrame) {
         this.jaerUpdaterFrame = jaerUpdaterFrame;
     }
+    
+    /** Zoom to center a particular point, with a zoom ratio. Can be used by EventFilter that manipulates the view.
+     * 
+     * @param pixel the pixel to center
+     * @param zoomFactor the zoom ratio, 1 for unzoomed, >1 for zoomed in by some factor
+     */
+    public void zoomToCenter(Point pixel, float zoomFactor){
+        getChip().getCanvas().zoomToCenter(pixel, zoomFactor);
+    }
+    
+    /** Remove any zoom */
+    public void unzoom(){
+        if(getChip().getCanvas()!=null){
+            getChip().getCanvas().unzoom();
+            repaint();
+        }
+    }
+    
+    public boolean isZoomed(){
+        if(getChip().getCanvas()!=null){
+            return getChip().getCanvas().isZoomed();
+        } else return false;
+    }
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
@@ -6445,6 +6514,7 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
     private javax.swing.JPopupMenu.Separator jSeparator25;
     private javax.swing.JPopupMenu.Separator jSeparator26;
     private javax.swing.JPopupMenu.Separator jSeparator27;
+    private javax.swing.JPopupMenu.Separator jSeparator3;
     private javax.swing.JSeparator jSeparator4;
     private javax.swing.JSeparator jSeparator5;
     private javax.swing.JPopupMenu.Separator jSeparator6;
@@ -6482,6 +6552,7 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
     private javax.swing.JMenuItem refreshInterfaceMenuItem;
     private javax.swing.JMenu remoteMenu;
     private javax.swing.ButtonGroup renderModeButtonGroup;
+    private javax.swing.JMenuItem renewChipMI;
     private javax.swing.JMenuItem reopenSocketInputStreamMenuItem;
     private javax.swing.JMenuItem resetAccumulationMenuItem;
     private javax.swing.JLabel resizeLabel;
@@ -6515,10 +6586,8 @@ public class AEViewer extends javax.swing.JFrame implements PropertyChangeListen
     private javax.swing.JMenuItem viewStepBackwardsMI;
     private javax.swing.JMenuItem viewStepForwardsMI;
     private javax.swing.JMenuItem zeroTimestampsMenuItem;
-    private javax.swing.JMenuItem zoomCenterMenuItem;
     private javax.swing.JMenuItem zoomInMenuItem;
     private javax.swing.JMenuItem zoomOutMenuItem;
     // End of variables declaration//GEN-END:variables
-
 
 }

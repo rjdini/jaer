@@ -172,19 +172,9 @@ public class ImuControl extends Observable implements HasPropertyTooltips, Biasg
 		return davisChip.prefsHeader() + ".";
 	}
 
-	@Override
-	public final void loadPreference() {
-		try {
-			setGyroScale(ImuGyroScale.valueOf(
-				davisChip.getPrefs().get(getPreferencesKey() + "IMU.GyroScale", ImuGyroScale.GyroFullScaleDegPerSec1000.toString())));
-			setAccelScale(ImuAccelScale
-				.valueOf(davisChip.getPrefs().get(getPreferencesKey() + "IMU.AccelScale", ImuAccelScale.ImuAccelScaleG8.toString())));
-			setDisplayImu(davisConfig.getChip().getPrefs().getBoolean(getPreferencesKey() + "IMU.displayEnabled", true));
-		}
-		catch (final Exception e) {
-			davisConfig.getChip().getLog().warning(e.toString());
-		}
-	}
+    private String getPreferencesKey() {
+        return "";
+    }
 
 	@Override
 	public void storePreference() {
