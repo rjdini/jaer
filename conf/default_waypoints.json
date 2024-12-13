@@ -1,0 +1,26 @@
+[
+  {
+    "name": "birds",
+    "azimuth": -9.306122,
+    "elevation": -9.599999,
+    "color": -6750055
+  },
+  {
+    "name": "lookout",
+    "azimuth": 20.20408,
+    "elevation": -5.729032,
+    "color": -65281
+  },
+  {
+    "name": "lukas",
+    "azimuth": -59.142857,
+    "elevation": 20.43871,
+    "color": -6750055
+  },
+  {
+    "name": "street",
+    "azimuth": -8.693877,
+    "elevation": -37.00645,
+    "color": -65281
+  }
+]
