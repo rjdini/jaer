@@ -51,8 +51,9 @@ import net.sf.jaer.graphics.AEViewer;
  *
  * @author tobi, rjd
  */
-@DevelopmentStatus(DevelopmentStatus.Status.Stable)
-@Description("Rev 3Dec24:  RS4Ronin tracks real and synthtic targets in PolarSpace")
+
+@Description("Rev 3Dec24:  RS4Ronin gimbal tracks real and synthetic targets in PolarSpace")
+@net.sf.jaer.DevelopmentStatus(net.sf.jaer.DevelopmentStatus.Status.Stable)
 public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements FrameAnnotater {
 
     private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(TrackerManagerV2.class);
@@ -272,8 +273,10 @@ return primaryTrackerAgent ;
     @Override
     public void initFilter() {
          AgentLogger.initialize(chip.getAeViewer());
-    }
+     }
 
+   
+    
     public void annotate(float[][][] frame) {
     }
 
