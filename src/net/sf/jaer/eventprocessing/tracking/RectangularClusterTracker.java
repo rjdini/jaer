@@ -807,7 +807,7 @@ public class RectangularClusterTracker extends EventFilter2D
     }
 
     private static boolean isFineLoggingLevel() {
-        if(log.getLevel()==null) return false;
+        if (log.getLevel()==null) return false;
         return log.getLevel().intValue() < Level.INFO.intValue();
     }
 
