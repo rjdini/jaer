@@ -7,11 +7,10 @@ package com.inilabs.jaer.projects.tracker;
 import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GLAutoDrawable;
 import java.awt.Graphics2D;
-import java.awt.geom.Point2D;
+//import java.awt.geom.Point2D;
 
 import com.jogamp.opengl.GL;
 import net.sf.jaer.Description;
-import net.sf.jaer.DevelopmentStatus;
 import net.sf.jaer.chip.AEChip;
 import net.sf.jaer.event.BasicEvent;
 import net.sf.jaer.event.EventPacket;
@@ -23,6 +22,7 @@ import com.jogamp.opengl.util.gl2.GLUT;
 import net.sf.jaer.util.DrawGL;
 import net.sf.jaer.util.EngineeringFormat;
 import com.inilabs.jaer.projects.cog.SpatialAttention;
+import com.inilabs.jaer.projects.environ.WaypointManager;
 import java.awt.Point;
 import java.awt.event.MouseEvent;
 import java.beans.PropertyChangeSupport;
@@ -34,7 +34,7 @@ import com.inilabs.jaer.projects.logging.LoggingStatePropertyChangeFilter;
 import com.inilabs.jaer.projects.motor.DirectGimbalController;
 import java.util.Timer;
 import java.util.stream.Collectors;
-import net.sf.jaer.graphics.AEViewer;
+import com.inilabs.jaer.projects.motor.JoystickController;
 
 
 
@@ -60,22 +60,26 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
 
     RectangularClusterTracker tracker;
   //  GimbalAimer panTilt = null;
-    Point2D.Float targetLocation = null;
-    RectangularClusterTracker.Cluster targetCluster = null;
+ //   Point2D.Float targetLocation = null;
+//    RectangularClusterTracker.Cluster targetCluster = null;
 
     private String who = "";  // the name of  this class, for locking gimbal access (if necessary) 
     private float[] rgb = {0, 0, 0, 0};
     private boolean isEnableTestClusters = false;
     private static PolarSpaceGUI polarSpaceGUI = null;
+    private static SpatialAttention spatialAttention;
     private TrackerAgentDrawable trackerAgentDrawable = null;
     private final LoggingStatePropertyChangeFilter loggingStateFilter;
    private TrackerManagerEngine engine; 
    private static FieldOfView fov;
-   private final SpatialAttention spatialAttention;
+//   private final SpatialAttention spatialAttention;
    
     private final int numberClustersAdded = 5 ; // sets the number of clusters generated for testing
     private final TMExerciser exerciser = new TMExerciser();
     private TrackerAgentDrawable primaryTrackerAgent;
+    private final JoystickController joystickController;
+    private final WaypointManager waypointManager;
+      
      EngineeringFormat fmt = new EngineeringFormat();
      
     Timer timer = new Timer();
@@ -84,6 +88,12 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
 
     public TrackerManagerV2(AEChip chip) {
         super(chip);
+        who = "TargetManagerV2";
+        support = new PropertyChangeSupport(this);
+        
+        Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
+        
+        // set up the filter chain
         FilterChain filterChain = new FilterChain(chip);
         loggingStateFilter = new LoggingStatePropertyChangeFilter(chip); 
         loggingStateFilter.getSupport().addPropertyChangeListener(this);
@@ -91,25 +101,32 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
         tracker.getSupport().addPropertyChangeListener(this);
         filterChain.add(loggingStateFilter);
         filterChain.add(tracker);
-        fov = FieldOfView.getInstance();
-        gimbal = DirectGimbalController.getInstance();
-        gimbal.addPropertyChangeListener(fov);
         setEnclosedFilterChain(filterChain);
-
-        who = "TargetManager";
-        support = new PropertyChangeSupport(this);
         
-         javax.swing.Timer updateTestTimer = new javax.swing.Timer(50, e ->   updateTrackerManagerEngineTests()) ;
-        updateTestTimer.start();
         
-         Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
-        
+        // Set up the Polar Tracking System
+        // I am having difficulties with circular dependencies, particularly in intreactions between PolarSpaceControlPanel and the functions it controls.
+        // To avoid these circular dependencies we use the (1) Factory-like construction of compnents, followed by (2) Initialization ('wiring') of the System.
+        // ( Not completely resolved as yet....  17Dec24 )
+        // Factory:
+         fov = FieldOfView.getInstance();
+         gimbal = DirectGimbalController.getInstance(fov);  // fov pose is slaved to gimbal pose
+         waypointManager = WaypointManager.getInstance();
+         spatialAttention = SpatialAttention.getInstance(gimbal, waypointManager); // spatial attention drives gimbal pose  (with parallel input from Joystick)   
+         joystickController = JoystickController.getInstance(gimbal);
          polarSpaceGUI = new PolarSpaceGUI();
+          
+          // Initialize
          polarSpaceGUI.getPolarSpaceDisplay().addDrawable(fov);
-         spatialAttention = SpatialAttention.getInstance();
-         
-         engine = new TrackerManagerEngine();
+         polarSpaceGUI.getPolarSpaceControlPanel().initialize(spatialAttention);
          polarSpaceGUI.getPolarSpaceDisplay().setHeading(0, 0);
+         
+          // should be up in factory chain, but must wait for polarSpaceDisplay...
+         engine = new TrackerManagerEngine(fov, spatialAttention,  polarSpaceGUI.getPolarSpaceDisplay()); 
+     
+         // Start some stuff
+          javax.swing.Timer updateTestTimer = new javax.swing.Timer(50, e ->   updateTrackerManagerEngineTests()) ;
+          updateTestTimer.start();
     }
     
    private void shutdown() {

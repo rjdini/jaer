@@ -18,10 +18,12 @@ import org.slf4j.LoggerFactory;
 public class TrackerManagerEngine {
     private static final int MAX_TRACKER_AGENTS = 3;
     private static final int MAX_CLUSTERS_PER_AGENT = 5; // Limit on clusters per agent
-    private PolarSpaceDisplay polarSpaceDisplay = PolarSpaceDisplay.getInstance();
+    private final PolarSpaceDisplay polarSpaceDisplay;
+    private final SpatialAttention spatialAttention;
+    private final FieldOfView fov;
+    
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private TrackerAgentDrawable currentBestAgent = null;
-    private FieldOfView fov = FieldOfView.getInstance();
     private long defaultAgentLifeTimeMillis = 5000; // 10 secs
      private long defaultEventClusterLifeTimeMillis =2000; // 2 secs
      private long lifeTimeExtensionMillis = 0; // reward for good agent taking on new cluster
@@ -38,13 +40,16 @@ private final CopyOnWriteArrayList<EventCluster> eventClusters = new CopyOnWrite
     private Color bestAgentColor = Color.RED; // Define the color for the best agents
 
     private volatile boolean freshDataAvailable = false;
-    private final SpatialAttention spatialAttention = SpatialAttention.getInstance();
+ 
     
     private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(TrackerManagerEngine.class);
     private static boolean isSaccade = false;
     
     
-    public TrackerManagerEngine() {
+    public TrackerManagerEngine(FieldOfView fov, SpatialAttention spatialAttention, PolarSpaceDisplay polarDisplay) {
+        this.fov = fov;
+        this.spatialAttention = spatialAttention;
+        this.polarSpaceDisplay = polarDisplay;
          // Start periodic processing task (10 Hz)
         scheduler.scheduleAtFixedRate(this::processPeriodically, 0, 100, TimeUnit.MILLISECONDS);
     }

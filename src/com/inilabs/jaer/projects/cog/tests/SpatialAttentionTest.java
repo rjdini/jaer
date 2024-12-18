@@ -18,6 +18,9 @@
  */
 
 import com.inilabs.jaer.projects.cog.SpatialAttention;
+import com.inilabs.jaer.projects.environ.WaypointManager;
+import com.inilabs.jaer.projects.motor.DirectGimbalController;
+import com.inilabs.jaer.projects.tracker.FieldOfView;
 import com.inilabs.jaer.projects.tracker.TrackerAgentDrawable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -30,8 +33,10 @@ public class SpatialAttentionTest {
 
     public static void main(String[] args) {
         // Initialize SpatialAttention singleton
-        
-        SpatialAttention spatialAttention = SpatialAttention.getInstance();
+        FieldOfView fov = FieldOfView.getInstance();
+        DirectGimbalController gimbal = DirectGimbalController.getInstance(fov);
+        WaypointManager waypointManager = WaypointManager.getInstance();
+        SpatialAttention spatialAttention = SpatialAttention.getInstance(gimbal, waypointManager);
 
         // Create a mock TrackerAgentDrawable
         TrackerAgentDrawable mockTrackerAgent = new TrackerAgentDrawable(0,10,2000);

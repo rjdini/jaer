@@ -60,20 +60,23 @@ public JButton resetWaypointButton;
 private float defaultWaypointAzimuth;
 private float defaultWaypointElevation;
 
-private  SpatialAttention spatialAttention  = SpatialAttention.getInstance();
+private  SpatialAttention spatialAttention;
 
 private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(PolarSpaceControlPanel.class);
 
+private ActionListener closeAction;
 
 public PolarSpaceControlPanel(PolarSpaceDisplay polarDisplay, ActionListener closeAction) {
     this.polarDisplay = polarDisplay;
   //  setLayout(new BorderLayout(5, 5)); // Use BorderLayout for main layout
-
+   this.closeAction = closeAction;
     // Register SpatialAttention as a KeyListener
     polarDisplay.setFocusable(true); // Ensure polarDisplay can receive focus
     polarDisplay.requestFocusInWindow(); // Request focus for polarDisplay
-    
+}
 
+public void initialize( SpatialAttention spatialAttention) { 
+   this.spatialAttention = spatialAttention; 
     // West Panel
     JPanel westPanel = new JPanel(new BorderLayout(5, 5)); // Use BorderLayout    
     westPanel.add(createHeadingGroupPanel(), BorderLayout.NORTH);
@@ -108,6 +111,9 @@ public PolarSpaceControlPanel(PolarSpaceDisplay polarDisplay, ActionListener clo
     // Synchronize sliders if linked
     synchronizeSliders();
 }
+
+
+
 
 
 

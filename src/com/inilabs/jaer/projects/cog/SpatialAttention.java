@@ -21,7 +21,6 @@ package com.inilabs.jaer.projects.cog;
 import com.inilabs.jaer.projects.environ.WaypointDrawable;
 import com.inilabs.jaer.projects.environ.WaypointManager;
 import com.inilabs.jaer.projects.motor.DirectGimbalController;
-import com.inilabs.jaer.projects.motor.JoystickController;
 import com.inilabs.jaer.projects.tracker.TrackerAgentDrawable;
 import com.inilabs.jaer.projects.tracker.TrackerManagerEngine;
 import java.util.concurrent.Executors;
@@ -48,32 +47,29 @@ public class SpatialAttention {
     private static final long BREAK_CONTACT_DURATION = 2000; // Threshold in milliseconds
     private long lastSuccessfulUpdate = System.currentTimeMillis();
     private boolean isSaccade = false; // State to ignore incoming data during waypoint movement
-    private final ScheduledExecutorService scheduler;
+   int cnt;
 
     private TrackerAgentDrawable bestTrackerAgent = null; // Reference to the best tracker agent
 
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
-
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    
     private final DirectGimbalController gimbal;
 //    private TrackerManagerEngine engine = new TrackerManagerEngine();
-
-    private final JoystickController joystickController;
-    private final WaypointManager waypointManager;
+   private final WaypointManager waypointManager;
     
 
     private static SpatialAttention instance;
 
-    private SpatialAttention() {
-        this.waypointManager = WaypointManager.getInstance();
-        this.gimbal = DirectGimbalController.getInstance();
-        this.joystickController = JoystickController.getInstance(gimbal);
-        this.scheduler = Executors.newSingleThreadScheduledExecutor();
+    private SpatialAttention(DirectGimbalController gimbal, WaypointManager waypointManager) {
+        this.gimbal = gimbal;
+        this.waypointManager = waypointManager;
         Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
     }
 
-    public static SpatialAttention getInstance() {
+    public static SpatialAttention getInstance(DirectGimbalController gimbal, WaypointManager waypointManager) {
         if (instance == null) {
-            instance = new SpatialAttention();
+            instance = new SpatialAttention(gimbal, waypointManager);
             instance.startTasks();
         }
         return instance;
@@ -111,33 +107,45 @@ public class SpatialAttention {
         // However - large moves of the gimbal would lead to generation false trackers, so these moveets occur within a saccade.
         // when TrackerManagerEngine has isSaccade true,  it does not process incomming clusters (both RCT and Test).
         // In future we could make this more sophisticated - eg continue to attend to 'imagined' test targets.
-       
-        if (enableGimbalPose) { // override from PolarSpaceControlPanel
+  try{
+       System.out.println("********** " + cnt );
+       cnt = cnt+1;
+        
+       // if (enableGimbalPose) { // override from PolarSpaceControlPanel
+        if (true) { // override from PolarSpaceControlPanel    
             // Check if the system is in a saccade state
             if (isSaccade) {
-                log.debug("Ignoring incoming data due to saccade.");
+                log.info("Ignoring incoming data due to saccade.");
                 return;
             }
             
-            log.debug("bestTrackerAgent {} ", getBestTrackerAgent());
+            log.info("bestTrackerAgent {} ", getBestTrackerAgent());
             if (getBestTrackerAgent() != null
                     && (getBestTrackerAgent().getSupportQuality() > getSupportQualityThreshold())) {
 
                 // Update the tracker agent and send pose to gimbal
                 getBestTrackerAgent().run();
-                log.info("Best Tracker Agent supportQuality threshold: {}, current: {}",
+                log.info("TRACKING --- Best Tracker Agent supportQuality threshold: {}, current: {}",
                         getSupportQualityThreshold(), getBestTrackerAgent().getSupportQuality());
                 gimbal.setGimbalPose(getBestTrackerAgent().getAzimuth(), 0f, getBestTrackerAgent().getElevation());
 
                 // Update the last successful update timestamp
                 lastSuccessfulUpdate = System.currentTimeMillis();
-            } else {
+            } 
+            else {
                 // Check if the time since the last successful update exceeds the threshold
                 if (System.currentTimeMillis() - lastSuccessfulUpdate >= BREAK_CONTACT_DURATION) {
+                     log.info("START  SACCADE ------  ");
+                     
                     goToWaypoint("street");
+                    
+                    log.info("END SACCADE ----------");                
                 }
             }
         }
+         } catch (Exception e) {
+        log.error("Error in updateGimbalPose: ", e);
+    }
     }
 
     

@@ -128,6 +128,7 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
     double qualityScore = elapsedLifeTimeFactor 
                         + numberOfClusters 
                         + clusterContribution;
+    
     return qualityScore / 100;
 }
 

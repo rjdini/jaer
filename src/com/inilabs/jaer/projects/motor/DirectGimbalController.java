@@ -72,19 +72,22 @@ public class DirectGimbalController {
     private static final float gimbalYawOffsetError = -1.5f;
     private static final float gimbalPitchOffsetError = 0.5f;
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+    private final FieldOfView fov;
     
     // Constructor
-   private DirectGimbalController() {
+   private DirectGimbalController(FieldOfView fov) {
         super();
         Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
         // Run at 10 Hz (100 ms interval)
         executor.scheduleAtFixedRate(this::updateGimbal, 100, 100, TimeUnit.MILLISECONDS);
+        this.fov = fov;
        init();
     }
     
-       public static DirectGimbalController getInstance() {
+       public static DirectGimbalController getInstance(FieldOfView fov) {
         if (instance == null) {
-            instance = new DirectGimbalController();
+           instance = new DirectGimbalController(fov);
+           instance.addPropertyChangeListener(fov);
         }
         return instance;
     }

@@ -59,7 +59,7 @@ private LinkedList<TestCluster> clusterList = null; // Persistent list to store 
 
                 // Create and add TestCluster
                 TestCluster testCluster = new TestCluster(azimuth, elevation, Color.GREEN);
-                log.info("Created Test cluster: ID={}, Azimuth={}, Elevation={}",
+                log.debug("Created Test cluster: ID={}, Azimuth={}, Elevation={}",
                         testCluster.getKey(), testCluster.getAzimuth(), testCluster.getElevation());
                 clusterList.add(testCluster);
             }
@@ -81,7 +81,7 @@ private LinkedList<TestCluster> clusterList = null; // Persistent list to store 
                 testCluster.setAzimuth(newAzimuth);
                 testCluster.setElevation(newElevation);
 
-                log.info("Moved Test cluster: ID={}, New Azimuth={}, New Elevation={}",
+                log.debug("Moved Test cluster: ID={}, New Azimuth={}, New Elevation={}",
                         testCluster.getKey(), newAzimuth, newElevation);
             }
         }
@@ -109,7 +109,7 @@ public  LinkedList<TestCluster>  getMultipleTestClusters( float centerAzim, floa
         // Create TestCluster
         TestCluster testCluster = new TestCluster(azimuth+centerAzim, elevation+centerElev, Color.GREEN);
 
-      log.info("Test cluster: ID={}, Azimuth={}, Elevation={}",
+      log.debug("Test cluster: ID={}, Azimuth={}, Elevation={}",
                  testCluster.getKey(), testCluster.getAzimuth(), testCluster.getElevation());
 
         clusterList.add(testCluster);
@@ -129,7 +129,7 @@ public  LinkedList<TestCluster> getTestClustersHorizontal() {
         // Create random testCluster around current azimuth
         TestCluster testCluster = new TestCluster(currentAzimuth+azimuth, currentElevation+elevation, Color.GREEN);
         
-        log.info("Test cluster: ID={}, Azimuth={}, Elevation={}",
+        log.debug("Test cluster: ID={}, Azimuth={}, Elevation={}",
                  testCluster.getKey(), testCluster.getAzimuth(), testCluster.getElevation());
         
         clusterList.add(testCluster);
@@ -175,7 +175,7 @@ public  LinkedList<TestCluster> getTestClustersCircular() {
         clusterList.add(testCluster);
 
         // Log the details
-        log.info("Test cluster: ID={}, Azimuth={}, Elevation={}",
+        log.debug("Test cluster: ID={}, Azimuth={}, Elevation={}",
                  testCluster.getKey(), testCluster.getAzimuth(), testCluster.getElevation());
 
         // Advance the angle by 0.1 radians
