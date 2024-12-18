@@ -21,6 +21,7 @@ package com.inilabs.jaer.projects.motor.tests;
 
 import com.inilabs.jaer.projects.motor.DirectGimbalController;
 import com.inilabs.jaer.projects.motor.Pose;
+import com.inilabs.jaer.projects.tracker.FieldOfView;
 import javax.swing.*;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -30,8 +31,8 @@ public class StepInputTest {
         // Create Gimbal and Controller
  //       Gimbal gimbal = new Gimbal();
   //      GimbalController controller = new GimbalController(gimbal, 0.4f, 0.0f, 0.000f);
-
-  DirectGimbalController gimbalController = DirectGimbalController.getInstance();
+  FieldOfView fov = FieldOfView.getInstance();
+  DirectGimbalController gimbalController = DirectGimbalController.getInstance(fov);
   
         // Create GUI for visualization
         JFrame frame = new JFrame("Step Input Test");

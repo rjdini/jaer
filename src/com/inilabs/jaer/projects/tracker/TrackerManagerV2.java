@@ -35,6 +35,9 @@ import com.inilabs.jaer.projects.motor.DirectGimbalController;
 import java.util.Timer;
 import java.util.stream.Collectors;
 import com.inilabs.jaer.projects.motor.JoystickController;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 
 
@@ -70,21 +73,26 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
     private static SpatialAttention spatialAttention;
     private TrackerAgentDrawable trackerAgentDrawable = null;
     private final LoggingStatePropertyChangeFilter loggingStateFilter;
-   private TrackerManagerEngine engine; 
-   private static FieldOfView fov;
+  
 //   private final SpatialAttention spatialAttention;
    
     private final int numberClustersAdded = 5 ; // sets the number of clusters generated for testing
-    private final TMExerciser exerciser = new TMExerciser();
+    
+    private final TMExerciser exerciser;
+    private TrackerManagerEngine engine; 
+    private static FieldOfView fov;
     private TrackerAgentDrawable primaryTrackerAgent;
     private final JoystickController joystickController;
     private final WaypointManager waypointManager;
+    private static DirectGimbalController gimbal;
       
      EngineeringFormat fmt = new EngineeringFormat();
      
-    Timer timer = new Timer();
-   // private GimbalBase gimbalBase; 
-      private static DirectGimbalController gimbal;
+   
+    
+    private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+    
+     
 
     public TrackerManagerV2(AEChip chip) {
         super(chip);
@@ -108,26 +116,37 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
         // I am having difficulties with circular dependencies, particularly in intreactions between PolarSpaceControlPanel and the functions it controls.
         // To avoid these circular dependencies we use the (1) Factory-like construction of compnents, followed by (2) Initialization ('wiring') of the System.
         // ( Not completely resolved as yet....  17Dec24 )
-        // Factory:
+     
+        // (1)  Factory:
          fov = FieldOfView.getInstance();
          gimbal = DirectGimbalController.getInstance(fov);  // fov pose is slaved to gimbal pose
          waypointManager = WaypointManager.getInstance();
          spatialAttention = SpatialAttention.getInstance(gimbal, waypointManager); // spatial attention drives gimbal pose  (with parallel input from Joystick)   
          joystickController = JoystickController.getInstance(gimbal);
          polarSpaceGUI = new PolarSpaceGUI();
-          
-          // Initialize
-         polarSpaceGUI.getPolarSpaceDisplay().addDrawable(fov);
-         polarSpaceGUI.getPolarSpaceControlPanel().initialize(spatialAttention);
-         polarSpaceGUI.getPolarSpaceDisplay().setHeading(0, 0);
-         
-          // should be up in factory chain, but must wait for polarSpaceDisplay...
          engine = new TrackerManagerEngine(fov, spatialAttention,  polarSpaceGUI.getPolarSpaceDisplay()); 
+         exerciser = new TMExerciser();  // temporary - neds to be refactored as part of general target system.
      
-         // Start some stuff
-          javax.swing.Timer updateTestTimer = new javax.swing.Timer(50, e ->   updateTrackerManagerEngineTests()) ;
-          updateTestTimer.start();
+          // (2) Initialize
+         polarSpaceGUI.getPolarSpaceDisplay().setHeading(0, 0);
+         polarSpaceGUI.getPolarSpaceDisplay().addDrawable(fov);
+         polarSpaceGUI.getPolarSpaceControlPanel().addCenterPanel(spatialAttention, waypointManager);
+        
+         // (3) Start some stuff
+         startTasks();
     }
+    
+    
+     private void startTasks() {
+        try {
+            // Schedule a task to periodically update the gimbal
+            executor.scheduleAtFixedRate(this::updateTrackerManagerEngineTests, 50, 50, TimeUnit.MILLISECONDS);
+            log.info("Scheduled tasks started....");
+        } catch (Exception e) {
+            log.error("Error starting scheduled tasks : {}", e.getMessage(), e);
+        }
+    }
+  
     
    private void shutdown() {
        AgentLogger.shutdown();
@@ -192,7 +211,7 @@ public EventPacket<? extends BasicEvent> filterPacket(EventPacket<? extends Basi
 
         
         // Update the TME engine with these clusters
-         engine.updateRCTClusterList(limitedClusters); 
+        engine.updateRCTClusterList(limitedClusters); 
         engine.updateBestTrackerAgentList();
           }
      return in;
@@ -206,16 +225,6 @@ private void updateTrackerManagerEngineTests() {
          engine.updateTestClusterList(exerciser.getTestClustersHorizontal() ); 
      } 
 }
-
-private void setPrimaryTrackerAgent( TrackerAgentDrawable agent ) {
-primaryTrackerAgent = agent;
-}
-
-private TrackerAgentDrawable getPrimaryTrackerAgent() {
-return primaryTrackerAgent ;
-}
-
-
 
  // <editor-fold defaultstate="collapsed" desc="GUI button --ControllerGUI--">
     /**

@@ -56,20 +56,7 @@ public class WaypointManager {
     // Private constructor to enforce singleton
     private WaypointManager() {
         this.display = PolarSpaceDisplay.getInstance();
-        this.display.setWaypointAdder(this::addWaypointAtAzimuthElevation); // Register waypoint adder
-        registerMouseClickListener();
-
-        this.display.setWaypointEditor(waypoint -> {
-            if (waypointGUI != null) {
-                waypointGUI.populateFields(waypoint);
-            }
-        });
-
-        this.display.setWaypointRemover(waypoint -> {
-            removeWaypoint(waypoint.getKey());
-            JOptionPane.showMessageDialog(display, "Waypoint removed successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
-        });
-
+        
         // Load default waypoints if the file exists
         try {
             File defaultFile = new File("conf/default_waypoints.json");
@@ -93,6 +80,31 @@ public class WaypointManager {
         }
         return instance;
     }
+    
+    // Initialize the editor here rather than in constructor, because some applications (lie TrackerManager)  do not require editor. 
+    // (Accidental mouse clicks introduce unwanted waypoints)
+    public void initializeWaypointEditor() {
+        this.display.setWaypointAdder(this::addWaypointAtAzimuthElevation); // Register waypoint adder
+        registerMouseClickListener();
+
+        this.display.setWaypointEditor(waypoint -> {
+            if (waypointGUI != null) {
+                waypointGUI.populateFields(waypoint);
+            }
+        });
+
+        this.display.setWaypointRemover(waypoint -> {
+            removeWaypoint(waypoint.getKey());
+            JOptionPane.showMessageDialog(display, "Waypoint removed successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+        });
+
+    }
+    
+    
+    
+    
+    
+    
 
     private void addWaypointAtAzimuthElevation(float azimuth, float elevation) {
         String name = JOptionPane.showInputDialog(display, "Enter waypoint name:");

@@ -20,11 +20,13 @@ package com.inilabs.jaer.projects.motor.tests;
 
 import com.inilabs.jaer.projects.motor.DirectGimbalController;
 import com.inilabs.jaer.projects.motor.JoystickController;
+import com.inilabs.jaer.projects.tracker.FieldOfView;
 
 public class JoystickTest {
     public static void main(String[] args) {
         
-        DirectGimbalController gimbal = DirectGimbalController.getInstance(); // Assuming Gimbal is implemented
+        FieldOfView fov = FieldOfView.getInstance();
+        DirectGimbalController gimbal = DirectGimbalController.getInstance(fov); // Assuming Gimbal is implemented
         JoystickController controller = JoystickController.getInstance(gimbal);
 
         System.out.println("Starting Joystick Controller...");

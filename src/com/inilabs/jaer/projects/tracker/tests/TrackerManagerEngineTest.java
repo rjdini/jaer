@@ -21,6 +21,7 @@ package com.inilabs.jaer.projects.tracker.tests;
 
 import com.inilabs.jaer.gimbal.GimbalBase;
 import com.inilabs.jaer.projects.cog.SpatialAttention;
+import com.inilabs.jaer.projects.environ.WaypointManager;
 import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
 import com.inilabs.jaer.projects.gui.PolarSpaceGUI;
 import com.inilabs.jaer.projects.logging.AgentLogger;
@@ -28,13 +29,13 @@ import com.inilabs.jaer.projects.motor.DirectGimbalController;
 import com.inilabs.jaer.projects.tracker.FieldOfView;
 import com.inilabs.jaer.projects.tracker.TrackerManagerEngine;
 import java.awt.Dimension;
-import javax.swing.Timer;
 
 public class TrackerManagerEngineTest {
     private static FieldOfView fov = FieldOfView.getInstance();
     private static final PolarSpaceDisplay polarDisplay = PolarSpaceDisplay.getInstance();
     private static final DirectGimbalController gimbal = DirectGimbalController.getInstance(fov);
-    private static final SpatialAttention spatialAttention = SpatialAttention.getInstance(gimbal);
+    private static final WaypointManager waypointManager = WaypointManager.getInstance();
+    private static final SpatialAttention spatialAttention = SpatialAttention.getInstance(gimbal, waypointManager);
     
      
     public static void main(String[] args) {

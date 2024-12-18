@@ -27,6 +27,7 @@ public class Main {
     WaypointManager manager = WaypointManager.getInstance();
     PolarSpaceDisplay display = PolarSpaceDisplay.getInstance();
     WaypointGUI waypointGUI = new WaypointGUI();
+    manager.initializeWaypointEditor();
     manager.setWaypointGUI(waypointGUI); // Link GUI to manager
     
     JFrame frame = new JFrame("Waypoint System Test");

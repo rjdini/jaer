@@ -23,6 +23,7 @@
 package com.inilabs.jaer.projects.gui;
 
 import com.inilabs.jaer.projects.cog.SpatialAttention;
+import com.inilabs.jaer.projects.environ.WaypointManager;
 import javax.swing.*;
 import javax.swing.event.ChangeListener;
 import java.awt.*;
@@ -66,6 +67,7 @@ private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic
 
 private ActionListener closeAction;
 
+// Small control panel (not SpatialAttention and WaypointManager)
 public PolarSpaceControlPanel(PolarSpaceDisplay polarDisplay, ActionListener closeAction) {
     this.polarDisplay = polarDisplay;
   //  setLayout(new BorderLayout(5, 5)); // Use BorderLayout for main layout
@@ -73,26 +75,13 @@ public PolarSpaceControlPanel(PolarSpaceDisplay polarDisplay, ActionListener clo
     // Register SpatialAttention as a KeyListener
     polarDisplay.setFocusable(true); // Ensure polarDisplay can receive focus
     polarDisplay.requestFocusInWindow(); // Request focus for polarDisplay
-}
-
-public void initialize( SpatialAttention spatialAttention) { 
-   this.spatialAttention = spatialAttention; 
+    
     // West Panel
     JPanel westPanel = new JPanel(new BorderLayout(5, 5)); // Use BorderLayout    
     westPanel.add(createHeadingGroupPanel(), BorderLayout.NORTH);
     westPanel.add(createRangeSettingsPanel(), BorderLayout.SOUTH);
-
-    // Center Panel
-    JPanel centerPanel = new JPanel(new BorderLayout(5, 5)); // Use BorderLayout
-    JPanel spatialAttentionPanel = createSpatialAttentionGroupPanel();
-    spatialAttentionPanel.setPreferredSize(new Dimension(400, 200)); // Ensure a visible size
-    JPanel waypointPanel = createWaypointPanel();
-    waypointPanel.setPreferredSize(new Dimension(400, 200));
-    centerPanel.add(spatialAttentionPanel, BorderLayout.NORTH);
-    centerPanel.add(waypointPanel, BorderLayout.SOUTH);
- //   centerPanel.setBackground(Color.RED);
-
-    // East Panel: Logging Controls and Keyboard Control
+    
+    // East Panel: Logging Controls 
     JPanel eastPanel = new JPanel(new BorderLayout(5, 5)); // Use BorderLayout for better organization
     // Create a container for logging and gimbal controls
     JPanel loggingAndGimbalPanel = new JPanel(new BorderLayout(5, 5));
@@ -105,16 +94,28 @@ public void initialize( SpatialAttention spatialAttention) {
 
     // Add panels to the layout
     add(westPanel, BorderLayout.WEST);   // West: Range sliders
-    add(centerPanel, BorderLayout.CENTER); // Center: Spatial attention group
     add(eastPanel, BorderLayout.EAST);   // East: Logging controls
 
     // Synchronize sliders if linked
     synchronizeSliders();
 }
 
+//  full control panel
+public void addCenterPanel(SpatialAttention spatialAttention, WaypointManager waypointManager) {
+ 
+// Center Panel
+    JPanel centerPanel = new JPanel(new BorderLayout(5, 5)); // Use BorderLayout
+    JPanel spatialAttentionPanel = createSpatialAttentionGroupPanel();
+    spatialAttentionPanel.setPreferredSize(new Dimension(400, 200)); // Ensure a visible size
+    JPanel waypointPanel = createWaypointPanel();
+    waypointPanel.setPreferredSize(new Dimension(400, 200));
+    centerPanel.add(spatialAttentionPanel, BorderLayout.NORTH);
+    centerPanel.add(waypointPanel, BorderLayout.SOUTH);
 
-
-
+    add(centerPanel, BorderLayout.CENTER); // Center: Spatial attention group
+      // Synchronize sliders if linked
+    synchronizeSliders();
+}
 
 
 private JPanel createSpatialAttentionGroupPanel() {

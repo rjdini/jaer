@@ -107,25 +107,20 @@ public class SpatialAttention {
         // However - large moves of the gimbal would lead to generation false trackers, so these moveets occur within a saccade.
         // when TrackerManagerEngine has isSaccade true,  it does not process incomming clusters (both RCT and Test).
         // In future we could make this more sophisticated - eg continue to attend to 'imagined' test targets.
-  try{
-       System.out.println("********** " + cnt );
-       cnt = cnt+1;
-        
-       // if (enableGimbalPose) { // override from PolarSpaceControlPanel
-        if (true) { // override from PolarSpaceControlPanel    
+  try{        
+       if (enableGimbalPose) { // override from PolarSpaceControlPanel
             // Check if the system is in a saccade state
             if (isSaccade) {
                 log.info("Ignoring incoming data due to saccade.");
                 return;
             }
             
-            log.info("bestTrackerAgent {} ", getBestTrackerAgent());
+            log.debug("bestTrackerAgent {} ", getBestTrackerAgent());
             if (getBestTrackerAgent() != null
                     && (getBestTrackerAgent().getSupportQuality() > getSupportQualityThreshold())) {
-
                 // Update the tracker agent and send pose to gimbal
                 getBestTrackerAgent().run();
-                log.info("TRACKING --- Best Tracker Agent supportQuality threshold: {}, current: {}",
+                log.debug("TRACKING --- Best Tracker Agent supportQuality threshold: {}, current: {}",
                         getSupportQualityThreshold(), getBestTrackerAgent().getSupportQuality());
                 gimbal.setGimbalPose(getBestTrackerAgent().getAzimuth(), 0f, getBestTrackerAgent().getElevation());
 
@@ -134,17 +129,13 @@ public class SpatialAttention {
             } 
             else {
                 // Check if the time since the last successful update exceeds the threshold
-                if (System.currentTimeMillis() - lastSuccessfulUpdate >= BREAK_CONTACT_DURATION) {
-                     log.info("START  SACCADE ------  ");
-                     
+                if (System.currentTimeMillis() - lastSuccessfulUpdate >= BREAK_CONTACT_DURATION) {                     
                     goToWaypoint("street");
-                    
-                    log.info("END SACCADE ----------");                
                 }
             }
         }
          } catch (Exception e) {
-        log.error("Error in updateGimbalPose: ", e);
+        log.error("Error in updateGimbalPose: {}", e);
     }
     }
 
