@@ -56,6 +56,7 @@ import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JSlider;
 import javax.swing.JTextField;
@@ -68,6 +69,7 @@ import javax.swing.border.TitledBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import net.sf.jaer.Preferred;
+import net.sf.jaer.eventprocessing.EventFilter.PrefsKeyClassValueDefault;
 import static net.sf.jaer.eventprocessing.FilterFrame.prefs;
 import net.sf.jaer.eventprocessing.filter.PreferencesMover;
 
@@ -213,6 +215,11 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
 
     private interface HasSetter {
 
+        /**
+         * Sets the GUI element to show the object
+         *
+         * @param o
+         */
         void set(Object o);
     }
     static final float LEFT_ALIGNMENT = Component.LEFT_ALIGNMENT;
@@ -222,12 +229,15 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
     private final static Logger log = Logger.getLogger("net.sf.jaer");
     private EventFilter filter = null;
     final float fontSize = 10f;
-    private Border normalBorder, redLineBorder, enclosedFilterSelectedBorder;
+    private Border normalBorder, redLineBorder, blueLineBorder, enclosedFilterSelectedBorder;
     private TitledBorder titledBorder;
     /**
      * map from filter to property, to apply property change events to control
      */
     private final HashMap<String, HasSetter> setterMap = new HashMap<>();
+    /**
+     * A list of all property controls
+     */
     protected final java.util.ArrayList<JComponent> controls = new ArrayList<>();
     /**
      * maps from enclosed filter to its panel
@@ -246,7 +256,7 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
      */
     private final HashSet<String> populatedGroupSet = new HashSet();
     /**
-     * Map from property to its control
+     * Map from property name to its control
      */
     private final HashMap<String, MyControl> propertyControlMap = new HashMap();
     private JComponent ungroupedControls = null;
@@ -263,7 +273,11 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
      */
     private String searchString = "";
 
-    private ArrayList<MyControl> highlightedControls = new ArrayList();
+    /** Current highlight(s) */
+    private HashSet<MyControl> highlightedControls = new HashSet();
+    
+    /** Properties modified from default preference value */
+    private HashSet<MyControl> modifiedControls = new HashSet();
 
     /**
      * Flag set by FilterFrame that says only show the filtered property
@@ -296,9 +310,13 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         setBorder(titledBorder);
         normalBorder = titledBorder.getBorder();
         redLineBorder = BorderFactory.createLineBorder(Color.red, 1);
+        blueLineBorder = BorderFactory.createLineBorder(Color.blue, 1);
         enclosedFilterSelectedBorder = BorderFactory.createLineBorder(Color.orange, 3);
         enabledCheckBox.setSelected(getFilter().isFilterEnabled());
-        addIntrospectedControls();
+        add(Box.createVerticalStrut(0));
+        buildPanel();
+        add(Box.createHorizontalStrut(0));  // use up vertical space to get components to top
+
         // when filter fires a property change event, we getString called here and we update all our controls
         getFilter().getSupport().addPropertyChangeListener(this);
 //        // add ourselves to listen for all enclosed filter property changes as well
@@ -355,6 +373,20 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         propertyControlMap.put(propertyName, comp);
     }
 
+    private void clearHighlights() {
+        for (MyControl c : highlightedControls) {
+            c.setBorder(null);
+        }
+        highlightedControls.clear();
+    }
+    
+    private void clearModifed(){
+        for (MyControl c : modifiedControls) {
+            c.setBorder(null);
+        }
+        modifiedControls.clear();
+    }
+
     /**
      * Returns the group panel holding a property, or null
      *
@@ -365,9 +397,41 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         return propertyToGroupPanelMap.get(propertyName);
     }
 
+    private void rebuildPanel() {
+        boolean wasSelected = getFilter().isSelected();
+        clearPanel();
+        buildPanel();
+        if (wasSelected) {
+            getFilter().setSelected(wasSelected);
+        }
+    }
+
+    private void clearPanel() {
+        for (Component c : controls) {
+            remove(c);
+        }
+    }
+
+    private void buildPanel() {
+        addIntrospectedControls();
+        clearHighlights();
+        highlightNonDefaultProperties();
+    }
+
+    private void highlightNonDefaultProperties() {
+        HashMap<String,PrefsKeyClassValueDefault> prefsMap=getFilter().getNonDefaultProperties();
+        for (var e : prefsMap.entrySet()) {
+            MyControl c = propertyControlMap.get(e.getValue().key());
+            if (c != null) {
+                c.highlightModified();
+            }
+        }
+    }
+
     // gets getter/setter methods for the filter and makes controls for them. enclosed filters are also added as submenus
     private void addIntrospectedControls() {
-        add(Box.createVerticalStrut(0));
+        boolean wasSelected = getFilter().isSelected(); // restore the state in case filter is rebuilt
+
         ungroupedControls = new MyControl();
         String u = "(Ungrouped)";
         ungroupedControls.setName(u);
@@ -791,9 +855,8 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
                 remove(groupContainerMap.get(s));
             }
         }
-        add(Box.createHorizontalStrut(0));  // use up vertical space to get components to top
 
-        setControlsVisible(false);
+        setControlsVisible(wasSelected);
 //        System.out.println("added glue to "+this);
     }
 
@@ -832,6 +895,12 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
 
     class MyControl extends JPanel {
 
+        /**
+         * Read and write methods for the property
+         */
+        Method read = null;
+        Method write = null;
+
         public MyControl() {
             setAlignmentX(LEFT_ALIGNMENT);
             setAlignmentY(TOP_ALIGNMENT);
@@ -843,6 +912,24 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
             d.setSize(1000, d.getHeight());
             return d;
         }
+
+        public void highlightModified() {
+            setBorder(blueLineBorder);
+            invalidate();
+            modifiedControls.add(this);
+        }
+        
+        public void highlightClearingOthers() {
+            highlightModified();
+            clearHighlights();
+            setBorder(redLineBorder);
+            invalidate();
+            highlightedControls.add(this);
+        }
+
+        public void clearHighlight() {
+            setBorder(null);
+        }
     }
 
     private void setFontSizeStyle(final JComponent label) {
@@ -852,14 +939,13 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
 
     class EnumControl extends MyControl implements HasSetter {
 
-        Method write, read;
         EventFilter filter;
         boolean initValue = false, nval;
         final JComboBox control;
 
         @Override
         public void set(Object o) {
-            control.setSelectedItem(o);
+            control.setSelectedItem(o); // TODO handle string value
         }
 
         public EnumControl(final Class<? extends Enum> c, final EventFilter f, final String name, final Method w, final Method r) {
@@ -899,6 +985,7 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
 
                 @Override
                 public void actionPerformed(ActionEvent e) {
+                    highlightClearingOthers();
                     try {
                         w.invoke(filter, control.getSelectedItem());
                     } catch (Exception e2) {
@@ -911,7 +998,6 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
 
     class StringControl extends MyControl implements HasSetter {
 
-        Method write, read;
         EventFilter filter;
         boolean initValue = false, nval;
         final JTextField textField;
@@ -962,6 +1048,7 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
 
                 @Override
                 public void actionPerformed(ActionEvent e) {
+                    highlightClearingOthers();
                     try {
                         w.invoke(filter, textField.getText());
                     } catch (Exception e2) {
@@ -976,7 +1063,6 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
 
     class BooleanControl extends MyControl implements HasSetter {
 
-        Method write, read;
         EventFilter filter;
         boolean initValue = false, nval;
         final JCheckBox checkBox;
@@ -1005,7 +1091,8 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
                     return;
                 }
                 initValue = x.booleanValue();
-                checkBox.setSelected(initValue);
+                set(initValue);
+//                checkBox.setSelected(initValue);
             } catch (InvocationTargetException e) {
                 e.printStackTrace();
             } catch (IllegalAccessException e) {
@@ -1016,6 +1103,7 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
 
                 @Override
                 public void actionPerformed(ActionEvent e) {
+                    highlightClearingOthers();
                     try {
                         w.invoke(filter, checkBox.isSelected());
                     } catch (InvocationTargetException ite) {
@@ -1039,13 +1127,20 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
                     }
 
                 }
+            } else if (o instanceof String) {
+                try {
+                    Boolean i = Boolean.parseBoolean((String) o);
+                    checkBox.setSelected(i);
+                } catch (NumberFormatException e) {
+                    log.warning(String.format("could not parse value %s", o));
+                }
             }
         }
+
     }
 
     class IntSliderControl extends MyControl implements HasSetter {
 
-        Method write, read;
         EventFilter filter;
         int initValue = 0, nval;
         JSlider slider;
@@ -1095,6 +1190,7 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
 
                 @Override
                 public void stateChanged(ChangeEvent e) {
+                    highlightClearingOthers();
                     if (sliderDontProcess) {
                         return;
                     }
@@ -1127,7 +1223,6 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
 
     class FloatSliderControl extends MyControl implements HasSetter {
 
-        Method write, read;
         EventFilter filter;
         JSlider slider;
         JTextField tf;
@@ -1186,6 +1281,7 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
 
                 @Override
                 public void stateChanged(ChangeEvent e) {
+                    highlightClearingOthers();
                     try {
                         int v = slider.getValue();
                         currentValue = minValue + ((maxValue - minValue) * ((float) slider.getValue() / (slider.getMaximum() - slider.getMinimum())));
@@ -1205,7 +1301,6 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
 
     class IntControl extends MyControl implements HasSetter {
 
-        Method write, read;
         EventFilter filter;
         int initValue = 0, nval;
         final JTextField tf;
@@ -1218,6 +1313,13 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
                 Integer b = (Integer) o;
                 String s = NumberFormat.getIntegerInstance().format(b);
                 tf.setText(s);
+            } else if (o instanceof String) {
+                try {
+                    Integer i = Integer.parseInt((String) o);
+                    tf.setText((String) o);
+                } catch (NumberFormatException e) {
+                    log.warning(String.format("could not parse value %s", o));
+                }
             }
         }
 
@@ -1252,10 +1354,8 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
                     return;
                 }
                 initValue = x.intValue();
-                String s = NumberFormat.getIntegerInstance().format(initValue);
-//                System.out.println("init value of "+name+" is "+s);
-                tf.setText(s);
-                fixIntValue(tf, r);
+                set(initValue);
+//                fixIntValue(tf, r);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -1264,6 +1364,7 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
 
                 @Override
                 public void actionPerformed(ActionEvent e) {
+                    highlightClearingOthers();
                     Integer newValue = null;
                     try {
                         NumberFormat format = NumberFormat.getNumberInstance();
@@ -1292,6 +1393,7 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
 
                 @Override
                 public void keyPressed(java.awt.event.KeyEvent evt) {
+                    highlightClearingOthers();
                     Integer newValue = null;
                     Integer oldValue = null;
 
@@ -1394,8 +1496,8 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
             tf.addMouseWheelListener(new java.awt.event.MouseWheelListener() {
 
                 @Override
-                public void mouseWheelMoved(java.awt.event.MouseWheelEvent evt
-                ) {
+                public void mouseWheelMoved(java.awt.event.MouseWheelEvent evt) {
+                    highlightClearingOthers();
                     Integer oldValue = null, newValue = null;
                     try {
                         oldValue = (Integer) r.invoke(filter);
@@ -1502,7 +1604,6 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         EngineeringFormat engFmt = new EngineeringFormat();
 //        final String format="%.6f";
 
-        Method write, read;
         EventFilter filter;
         float initValue = 0, nval;
         final JTextField tf;
@@ -1516,6 +1617,13 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
             } else if (o instanceof Integer) {
                 int b = (Integer) o;
                 tf.setText(engFmt.format((float) b));
+            } else if (o instanceof String) {
+                try {
+                    Float v = Float.parseFloat((String) o);
+                    tf.setText((String) o);
+                } catch (NumberFormatException e) {
+                    log.warning(String.format("could not parse value %s", o));
+                }
             }
         }
 
@@ -1556,7 +1664,7 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
 
                 @Override
                 public void actionPerformed(ActionEvent e) {
-//                    System.out.println(e);
+                    highlightClearingOthers();
                     try {
                         float y = engFmt.parseFloat(tf.getText());
                         w.invoke(filter, y);
@@ -1578,6 +1686,7 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
 
                 @Override
                 public void keyPressed(java.awt.event.KeyEvent evt) {
+                    highlightClearingOthers();
                     try {
                         Float x = (Float) r.invoke(filter); // getString the value from the getter method
                         initValue = x.floatValue();
@@ -1648,6 +1757,7 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
 
                 @Override
                 public void mouseWheelMoved(java.awt.event.MouseWheelEvent evt) {
+                    highlightClearingOthers();
                     try {
                         Float x = (Float) r.invoke(filter); // getString the value from the getter method
                         initValue = x.floatValue();
@@ -1807,10 +1917,11 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         enabledCheckBox = new javax.swing.JCheckBox();
         resetButton = new javax.swing.JButton();
         showControlsToggleButton = new javax.swing.JToggleButton();
-        exportImportPanel1 = new javax.swing.JPanel();
+        copyPasteDefaultsPanel = new javax.swing.JPanel();
         filler2 = new javax.swing.Box.Filler(new java.awt.Dimension(10, 0), new java.awt.Dimension(10, 0), new java.awt.Dimension(30, 32767));
         copyB = new javax.swing.JButton();
         pasteB = new javax.swing.JButton();
+        defaultsB = new javax.swing.JButton();
         exportImportPanel = new javax.swing.JPanel();
         filler1 = new javax.swing.Box.Filler(new java.awt.Dimension(10, 0), new java.awt.Dimension(10, 0), new java.awt.Dimension(30, 32767));
         exportB = new javax.swing.JButton();
@@ -1859,11 +1970,11 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
 
         jPanel1.add(enableResetControlsHelpPanel);
 
-        exportImportPanel1.setMaximumSize(new java.awt.Dimension(98, 17));
-        exportImportPanel1.setMinimumSize(new java.awt.Dimension(98, 17));
-        exportImportPanel1.setPreferredSize(new java.awt.Dimension(98, 17));
-        exportImportPanel1.setLayout(new javax.swing.BoxLayout(exportImportPanel1, javax.swing.BoxLayout.X_AXIS));
-        exportImportPanel1.add(filler2);
+        copyPasteDefaultsPanel.setMaximumSize(new java.awt.Dimension(129, 17));
+        copyPasteDefaultsPanel.setMinimumSize(new java.awt.Dimension(129, 17));
+        copyPasteDefaultsPanel.setPreferredSize(new java.awt.Dimension(98, 17));
+        copyPasteDefaultsPanel.setLayout(new javax.swing.BoxLayout(copyPasteDefaultsPanel, javax.swing.BoxLayout.X_AXIS));
+        copyPasteDefaultsPanel.add(filler2);
 
         copyB.setFont(new java.awt.Font("Tahoma", 0, 9)); // NOI18N
         copyB.setText("Copy");
@@ -1875,7 +1986,7 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
                 copyBActionPerformed(evt);
             }
         });
-        exportImportPanel1.add(copyB);
+        copyPasteDefaultsPanel.add(copyB);
 
         pasteB.setFont(new java.awt.Font("Tahoma", 0, 9)); // NOI18N
         pasteB.setText("Paste");
@@ -1887,9 +1998,21 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
                 pasteBActionPerformed(evt);
             }
         });
-        exportImportPanel1.add(pasteB);
+        copyPasteDefaultsPanel.add(pasteB);
 
-        jPanel1.add(exportImportPanel1);
+        defaultsB.setFont(new java.awt.Font("Tahoma", 0, 9)); // NOI18N
+        defaultsB.setText("Defaults");
+        defaultsB.setToolTipText("Set all properties back to default values");
+        defaultsB.setAlignmentX(0.5F);
+        defaultsB.setMargin(new java.awt.Insets(1, 5, 1, 5));
+        defaultsB.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                defaultsBActionPerformed(evt);
+            }
+        });
+        copyPasteDefaultsPanel.add(defaultsB);
+
+        jPanel1.add(copyPasteDefaultsPanel);
 
         exportImportPanel.setMaximumSize(new java.awt.Dimension(98, 17));
         exportImportPanel.setMinimumSize(new java.awt.Dimension(98, 17));
@@ -2118,13 +2241,63 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         }
     }//GEN-LAST:event_pasteBActionPerformed
 
+    private void defaultsBActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_defaultsBActionPerformed
+        HashMap<String, EventFilter.PrefsKeyClassValueDefault> nonDefaultProps = getFilter().getNonDefaultProperties();
+        int count = nonDefaultProps.size();
+        if (count > 0) {
+            StringBuilder sb;
+            if (count > MAX_PROPS_TO_SHOW_RESTORE_DEFAULTS) {
+                sb = new StringBuilder("");
+            } else {
+                sb = new StringBuilder("<ul>");
+                for (String prop : nonDefaultProps.keySet()) {
+                    sb.append("<li>").append(prop.substring(prop.indexOf(".") + 1));
+                }
+                sb.append("</ul>");
+            }
+            final String msg = String.format("<html>Really reset %d propertie(s)  %s to default values?<p>You can Export first to save them.", count, sb.toString());
+            int ret = JOptionPane.showConfirmDialog(defaultsB, msg, "Restore defaults?", JOptionPane.YES_NO_OPTION);
+            switch (ret) {
+                case JOptionPane.YES_OPTION:
+                    restoreDefaultPropertyValues();
+                    break;
+            }
+        } else {
+            JOptionPane.showMessageDialog(defaultsB, "No properties have been modified from default values");
+        }
+    }//GEN-LAST:event_defaultsBActionPerformed
+    private static final int MAX_PROPS_TO_SHOW_RESTORE_DEFAULTS = 20;
+
+    private void restoreDefaultPropertyValues() {
+        HashMap<String, EventFilter.PrefsKeyClassValueDefault> clearedProperties = getFilter().restoreDefaultPreferences();
+        for (String k : clearedProperties.keySet()) {
+            MyControl control = propertyControlMap.get(k);
+            if (control != null && (control.write != null)) {
+                EventFilter.PrefsKeyClassValueDefault prefsValue = clearedProperties.get(k);
+                Method writer = control.write;
+                try {
+                    writer.invoke(filter, prefsValue.defaultValue());
+                    if (control instanceof HasSetter) {
+                        HasSetter setter = (HasSetter) control;
+                        setter.set(prefsValue.defaultValue());
+                    }
+                    log.fine(String.format("restored %s to %s", k, prefsValue.defaultValue()));
+                } catch (Exception e) {
+                    log.warning(String.format("could not set %s to %s: %s", k, prefsValue, e.toString()));
+                }
+            }
+        }
+        getFilter().restoreDefaultPreferences(); // once more to remove keys from preferences so they are back to hard-coded defaults
+    }
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton copyB;
+    private javax.swing.JPanel copyPasteDefaultsPanel;
+    private javax.swing.JButton defaultsB;
     protected javax.swing.JPanel enableResetControlsHelpPanel;
     protected javax.swing.JCheckBox enabledCheckBox;
     private javax.swing.JButton exportB;
     private javax.swing.JPanel exportImportPanel;
-    private javax.swing.JPanel exportImportPanel1;
     private javax.swing.Box.Filler filler1;
     private javax.swing.Box.Filler filler2;
     private javax.swing.JButton importB;
@@ -2183,7 +2356,6 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
 
     class Point2DControl extends MyControl implements HasSetter {
 
-        Method write, read;
         EventFilter filter;
         Point2D.Float point;
         float initValue = 0, nval;
@@ -2200,6 +2372,8 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
                 Point2D b = (Point2D) o;
                 tfx.setText(String.format(format, b.getX()));
                 tfy.setText(String.format(format, b.getY()));
+            } else if (o instanceof String) {
+                log.log(Level.WARNING, "cannot set from String value {0}", o);
             }
         }
 
@@ -2215,7 +2389,7 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
 
             @Override
             public void actionPerformed(ActionEvent e) {
-//                    System.out.println(e);
+                highlightClearingOthers();
                 try {
                     float x = Float.parseFloat(tfx.getText());
                     float y = Float.parseFloat(tfy.getText());
@@ -2244,7 +2418,7 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
 
             @Override
             public void actionPerformed(ActionEvent e) {
-//                    System.out.println(e);
+                highlightClearingOthers();
                 try {
                     Object arg = null;
                     writeMethod.invoke(filter, arg);
@@ -2412,7 +2586,7 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
                 c.setVisible(true);
                 c.invalidate();
             }
-        } else { // there is a search string, so set each property to either highlight or show, hiding others
+        } else { // there is a search string, so set each property to either highlightClearingOthers or show, hiding others
 
             highlightedControls.clear();
             // if hideOthers, hide all groups and later only show those that match
@@ -2431,13 +2605,13 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
                     } else { // no match, then hide it
                         c.setVisible(false);
                     }
-                } else { // highlight
+                } else { // highlightClearingOthers
                     setGroupContainerWithPropertyVisible(propName, false);
                     c.setVisible(true);
                     setGroupContainerWithPropertyVisible(propName, true);
                     if (isPropertyVisible(propName)) {
                         log.fine(String.format("Hightlighting Match: %s is in %s", searchString, propName));
-                        c.setBorder(redLineBorder); // highlight it
+                        c.setBorder(redLineBorder); // highlightClearingOthers it
                         highlightedControls.add(c);
                     } else { // no match, then hide it if hideOthers set, otherwise show it
                         c.setBorder(null);
@@ -2576,6 +2750,7 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         int retValue = fileChooser.showOpenDialog(this);
         if (retValue == JFileChooser.APPROVE_OPTION) {
             File f = fileChooser.getSelectedFile();
+            prefs.put("FilterFrame.lastFile", f.getAbsolutePath());
             filter.importPrefs(f);
         }
         PreferencesMover.OldPrefsCheckResult result = PreferencesMover.hasOldChipFilterPreferences(filter);
