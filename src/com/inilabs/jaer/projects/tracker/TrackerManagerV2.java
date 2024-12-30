@@ -128,10 +128,12 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
          exerciser = new TMExerciser();  // temporary - neds to be refactored as part of general target system.
      
           // (2) Initialize
-         polarSpaceGUI.getPolarSpaceDisplay().setHeading(0, 0);
          polarSpaceGUI.getPolarSpaceDisplay().addDrawable(fov);
          polarSpaceGUI.getPolarSpaceControlPanel().addCenterPanel(spatialAttention, waypointManager);
+      
+         polarSpaceGUI.getPolarSpaceDisplay().setHeading(0, 0);
         
+         
          // (3) Start some stuff
          startTasks();
     }

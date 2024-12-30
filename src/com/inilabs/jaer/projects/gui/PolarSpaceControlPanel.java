@@ -66,6 +66,7 @@ private  SpatialAttention spatialAttention;
 private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(PolarSpaceControlPanel.class);
 
 private ActionListener closeAction;
+    private WaypointManager waypointManager;
 
 // Small control panel (not SpatialAttention and WaypointManager)
 public PolarSpaceControlPanel(PolarSpaceDisplay polarDisplay, ActionListener closeAction) {
@@ -86,7 +87,8 @@ public PolarSpaceControlPanel(PolarSpaceDisplay polarDisplay, ActionListener clo
     // Create a container for logging and gimbal controls
     JPanel loggingAndGimbalPanel = new JPanel(new BorderLayout(5, 5));
     loggingAndGimbalPanel.add(createLoggingPanel(), BorderLayout.NORTH);
-    loggingAndGimbalPanel.add(createGimbalControlPanel(), BorderLayout.SOUTH);
+
+    
   
     // Add the combined panel and keyboard controls to the east panel
     eastPanel.add(loggingAndGimbalPanel, BorderLayout.NORTH);
@@ -102,15 +104,17 @@ public PolarSpaceControlPanel(PolarSpaceDisplay polarDisplay, ActionListener clo
 
 //  full control panel
 public void addCenterPanel(SpatialAttention spatialAttention, WaypointManager waypointManager) {
- 
+    this.spatialAttention = spatialAttention;
+    this.waypointManager = waypointManager;
 // Center Panel
     JPanel centerPanel = new JPanel(new BorderLayout(5, 5)); // Use BorderLayout
     JPanel spatialAttentionPanel = createSpatialAttentionGroupPanel();
-    spatialAttentionPanel.setPreferredSize(new Dimension(400, 200)); // Ensure a visible size
+  //  spatialAttentionPanel.setPreferredSize(new Dimension(400, 100)); // Ensure a visible size
     JPanel waypointPanel = createWaypointPanel();
-    waypointPanel.setPreferredSize(new Dimension(400, 200));
+  //  waypointPanel.setPreferredSize(new Dimension(400, 150));
     centerPanel.add(spatialAttentionPanel, BorderLayout.NORTH);
-    centerPanel.add(waypointPanel, BorderLayout.SOUTH);
+    centerPanel.add(waypointPanel, BorderLayout.CENTER);
+    centerPanel.add(createGimbalControlPanel(), BorderLayout.SOUTH);
 
     add(centerPanel, BorderLayout.CENTER); // Center: Spatial attention group
       // Synchronize sliders if linked
@@ -118,12 +122,23 @@ public void addCenterPanel(SpatialAttention spatialAttention, WaypointManager wa
 }
 
 
+  // Helper method to create a styled button
+    private JButton createStyledButton(String text, int width, int height, int fontSize) {
+        JButton button = new JButton(text);
+        button.setPreferredSize(new Dimension(width, height)); // Set size
+        button.setFont(new Font("Arial", Font.PLAIN, fontSize)); // Set font
+        button.setFocusPainted(false); // Optional: remove focus border
+        return button;
+    }
+
+
 private JPanel createSpatialAttentionGroupPanel() {
     // Create the main panel with a vertical BoxLayout
     JPanel spatialAttentionGroupPanel = new JPanel();
     spatialAttentionGroupPanel.setLayout(new BoxLayout(spatialAttentionGroupPanel, BoxLayout.Y_AXIS));
     spatialAttentionGroupPanel.setBorder(BorderFactory.createTitledBorder("Attention Controls"));
-    spatialAttentionGroupPanel.setPreferredSize(new Dimension(400, 200));
+    spatialAttentionGroupPanel.setPreferredSize(new Dimension(400, 100));
+   // spatialAttentionGroupPanel.setMaximumSize(new Dimension(400, 100));  // Restrict height to 100 pixels
 
     // Create a sub-panel for the Support Quality slider
     JPanel supportQualityPanel = new JPanel(new BorderLayout(5, 5));
@@ -152,8 +167,7 @@ private JPanel createWaypointPanel() {
     JPanel wayPointPanel = new JPanel();
     wayPointPanel.setLayout(new BoxLayout(wayPointPanel, BoxLayout.Y_AXIS));
     wayPointPanel.setBorder(BorderFactory.createTitledBorder("Waypoint Controls"));
-
-    wayPointPanel.setPreferredSize(new Dimension(600, 200));
+    wayPointPanel.setPreferredSize(new Dimension(400, 150));
       
     // Azimuth Waypoint Slider
     JPanel azimuthPanel = new JPanel(new BorderLayout(5, 5));
@@ -175,8 +189,6 @@ private JPanel createWaypointPanel() {
     azimuthLabelTable.put(120, new JLabel("120"));
     azimuthLabelTable.put(180, new JLabel("180"));
     azimuthWaypointSlider.setLabelTable(azimuthLabelTable);
-
-    
     
     azimuthPanel.add(azimuthWaypointSlider, BorderLayout.CENTER);
     wayPointPanel.add(azimuthPanel);
@@ -223,8 +235,7 @@ private JPanel createHeadingGroupPanel() {
     JPanel headingGroupPanel = new JPanel();
     headingGroupPanel.setLayout(new BoxLayout(headingGroupPanel, BoxLayout.Y_AXIS));
     headingGroupPanel.setBorder(BorderFactory.createTitledBorder("Heading Controls"));
-
-    headingGroupPanel.setPreferredSize(new Dimension(600, 200));
+    headingGroupPanel.setPreferredSize(new Dimension(600, 150));
       
     // Azimuth Heading Slider
     JPanel azimuthPanel = new JPanel(new BorderLayout(5, 5));
@@ -289,8 +300,7 @@ private JPanel createRangeSettingsPanel() {
     JPanel settingsPanel = new JPanel();
     settingsPanel.setLayout(new BoxLayout(settingsPanel, BoxLayout.Y_AXIS));
     settingsPanel.setBorder(BorderFactory.createTitledBorder("Range Controls"));
-
-    settingsPanel.setPreferredSize(new Dimension(600, 200));
+    settingsPanel.setPreferredSize(new Dimension(600, 150));
     
     // Azimuth Range Slider
     JPanel azimuthPanel = new JPanel(new BorderLayout(5, 5));
@@ -316,22 +326,28 @@ private JPanel createRangeSettingsPanel() {
     return settingsPanel;
 }
 
+
 private JPanel createButtonPanel(ActionListener closeAction) {
-    JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
+    JPanel buttonPanel = new JPanel();
+    buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.Y_AXIS)); // Set vertical layout
+
     // Path Toggle Button
     pathToggleButton = createToggleButton("Show Paths", 120, 25);
     pathToggleButton.addActionListener(new PathToggleListener());
+    pathToggleButton.setAlignmentX(Component.CENTER_ALIGNMENT); // Center align the button
     buttonPanel.add(pathToggleButton);
+
+    buttonPanel.add(Box.createVerticalStrut(10)); // Add spacing between buttons
 
     // Close Button
     closeButton = new JButton("Close");
     closeButton.setPreferredSize(new Dimension(80, 25));
     closeButton.addActionListener(closeAction);
+    closeButton.setAlignmentX(Component.CENTER_ALIGNMENT); // Center align the button
     buttonPanel.add(closeButton);
 
     return buttonPanel;
 }
-
 
 public JPanel createGimbalControlPanel() {
     JPanel gimbalPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));

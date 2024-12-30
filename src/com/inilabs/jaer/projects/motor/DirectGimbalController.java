@@ -1,3 +1,4 @@
+
 /*
  * Copyright (C) 2024 rjd.
  *
@@ -19,14 +20,15 @@
 package com.inilabs.jaer.projects.motor;
 
 import com.inilabs.birdland.gimbal.RS4ControllerV2;
-import static com.inilabs.jaer.gimbal.GimbalBase.rs4controllerGUI;
 import com.inilabs.jaer.gimbal.RS4ControllerGUISwingV1;
 import com.inilabs.jaer.projects.tracker.FieldOfView;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
+import java.io.IOException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import net.bytebuddy.implementation.bytecode.Throw;
 import org.slf4j.LoggerFactory;
 
 public class DirectGimbalController {
@@ -67,6 +69,7 @@ public class DirectGimbalController {
     private Pose resetPose = new Pose(0f, 0f, 0f);
     private Pose defaultPose = new Pose(10, 0, -30); // nidelbadstrasse
     private boolean gimbalPoseEnabled = true;
+     private boolean isDummyMode = false;
     
     
     private static final float gimbalYawOffsetError = -1.5f;
@@ -92,11 +95,19 @@ public class DirectGimbalController {
         return instance;
     }
     
-       private void init() {
-      rs4controller = RS4ControllerV2.getInstance();
-      rs4controllerGUI = new RS4ControllerGUISwingV1();     
-      sendDefaultGimbalPose();  
-} 
+       
+    private void init() {
+       //  TODO --  need to solve the case where RS4Controller is not present, and then use effence copy 
+        if(true) {
+            rs4controller = RS4ControllerV2.getInstance();
+        } else {
+            log.warn("RS4 Controller not available. Switching to dummy mode.");
+            isDummyMode = true;
+        }
+            sendDefaultGimbalPose();
+    }
+  
+       
        
         public void addPropertyChangeListener(PropertyChangeListener listener) {
         this.pcs.addPropertyChangeListener(listener);
@@ -150,11 +161,13 @@ public class DirectGimbalController {
         return checkedPitch;
     }
     
-    
-    
-    public Pose getGimbalPose() {
-        return currentPose;
+   public Pose getGimbalPose() {
+        if (isDummyMode) {
+            return currentPose;
+        }
+        return fetchGimbalPose();
     }
+    
 
     // periodic update of the RS4 Gimbal state 
     private synchronized void updateGimbal() {
@@ -170,41 +183,55 @@ public class DirectGimbalController {
     // regardless of whether data has changed.
     // This ensures GimbalBase consistently reflects the latest data from RS4ControllerV2, 
     // minimizing any discrepancies between the controller’s actual and reported poses.  
-    private void fetchGimbalPose() {
-          // store the current values
+     private Pose fetchGimbalPose() {
+       
+              // store the current values
           previousYaw = currentYaw;
           previousRoll = currentRoll;
           previousPitch = currentPitch;
           float [] previousReceivedPose = {previousYaw, previousRoll, previousPitch};
-          
-          // update thecurrent  values 
+            
+               // update thecurrent  values 
+        if(!isDummyMode) {
            currentYaw = rs4controller.getYaw()-gimbalYawOffsetError;  // (deg, in gimbal polar space)
            currentRoll = rs4controller.getRoll();
            currentPitch = rs4controller.getPitch()-gimbalPitchOffsetError;
-          float [] newReceivedPose = {currentYaw, currentRoll, currentPitch};
+            }
+            else { // use efference copy  
+               currentYaw = currentPose.getYaw();  // (deg, in gimbal polar space)
+               currentRoll = currentPose.getRoll();
+               currentPitch = currentPose.getPitch();    
+                   }
+           
+          float [] newReceivedPose = {currentYaw, currentRoll, currentPitch};  
           
           currentPose = new Pose(currentYaw, currentRoll, currentPitch ); 
-   
           // notify the listeners of polar cordinate updates
            pcs.firePropertyChange("FetchedGimbalPose", previousReceivedPose, newReceivedPose);    
            log.debug("Fetched RS4Controller pose (y,r,p)  {}, {}, {}", currentYaw, currentRoll, currentPitch );          
+           return currentPose;
     }
 
-    
     
       public void  setGimbalPoseDirect( Pose pose) {
           setGimbalPoseDirect(pose.getYaw(), pose.getRoll(), pose.getPitch()) ;
       }
       
+      
     // direct update of the RS4    
-     public void  setGimbalPoseDirect( float yaw, float roll, float pitch) {       
+     public void  setGimbalPoseDirect( float yaw, float roll, float pitch) {           
           float [] previousSendPose = {previousSendYaw, previousSendRoll, previousSendPitch};
-           currentSendYaw = yaw;
-           currentSendRoll = roll;
-           currentSendPitch = pitch;         
+           currentSendYaw = rangeCheckYaw(yaw);
+           currentSendRoll = rangeCheckRoll(roll);
+           currentSendPitch = rangeCheckPitch(pitch);         
         
-           rs4controller.setPoseDirect(currentSendYaw+gimbalYawOffsetError, currentSendRoll, currentSendPitch+gimbalPitchOffsetError); // PanTilt does not consider Roll 
-           
+        if (!isDummyMode) {
+               rs4controller.setPoseDirect(currentSendYaw+gimbalYawOffsetError, currentSendRoll, currentSendPitch+gimbalPitchOffsetError); // PanTilt does not consider Roll 
+         } else  {
+            currentPose = new Pose(currentSendYaw, currentSendRoll, currentSendPitch);
+            log.debug("Dummy mode: Pose set to {}", currentPose);
+        }
+        
            previousSendYaw = currentSendYaw;
            previousSendRoll = currentSendRoll;
            previousSendPitch = currentSendPitch;
