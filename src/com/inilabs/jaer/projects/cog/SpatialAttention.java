@@ -111,16 +111,15 @@ public class SpatialAttention {
        if (enableGimbalPose) { // override from PolarSpaceControlPanel
             // Check if the system is in a saccade state
             if (isSaccade) {
-                log.info("Ignoring incoming data due to saccade.");
+                log.info("Ignoring incoming data during saccade.");
                 return;
             }
-            
-            log.debug("bestTrackerAgent {} ", getBestTrackerAgent());
+            log.info("bestTrackerAgent {} ", getBestTrackerAgent());
             if (getBestTrackerAgent() != null
                     && (getBestTrackerAgent().getSupportQuality() > getSupportQualityThreshold())) {
                 // Update the tracker agent and send pose to gimbal
                 getBestTrackerAgent().run();
-                log.debug("TRACKING --- Best Tracker Agent supportQuality threshold: {}, current: {}",
+                log.info("TRACKING --- Best Tracker Agent supportQuality threshold: {}, current: {}",
                         getSupportQualityThreshold(), getBestTrackerAgent().getSupportQuality());
                 gimbal.setGimbalPose(getBestTrackerAgent().getAzimuth(), 0f, getBestTrackerAgent().getElevation());
 
