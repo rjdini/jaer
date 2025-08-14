@@ -23,7 +23,7 @@ import java.awt.geom.Point2D;
 
 public interface ClusterAdapter {
     float getAzimuth();  // degrees in PolarSpace
-    float getElevation(); // egrees in PolarSpace
+    float getElevation(); // degrees in PolarSpace
     Point2D.Float getLocation(); // x, y in chip pixels space.
     String getKey(); // For unique identification
     boolean isVisible(); // for rendering

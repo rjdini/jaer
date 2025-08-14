@@ -38,7 +38,7 @@ public class BasicDrawable implements Drawable {
 
     // Path buffer for recent positions
     protected final LinkedList<float[]> pathBuffer = new LinkedList<>();
-    protected final int maxPathLength = 20;
+    protected final int maxPathLength = 40;
     protected Color color = Color.BLACK;
     protected boolean showPath = false;
     private float size = 1.0f;
@@ -53,7 +53,8 @@ public class BasicDrawable implements Drawable {
     private long startTime; // agent created
     protected long timestamp;  // system or jaerts timestamp 
     private long lastTime; // agent closed
-    private long maxLifetime = 100 ; //millisec
+    public long defaultLifeDuration = 500; //millisec  default duration of existence
+    private long maxLifetime = getDefaultLifeDuration() ; //millisec  Expires this much after startTime.
     protected boolean isOrphaned = false;
     private boolean isExpired = false;
     protected static FieldOfView fov;
@@ -86,13 +87,16 @@ public class BasicDrawable implements Drawable {
      *
      * @return The current timestamp in milliseconds.
      */
-    protected long getSystemTimestamp() {
+    protected static long getSystemTimestamp() {
         return System.currentTimeMillis();
     }
     
    
     public void extendLifetime(long incrementMillis) {
-        setMaxLifetime(getMaxLifetime() + incrementMillis); // Add reward time
+        // two options here: 
+        // 1. we could increment the max lifetime, but that could evtually make maxlife time unacceptably long...
+        // 2 (done here) set the max lifetime to a lifetime ahead of the current lifetime (get to live a little longer)
+        setMaxLifetime(getLifetime() + incrementMillis); // Add a life
     }
     
     
@@ -445,6 +449,20 @@ public class BasicDrawable implements Drawable {
      */
     public void setTimestamp(long timestamp) {
         this.timestamp = timestamp;
+    }
+
+    /**
+     * @return the defaultLifeDuration
+     */
+    public long getDefaultLifeDuration() {
+        return defaultLifeDuration;
+    }
+
+    /**
+     * @param defaultLifeDuration the defaultLifeDuration to set
+     */
+    public void setDefaultLifeDuration(long defaultLifeDuration) {
+        this.defaultLifeDuration = defaultLifeDuration;
     }
     
 }

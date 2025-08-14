@@ -39,7 +39,7 @@ public class SpatialAttentionTest {
         SpatialAttention spatialAttention = SpatialAttention.getInstance(gimbal, waypointManager);
 
         // Create a mock TrackerAgentDrawable
-        TrackerAgentDrawable mockTrackerAgent = new TrackerAgentDrawable(0,10,2000);
+        TrackerAgentDrawable mockTrackerAgent = new TrackerAgentDrawable(0,10);
         mockTrackerAgent.enableSupportQualltyTests(true);
         mockTrackerAgent.setMockSupportQuality(50); // Arbitrary high quality to surpass threshold
 

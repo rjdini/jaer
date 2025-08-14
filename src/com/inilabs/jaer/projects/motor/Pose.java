@@ -19,8 +19,17 @@
 package com.inilabs.jaer.projects.motor;
 
 public class Pose {
-    private final float yaw, roll, pitch;
+    public float yaw;
+    public float roll;
+    public float pitch;
 
+    public Pose() {
+        this.yaw = 0.0f;
+        this.roll = 0.0f;
+        this.pitch = 0.0f;
+    }
+    
+    
     public Pose(float yaw, float roll, float pitch) {
         this.yaw = yaw;
         this.roll = roll;
@@ -37,6 +46,27 @@ public class Pose {
 
     public float getPitch() {
         return pitch;
+    }
+
+    /**
+     * @param yaw the yaw to set
+     */
+    public void setYaw(float yaw) {
+        this.yaw = yaw;
+    }
+
+    /**
+     * @param roll the roll to set
+     */
+    public void setRoll(float roll) {
+        this.roll = roll;
+    }
+
+    /**
+     * @param pitch the pitch to set
+     */
+    public void setPitch(float pitch) {
+        this.pitch = pitch;
     }
 }
 

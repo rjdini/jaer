@@ -35,6 +35,8 @@ import com.inilabs.jaer.projects.motor.DirectGimbalController;
 import java.util.Timer;
 import java.util.stream.Collectors;
 import com.inilabs.jaer.projects.motor.JoystickController;
+import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -78,7 +80,8 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
    
     private final int numberClustersAdded = 5 ; // sets the number of clusters generated for testing
     
-    private final TMExerciser exerciser;
+    private final TrackerManagerExerciser2 exerciser;
+    private  LinkedList<TestCluster> testClusterList = null;
     private TrackerManagerEngine engine; 
     private static FieldOfView fov;
     private TrackerAgentDrawable primaryTrackerAgent;
@@ -125,8 +128,9 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
          joystickController = JoystickController.getInstance(gimbal);
          polarSpaceGUI = new PolarSpaceGUI();
          engine = new TrackerManagerEngine(fov, spatialAttention,  polarSpaceGUI.getPolarSpaceDisplay()); 
-         exerciser = new TMExerciser();  // temporary - neds to be refactored as part of general target system.
-     
+         exerciser = new TrackerManagerExerciser2();  // temporary - neds to be refactored as part of general target system.
+         testClusterList = exerciser.createGaussianCluster(4, 4.0f);
+         
           // (2) Initialize
          polarSpaceGUI.getPolarSpaceDisplay().addDrawable(fov);
          polarSpaceGUI.getPolarSpaceControlPanel().addCenterPanel(spatialAttention, waypointManager);
@@ -220,11 +224,12 @@ public EventPacket<? extends BasicEvent> filterPacket(EventPacket<? extends Basi
     }
 
     
-
 private void updateTrackerManagerEngineTests() {    
     if(isEnableTestClusters) {
       //  engine.updateTestClusterList(exerciser.getTestClusters(10, -30) ); 
-         engine.updateTestClusterList(exerciser.getTestClustersHorizontal() ); 
+        
+         testClusterList = exerciser.moveTestClustersOblique(testClusterList);
+         engine.updateTestClusterList(testClusterList); 
      } 
 }
 
@@ -384,7 +389,7 @@ private GL2 drawTargetLocation(GL2 gl) {
       float sx = chip.getSizeX() / 32;
       TrackerAgentDrawable agent =  spatialAttention.getBestTrackerAgent(); 
       if (agent != null) {
-       agent.run(); // update data
+   //    agent.run(); // update data
   //  float[] target = getGimbalBase().getTarget()
      float pixelX = agent.getChipLocation().x;
      float pixelY = agent.getChipLocation().y;            
@@ -392,7 +397,8 @@ private GL2 drawTargetLocation(GL2 gl) {
     gl.glPushAttrib(GL2.GL_CURRENT_BIT | GL2.GL_ENABLE_BIT);
     try {
         gl.glTranslatef(pixelX, pixelY, 0);
-        gl.glColor3f(agent.getColor().getRed(), agent.getColor().getGreen(), agent.getColor().getBlue());
+//        gl.glColor3f(agent.getColor().getRed(), agent.getColor().getGreen(), agent.getColor().getBlue());
+        gl.glColor3f(0, 1, 1);
         DrawGL.drawCircle(gl, 0f, 0f, sx, 10);
 
         // Text annotation on clusters

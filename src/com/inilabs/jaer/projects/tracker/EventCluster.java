@@ -36,35 +36,29 @@ public class EventCluster extends AgentDrawable implements Expirable, Runnable, 
    public ClusterAdapter enclosedCluster;
     private TrackerAgentDrawable enclosingAgent; // Reference to the enclosing agent
     private Color color = Color.BLACK; // Default color for visualization
-    private float size = 2.0f; // Default size for drawing
-    private long startTime;
-    private long maxLifetime = 2000 ; // 2sec default
-  //  private final long startTime = System.currentTimeMillis(); // Creation time
-   // private long expirationTime; // Time at which the cluster expires
-    
-  //  private static final FieldOfView fov = FieldOfView.getInstance(); // Shared FieldOfView instance
-
+    private float size = 10f; // Default size for drawing
+    private static long defaultEventClusterLifeTimeMillis = 200; // 0.2 secs
+    public long lifetimeExtensionMillis = 200 ; // reward for continuous representation of a DVS / Test cluster
+ 
     
     /**
- * Factory method to adapt a Cluster into an EventCluster.
+ * Factory method to adapt a Cluster into an EventCluster.EventCluster provides encapsulation of RCT Clusters (and  equivalent test clusters).Because RCT is a heavy jaer filter class, its clusters will not run natively in the PolarSpace environment.]
+ Therefore RCT clusters and test clusters are enclosed by common ClusterAdapter, which is then encapsulated by EventCluster.
  *
- * EventCluster provides encapsulation of RCT Clusters (and  equivalent test clusters).
- * Because RCT is a heavy jaer filter class, its clusters will not run natively in the PolarSpace environment.]
- * Therefore RCT clusters and test clusters are enclosed by common ClusterAdapter, which is then encapsulated by EventCluster.  
- * 
  * Note that RCT clusters (and hopefully test clusters in future) are continually updated in background (eg by RCT).
- * So - they are 'live'.
+ So - they are 'live'.
  * 
- * @param cluster The Cluster object to adapt.
+ * @param clusterAdapter
+* @param lifetimeMillis
  * @return A new EventCluster instance based on the Cluster data.
  */
-public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter, long lifetimeMillis) {
+public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter) {
     // Optionally include transformation logic
     EventCluster eventCluster = new EventCluster(clusterAdapter.getAzimuth(), clusterAdapter.getElevation(), clusterAdapter.getColor());
     eventCluster.enclosedCluster = clusterAdapter; 
     eventCluster.size = clusterAdapter.getSize();
-    eventCluster.startTime = eventCluster.getSystemTimestamp();
-    eventCluster.maxLifetime = lifetimeMillis ; 
+    eventCluster.setStartTime(getSystemTimestamp());
+    eventCluster.setMaxLifetime(defaultEventClusterLifeTimeMillis) ; 
     return eventCluster;
 }
 
@@ -90,6 +84,12 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter, lon
 @Override   
  public void close() {
       AgentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(),  getColor(), getEnclosedClusterKeyAsList());
+    }
+ 
+ @Override
+ public void extendLifetime(long incrementMillis) {
+     //  set the max lifetime to a lifetime ahead of the current lifetime (get to live a little longer)
+        setMaxLifetime(this.getLifetime() + incrementMillis); // Add a life
     }
  
     // Constructors
@@ -163,20 +163,15 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter, lon
     
     private void checkEventClusterExpired() {
  //    if ((getLifetime() > maxLifetime) && ( getAdapter() == null ) ) {
-          if (getLifetime() > maxLifetime ) {
+          if (getLifetime() > getMaxLifetime() ) {
             setExpired(true);
         }
     }
-    
-    @Override
-    public long getLifetime()  {
-     return getSystemTimestamp() - startTime;
- }
-    
+     
     public synchronized void run() {
         
-       checkEventClusterExpired();
-     // System.out.println("@@  key:" + getKey() + "  lifetime: " + getLifetime() +" maxLifetime: " + maxLifetime + " expired: " +  isExpired() +" enclosed clust key: " + getEnclosedClusterKey() );
+      checkEventClusterExpired();
+      System.out.println("@@  key:" + getKey() + "  lifetime: " + getLifetime() +" maxLifetime: " + getMaxLifetime() + " expired: " +  isExpired() +" enclosed clust key: " + getEnclosedClusterKey() );
       move();
     
     }
@@ -256,8 +251,8 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter, lon
            int pixelSizeY = (int) (size * getElevationScale());
         
            // if we have an enclosed cluster - we use its coords (should have been updated on move() in anycase.
-        if(getEnclosedCluster() != null ) { // use the enclsoed cluster's coords.
-         myX =  getCenterX() + (int) ((getEnclosedCluster().getAzimuth() - getAzimuthHeading()) * getAzimuthScale());
+        if(getEnclosedCluster() != null ) { // use the enclosed cluster's coords.
+          myX =  getCenterX() + (int) ((getEnclosedCluster().getAzimuth() - getAzimuthHeading()) * getAzimuthScale());
           myY =  getCenterY() - (int) ((getEnclosedCluster().getElevation() - getElevationHeading()) * getElevationScale());  
           setColor(getEnclosedCluster().getColor());
         } 
@@ -268,8 +263,8 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter, lon
             int xAgent = enclosingAgent.getCenterX() + (int) ((enclosingAgent.getAzimuth() - getAzimuthHeading()) * getAzimuthScale());
             int yAgent= enclosingAgent.getCenterY() - (int) ((enclosingAgent.getElevation() - getElevationHeading()) * getElevationScale());
             // Draw a circle for the cluster
-        //    int pixelSizeX = (int) (size * enclosingAgent.getAzimuthScale());
-        //    int pixelSizeY = (int) (size * enclosingAgent.getElevationScale());
+            pixelSizeX = (int) (size * enclosingAgent.getAzimuthScale());
+            pixelSizeY = (int) (size * enclosingAgent.getElevationScale());
         
             g2d.fillOval(myX - pixelSizeX / 2, myY - pixelSizeY / 2, pixelSizeX, pixelSizeY);
             g2d.drawString(getKey(), myX, myY - pixelSizeY/2);
@@ -282,5 +277,19 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter, lon
             g2d.drawString(getKey(), myX, myY - pixelSizeY/2);
      }
         
+    }
+
+    /**
+     * @return the lifetimeExtensionMillis
+     */
+    public long getLifetimeExtensionMillis() {
+        return lifetimeExtensionMillis;
+    }
+
+    /**
+     * @param lifetimeExtensionMillis the lifetimeExtensionMillis to set
+     */
+    public void setLifetimeExtensionMillis(long lifetimeExtensionMillis) {
+        this.lifetimeExtensionMillis = lifetimeExtensionMillis;
     }
 }

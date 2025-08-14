@@ -17,11 +17,14 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
+
 package com.inilabs.jaer.projects.motor;
 
 import com.inilabs.birdland.gimbal.RS4ControllerV2;
 import com.inilabs.jaer.gimbal.RS4ControllerGUISwingV1;
+import com.inilabs.jaer.projects.motor.Pose;
 import com.inilabs.jaer.projects.tracker.FieldOfView;
+import java.awt.geom.Point2D;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.IOException;
@@ -37,34 +40,46 @@ public class DirectGimbalController {
 
     private static RS4ControllerV2 rs4controller;
     public static RS4ControllerGUISwingV1 rs4controllerGUI;
-    private Pose currentPose = new Pose(0.0f, 0.0f, 0.0f);
+    
+   
+     
+    private Pose currentSendPose = new Pose(0.0f, 0.0f, 0.0f);  // pose sent to Gimbal
+    private Pose previousSendPose = new Pose(0.0f, 0.0f, 0.0f);
+    private Pose currentGimbalPose = new Pose(0.0f, 0.0f, 0.0f);  // pose returned from gimbal
+    private Pose previousGimbalPose = new Pose(0.0f, 0.0f, 0.0f);
+
     private volatile float targetYaw = 0, targetRoll = 0, targetPitch = 0;
     private final PropertyChangeSupport pcs = new PropertyChangeSupport(this);
     private static DirectGimbalController instance;
     
-    private float leftYawLimit = -90f;
-    private float rightYawLimit = 90f;
-    private float leftRollLimit = -60f;
-    private float rightRollLimit = 60f;
-    private float lowerPitchLimit = -60f;
-    private float upperPitchLimit = 60f;
+    private final float leftYawLimit = -90f;
+    private final float rightYawLimit = 90f;
+    private final float leftRollLimit = -60f;
+    private final float rightRollLimit = 60f;
+    private final float lowerPitchLimit = -60f;
+    private final float upperPitchLimit = 60f;
       
     
-    private float previousSendYaw = 0f;
-    private float previousSendRoll = 0f;
-    private float previousSendPitch = 0f;
-    
-    private float currentSendYaw = 0f;
-    private float currentSendRoll = 0f;
-    private float currentSendPitch = 0f;
-    
-     private float previousYaw = 0f;
-     private float previousRoll = 0f;
-     private float previousPitch = 0f;
-          
-     private float currentYaw = 0f;
-     private float currentRoll = 0f;
-     private float currentPitch = 0f;
+//    private float previousSendYaw = 0f;
+//    private float previousSendRoll = 0f;
+//    private float previousSendPitch = 0f;
+//    
+//    private float currentSendYaw = 0f;
+//    private float currentSendRoll = 0f;
+//    private float currentSendPitch = 0f;
+//    
+//     private float previousYaw = 0f;
+//     private float previousRoll = 0f;
+//     private float previousPitch = 0f;
+//          
+//     private float currentYaw = 0f;
+//     private float currentRoll = 0f;
+//     private float currentPitch = 0f;
+     
+     private long previousUpdateTime = 0; // millisec
+     private long currentUpdateTime= 0; // millisecs
+     private float deltaUpdateTime = 1000; //seconds
+     private Point2D gimbalVelocity = new Point2D.Float(0.0f, 0.0f); 
 
     private Pose resetPose = new Pose(0f, 0f, 0f);
     private Pose defaultPose = new Pose(10, 0, -30); // nidelbadstrasse
@@ -97,6 +112,8 @@ public class DirectGimbalController {
     
        
     private void init() {
+       previousUpdateTime = System.currentTimeMillis(); // initialize gimbal velocity reference time
+        
        //  TODO --  need to solve the case where RS4Controller is not present, and then use effence copy 
         if(true) {
             rs4controller = RS4ControllerV2.getInstance();
@@ -163,15 +180,39 @@ public class DirectGimbalController {
     
    public Pose getGimbalPose() {
         if (isDummyMode) {
-            return currentPose;
+            return currentGimbalPose;
         }
         return fetchGimbalPose();
     }
-    
+   
+   
+   private void updateGimbalVelocity() {
+    // Calculates the velocity in 2D space (returns angle and magnitude as a float array)
+        if (deltaUpdateTime <= 0) {
+            throw new IllegalArgumentException("Time interval must be greater than zero.");
+        }
+        
+        float deltaX = currentSendPose.getYaw() - previousSendPose.getYaw() ;
+        float deltaY = currentSendPose.getPitch() - previousSendPose.getPitch();
+        log.debug("****** gimbal velocity current Yaw {} previous Yaw{} ",  currentSendPose.getYaw(), previousSendPose.getYaw());
+         log.debug("****** gimbal velocity current Pitch {} previous Pitch{} ",  currentSendPose.getPitch(), previousSendPose.getPitch());
+        log.debug("****** gimbal velocity deltaX {} deltaY {}  deltaUpdateTime {}",  deltaX, deltaY,  deltaUpdateTime);
 
+        float magnitude = (float) Math.sqrt(deltaX * deltaX + deltaY * deltaY) / deltaUpdateTime;
+        float angle = (float) Math.toDegrees(Math.atan2(deltaY, deltaX));
+        log.debug("****** gimbal velocity angle {} mag(d/s) {}", angle, magnitude );
+        gimbalVelocity.setLocation(deltaX/deltaUpdateTime, deltaY/deltaUpdateTime);
+    }
+
+   
+   public Point2D getGimbalVelocity() {
+           return gimbalVelocity;  // velocity as 2D vector
+   }
+   
+ 
     // periodic update of the RS4 Gimbal state 
     private synchronized void updateGimbal() {
-        fetchGimbalPose();  
+        fetchGimbalPose(); 
         
        if(isGimbalPoseEnabled()) { 
         setGimbalPoseDirect(targetYaw, targetRoll, targetPitch);
@@ -185,59 +226,53 @@ public class DirectGimbalController {
     // minimizing any discrepancies between the controller’s actual and reported poses.  
      private Pose fetchGimbalPose() {
        
-              // store the current values
-          previousYaw = currentYaw;
-          previousRoll = currentRoll;
-          previousPitch = currentPitch;
-          float [] previousReceivedPose = {previousYaw, previousRoll, previousPitch};
+          // store the current values
+          previousGimbalPose = new Pose(currentGimbalPose.getYaw(), currentGimbalPose.getRoll(), currentGimbalPose.getPitch());
             
-               // update thecurrent  values 
+          currentGimbalPose = new Pose();
+          // update thecurrent  values 
         if(!isDummyMode) {
-           currentYaw = rs4controller.getYaw()-gimbalYawOffsetError;  // (deg, in gimbal polar space)
-           currentRoll = rs4controller.getRoll();
-           currentPitch = rs4controller.getPitch()-gimbalPitchOffsetError;
+           currentGimbalPose.setYaw(rs4controller.getYaw()-gimbalYawOffsetError);  // (deg, in gimbal polar space)
+           currentGimbalPose.setRoll(rs4controller.getRoll());
+           currentGimbalPose.setPitch(rs4controller.getPitch()-gimbalPitchOffsetError);
             }
             else { // use efference copy  
-               currentYaw = currentPose.getYaw();  // (deg, in gimbal polar space)
-               currentRoll = currentPose.getRoll();
-               currentPitch = currentPose.getPitch();    
+               currentGimbalPose.setYaw(currentSendPose.getYaw());  // (deg, in gimbal polar space)
+               currentGimbalPose.setRoll(currentSendPose.getRoll());
+               currentGimbalPose.setPitch(currentSendPose.getPitch());    
                    }
            
-          float [] newReceivedPose = {currentYaw, currentRoll, currentPitch};  
-          
-          currentPose = new Pose(currentYaw, currentRoll, currentPitch ); 
           // notify the listeners of polar cordinate updates
-           pcs.firePropertyChange("FetchedGimbalPose", previousReceivedPose, newReceivedPose);    
-           log.debug("Fetched RS4Controller pose (y,r,p)  {}, {}, {}", currentYaw, currentRoll, currentPitch );          
-           return currentPose;
+           pcs.firePropertyChange("FetchedGimbalPose", previousGimbalPose, currentGimbalPose);    
+           log.debug("Fetched RS4Controller pose (y,r,p)  {}, {}, {}", currentGimbalPose.getYaw(), currentGimbalPose.getRoll(), currentGimbalPose.getPitch() );          
+           return currentGimbalPose;
     }
 
-    
       public void  setGimbalPoseDirect( Pose pose) {
           setGimbalPoseDirect(pose.getYaw(), pose.getRoll(), pose.getPitch()) ;
       }
       
       
     // direct update of the RS4    
-     public void  setGimbalPoseDirect( float yaw, float roll, float pitch) {           
-          float [] previousSendPose = {previousSendYaw, previousSendRoll, previousSendPitch};
-           currentSendYaw = rangeCheckYaw(yaw);
-           currentSendRoll = rangeCheckRoll(roll);
-           currentSendPitch = rangeCheckPitch(pitch);         
-        
+     public synchronized void setGimbalPoseDirect( float yaw, float roll, float pitch) {           
+          previousSendPose =  new Pose(currentSendPose.getYaw(), currentSendPose.getRoll(), currentSendPose.getPitch());
+          currentSendPose = new Pose(rangeCheckYaw(yaw), rangeCheckRoll(roll), rangeCheckPitch(pitch)); 
+          log.debug("^^^^^ currentSendPose  yaw :  {}, pitch :  {}  ",  currentSendPose.getYaw(), currentSendPose.getPitch());
+          
+         currentUpdateTime = System.currentTimeMillis();
+         deltaUpdateTime = (float) (currentUpdateTime - previousUpdateTime)/(float)1000.0 ;
+         previousUpdateTime = currentUpdateTime;
+         updateGimbalVelocity();     
+                   
         if (!isDummyMode) {
-               rs4controller.setPoseDirect(currentSendYaw+gimbalYawOffsetError, currentSendRoll, currentSendPitch+gimbalPitchOffsetError); // PanTilt does not consider Roll 
+               rs4controller.setPoseDirect(currentSendPose.getYaw()+gimbalYawOffsetError, currentSendPose.getRoll(), currentSendPose.getPitch()+gimbalPitchOffsetError); // PanTilt does not consider Roll 
          } else  {
-            currentPose = new Pose(currentSendYaw, currentSendRoll, currentSendPitch);
-            log.debug("Dummy mode: Pose set to {}", currentPose);
+     //       currentSendPose = new Pose(currentSendPose.getYaw(), currentSendPose.getRoll(), currentSendPose.getPitch());
+            log.debug("Dummy mode: Pose set to {}", currentSendPose);
         }
-        
-           previousSendYaw = currentSendYaw;
-           previousSendRoll = currentSendRoll;
-           previousSendPitch = currentSendPitch;
-           float [] newSendPose = {currentSendYaw, currentSendRoll,  currentSendPitch};
-           this.pcs.firePropertyChange("SendGimbalPose", previousSendPose, newSendPose); 
-            log.debug("SendGimbalPoseDirect (y,r,p)  {}, {}, {}", currentSendYaw, currentSendRoll, currentSendPitch );
+    
+           this.pcs.firePropertyChange("SendGimbalPose", previousSendPose, currentSendPose); 
+            log.debug("SendGimbalPoseDirect (y,r,p)  {}, {}, {}", currentSendPose.getYaw(), currentSendPose.getRoll(), currentSendPose.getPitch() );
     }
          
      

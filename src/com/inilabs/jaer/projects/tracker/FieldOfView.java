@@ -30,6 +30,7 @@ import java.beans.PropertyChangeSupport;
 import com.inilabs.jaer.projects.gui.Drawable;
 import com.inilabs.jaer.projects.logging.AgentLogger;
 import com.inilabs.jaer.projects.logging.EventType;
+import com.inilabs.jaer.projects.motor.Pose;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -67,9 +68,10 @@ public class FieldOfView implements Drawable, PropertyChangeListener {
     private float size = 1.0f;
     private Color color = Color.BLACK;
     private BiConsumer<ActionType, String> parentCallback;
-    private final LinkedList<float[]> pathBuffer = new LinkedList<>();
-
-    protected final int maxPathLength = 20;
+    
+    protected final LinkedList<float[]> pathBuffer = new LinkedList<>();
+    protected final int maxPathLength = 40;
+   
     private int centerX = 0;
     private int centerY = 0;
     private float azimuthScale = 1.0f;
@@ -125,9 +127,9 @@ public class FieldOfView implements Drawable, PropertyChangeListener {
     @Override
     public void propertyChange(PropertyChangeEvent evt) {
         if ("FetchedGimbalPose".equals(evt.getPropertyName())) {
-            float[] newFOVPose = (float[]) evt.getNewValue();
-            setPose(newFOVPose[0], newFOVPose[1], newFOVPose[2] );
-            log.debug("Received evt FetchedGimbalPose  azi {}, ele {}", newFOVPose[0], newFOVPose[2]);    
+            Pose newFOVPose = (Pose) evt.getNewValue();
+            setPose(newFOVPose.yaw, newFOVPose.getRoll(), newFOVPose.getPitch() );
+            log.debug("Received evt FetchedGimbalPose  azi {}, ele {}", newFOVPose.getYaw(), newFOVPose.getPitch());    
         }
     }
     
@@ -238,27 +240,44 @@ public class FieldOfView implements Drawable, PropertyChangeListener {
 
              // Draw the path if enabled
         if (showPath) {
-            drawPath(g2d, getCenterX(), getCenterY());
+            drawPath(g2d);
         }
        
     }
     
     
-    protected void drawPath(Graphics2D g2d, int centerX, int centerY) {
-        g2d.setColor(Color.GRAY);
+      protected void drawPath(Graphics2D g2d) {
+        g2d.setColor(color);
         float[] previousPosition = null;
 
         for (float[] position : pathBuffer) {
+            int pathX = getCenterX() + (int) ((position[0] - getAzimuthHeading()) * getAzimuthScale());
+            int pathY = getCenterY() - (int) ((position[1] - getElevationHeading()) * getElevationScale());
+
             if (previousPosition != null) {
-                int previousX = centerX + (int) (previousPosition[0] * getAzimuthScale());
-                int previousY = centerY - (int) (previousPosition[1] * getElevationScale());
-                int currentX = centerX + (int) (position[0] * getAzimuthScale());
-                int currentY = centerY - (int) (position[1] * getElevationScale());
-                g2d.drawLine(previousX, previousY, currentX, currentY);
+                int prevX = getCenterX() + (int) ((previousPosition[0] - getAzimuthHeading()) * getAzimuthScale());
+                int prevY = getCenterY() - (int) ((previousPosition[1] - getElevationHeading()) * getElevationScale());
+                g2d.drawLine(prevX, prevY, pathX, pathY);
             }
             previousPosition = position;
         }
     }
+    
+//    protected synchronized void drawPath(Graphics2D g2d, int centerX, int centerY) {
+//        g2d.setColor(Color.GRAY);
+//        float[] previousPosition = null;
+//
+//        for (float[] position : pathBuffer) {
+//            if (previousPosition != null) {
+//                int previousX = centerX + (int) (previousPosition[0] * getAzimuthScale());
+//                int previousY = centerY - (int) (previousPosition[1] * getElevationScale());
+//                int currentX = centerX + (int) (position[0] * getAzimuthScale());
+//                int currentY = centerY - (int) (position[1] * getElevationScale());
+//                g2d.drawLine(previousX, previousY, currentX, currentY);
+//            }
+//            previousPosition = position;
+//        }
+//    }
     
      // pan and tilt are legacy dimensions from Tobi's pan tilt system. 
     // Both range 0-1, with 0,0 at bottom left. 0-1 normalizes the chip dimentsion (chip_width, chip height) 
@@ -506,12 +525,15 @@ public class FieldOfView implements Drawable, PropertyChangeListener {
     }
 
 
-    private void addCurrentPositionToPath() {
-        if (pathBuffer.size() >= 20) { // Arbitrary max path length
+    
+    
+     protected void addCurrentPositionToPath() {
+        if (pathBuffer.size() >= maxPathLength) {
             pathBuffer.removeFirst();
         }
-        pathBuffer.addLast(new float[]{azimuth, elevation});
-    }    
+        pathBuffer.addLast(new float[]{getAzimuth(), getElevation()});
+    }
+    
 
     /**
      * @return the showPath

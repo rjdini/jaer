@@ -96,7 +96,7 @@ public class AgentDrawable extends BasicDrawable implements Drawable {
     @Override
     protected void drawPath(Graphics2D g2d) {
         g2d.setColor(color);
-        float[] previousPosition = {0,0};
+        float[] previousPosition = null;
 
         for (float[] position : pathBuffer) {
             int pathX = getCenterX() + (int) ((position[0] - getAzimuthHeading()) * getAzimuthScale());
