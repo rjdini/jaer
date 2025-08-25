@@ -7,6 +7,7 @@ package net.sf.jaer.eventprocessing;
 
 import java.awt.Color;
 import java.awt.Desktop;
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
@@ -17,23 +18,30 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.logging.Logger;
 import java.util.prefs.Preferences;
 
 import javax.swing.AbstractAction;
 import javax.swing.JButton;
-import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import javax.swing.KeyStroke;
+import javax.swing.ToolTipManager;
 import javax.swing.border.Border;
 import javax.swing.border.LineBorder;
 import javax.swing.border.TitledBorder;
+import javax.swing.event.UndoableEditEvent;
+import javax.swing.event.UndoableEditListener;
+import javax.swing.undo.CannotRedoException;
+import javax.swing.undo.CannotUndoException;
+import javax.swing.undo.UndoManager;
+import javax.swing.undo.UndoableEdit;
+import javax.swing.undo.UndoableEditSupport;
 import net.sf.jaer.JaerConstants;
 
 import net.sf.jaer.chip.AEChip;
 import net.sf.jaer.eventprocessing.filter.PreferencesMover;
-import net.sf.jaer.graphics.AEViewer;
 import net.sf.jaer.util.EngineeringFormat;
 import net.sf.jaer.util.JAERWindowUtilities;
 import net.sf.jaer.util.RecentFiles;
@@ -69,6 +77,15 @@ public class FilterFrame<PanelType extends FilterPanel> extends javax.swing.JFra
 
     private static EventFilter.CopiedProps copiedProps = null; // static so we can copy between chips which get a new FilterPanel
 
+    UndoManager undoManager = new UndoManager();
+    // undo/redo
+    UndoableEditSupport editSupport = new UndoableEditSupport();
+    UndoAction undoAction = new UndoAction();
+    RedoAction redoAction = new RedoAction();
+    
+    protected HashMap<EventFilter,FilterPanel> filter2FilterPanelMap=new HashMap();
+    
+
     /**
      * Creates new form FilterFrame
      */
@@ -79,6 +96,7 @@ public class FilterFrame<PanelType extends FilterPanel> extends javax.swing.JFra
         chip.setFilterFrame(this);
         setName("FilterFrame");
         initComponents();
+        simpleCB.setSelected(prefs.getBoolean("simpleMode",false));
         setIconImage(new javax.swing.ImageIcon(getClass().getResource(JaerConstants.ICON_IMAGE_FILTERS)).getImage());
 
 //        fileMenu.remove(prefsEditorMenuItem); // TODO tobi hack to work around leftover item in form that was edited outside of netbeans
@@ -167,6 +185,65 @@ public class FilterFrame<PanelType extends FilterPanel> extends javax.swing.JFra
                 }
             }
         }
+
+        editSupport.addUndoableEditListener(new MyUndoableEditListener());
+        undoManager.discardAllEdits();
+        fixUndoRedo();
+        undoButton.setHideActionText(true);
+        redoButton.setHideActionText(true);
+        ToolTipManager toolTipManager = ToolTipManager.sharedInstance();
+        toolTipManager.setInitialDelay(100); // Set initial delay to 500 milliseconds
+        toolTipManager.setDismissDelay(2000); // Set dismiss delay to 2000 milliseconds
+        
+        // now call optional initGUI for each filter
+        for(EventFilter f:filterChain){
+            f.initGUI();
+        }
+    }
+
+    protected class MyUndoableEditListener
+            implements UndoableEditListener {
+
+        public void undoableEditHappened(UndoableEditEvent e) {
+            //Remember the edit and update the menus
+            log.fine("adding undoable edit event" + e);
+            undoManager.addEdit(e.getEdit());
+            fixUndoRedo();
+        }
+    }
+
+    private class UndoAction extends AbstractAction {
+
+        public UndoAction() {
+            putValue(NAME, "Undo");
+            putValue(SHORT_DESCRIPTION, "Undo the last property change");
+            putValue(SMALL_ICON, new javax.swing.ImageIcon(getClass().getResource("/net/sf/jaer/biasgen/undo.gif")));
+            putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_Z, java.awt.event.InputEvent.CTRL_DOWN_MASK));
+        }
+
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            undo();
+            putValue(SHORT_DESCRIPTION, undoManager.getUndoPresentationName());
+        }
+
+    }
+
+    private class RedoAction extends AbstractAction {
+
+        public RedoAction() {
+            putValue(NAME, "Redo");
+            putValue(SHORT_DESCRIPTION, "Redo the last property change");
+            putValue(SMALL_ICON, new javax.swing.ImageIcon(getClass().getResource("/net/sf/jaer/biasgen/redo.gif")));
+            putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_Y, java.awt.event.InputEvent.CTRL_DOWN_MASK));
+        }
+
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            redo();
+            putValue(SHORT_DESCRIPTION, undoManager.getRedoPresentationName());
+        }
+
     }
 
     private void prefsEditorMenuItemActionPerformed(ActionEvent evt) {
@@ -193,6 +270,8 @@ public class FilterFrame<PanelType extends FilterPanel> extends javax.swing.JFra
         selectFiltersJB = new javax.swing.JButton();
         tipLabel = new javax.swing.JLabel();
         jPanel1 = new javax.swing.JPanel();
+        undoButton = new javax.swing.JButton();
+        redoButton = new javax.swing.JButton();
         filterJPanel = new javax.swing.JPanel();
         clearFilterJB = new javax.swing.JButton();
         highlightTF = new javax.swing.JTextField();
@@ -207,6 +286,9 @@ public class FilterFrame<PanelType extends FilterPanel> extends javax.swing.JFra
         exportPreferencesMI = new javax.swing.JMenuItem();
         jSeparator2 = new javax.swing.JSeparator();
         exitMenuItem = new javax.swing.JMenuItem();
+        editMenu = new javax.swing.JMenu();
+        undoEditMenuItem = new javax.swing.JMenuItem();
+        redoEditMenuItem = new javax.swing.JMenuItem();
         viewMenu = new javax.swing.JMenu();
         customizeMenuItem = new javax.swing.JMenuItem();
         highlightMI = new javax.swing.JMenuItem();
@@ -309,6 +391,18 @@ public class FilterFrame<PanelType extends FilterPanel> extends javax.swing.JFra
 
         jPanel1.setAlignmentX(0.0F);
         jPanel1.setLayout(new javax.swing.BoxLayout(jPanel1, javax.swing.BoxLayout.X_AXIS));
+
+        undoButton.setAction(undoAction);
+        undoButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/net/sf/jaer/biasgen/undo.gif"))); // NOI18N
+        undoButton.setToolTipText("Undo last property change");
+        undoButton.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        jPanel1.add(undoButton);
+
+        redoButton.setAction(redoAction);
+        redoButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/net/sf/jaer/biasgen/redo.gif"))); // NOI18N
+        redoButton.setToolTipText("Redo last property change");
+        redoButton.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        jPanel1.add(redoButton);
 
         filterJPanel.setBorder(new javax.swing.border.LineBorder(new java.awt.Color(0, 0, 0), 1, true));
         filterJPanel.setLayout(new javax.swing.BoxLayout(filterJPanel, javax.swing.BoxLayout.LINE_AXIS));
@@ -419,6 +513,32 @@ public class FilterFrame<PanelType extends FilterPanel> extends javax.swing.JFra
         fileMenu.add(exitMenuItem);
 
         mainMenuBar.add(fileMenu);
+
+        editMenu.setMnemonic('E');
+        editMenu.setText("Edit");
+
+        undoEditMenuItem.setAction(undoAction);
+        undoEditMenuItem.setMnemonic('U');
+        undoEditMenuItem.setText("Undo");
+        undoEditMenuItem.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                undoEditMenuItemActionPerformed(evt);
+            }
+        });
+        editMenu.add(undoEditMenuItem);
+
+        redoEditMenuItem.setAction(redoAction);
+        redoEditMenuItem.setMnemonic('R');
+        redoEditMenuItem.setText("Redo");
+        redoEditMenuItem.setEnabled(false);
+        redoEditMenuItem.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                redoEditMenuItemActionPerformed(evt);
+            }
+        });
+        editMenu.add(redoEditMenuItem);
+
+        mainMenuBar.add(editMenu);
 
         viewMenu.setMnemonic('v');
         viewMenu.setText("View");
@@ -626,9 +746,10 @@ public class FilterFrame<PanelType extends FilterPanel> extends javax.swing.JFra
     /**
      * rebuilds the frame contents using the existing filters in the filterChain
      */
-    public void rebuildContents() {
+    final public void rebuildContents() {
         filterPanels.clear();
         filtersPanel.removeAll();
+        filter2FilterPanelMap.clear();
         int n = 0;
         int w = 100, h = 30;
         for (EventFilter2D f : filterChain) {
@@ -690,7 +811,7 @@ public class FilterFrame<PanelType extends FilterPanel> extends javax.swing.JFra
         return restoreFilterEnabledStateEnabled;
     }
 
-    public void setRestoreFilterEnabledStateEnabled(boolean restoreFilterEnabledStateEnabled) {
+    final public void setRestoreFilterEnabledStateEnabled(boolean restoreFilterEnabledStateEnabled) {
         this.restoreFilterEnabledStateEnabled = restoreFilterEnabledStateEnabled;
         prefs.putBoolean("FilterFrame.restoreFilterEnabledStateEnabled", restoreFilterEnabledStateEnabled);
         restoreFilterEnabledStateCheckBoxMenuItem.setSelected(restoreFilterEnabledStateEnabled);
@@ -820,28 +941,81 @@ public class FilterFrame<PanelType extends FilterPanel> extends javax.swing.JFra
     }//GEN-LAST:event_highlightTFKeyTyped
 
     private void simpleCBActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_simpleCBActionPerformed
-        for (FilterPanel p : filterPanels) {
-            if (p.isControlsVisible()) {
-                p.showPropertyHighlightsOrVisibility(highlightTF.getText(), hideOthersRB.isSelected(), simpleCB.isSelected());
-            }
-        }
+        prefs.putBoolean("simpleMode",simpleCB.isSelected());
+        updateHighlightedAndSimpleVisibilites();
     }//GEN-LAST:event_simpleCBActionPerformed
 
-    private void highlightRBActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_highlightRBActionPerformed
+    /** Updates visibility of controls */
+    public void updateHighlightedAndSimpleVisibilites() {
         for (FilterPanel p : filterPanels) {
             if (p.isControlsVisible()) {
                 p.showPropertyHighlightsOrVisibility(highlightTF.getText(), hideOthersRB.isSelected(), simpleCB.isSelected());
             }
         }
+    }
+
+    private void highlightRBActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_highlightRBActionPerformed
+        updateHighlightedAndSimpleVisibilites();
     }//GEN-LAST:event_highlightRBActionPerformed
 
     private void hideOthersRBActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_hideOthersRBActionPerformed
-        for (FilterPanel p : filterPanels) {
-            if (p.isControlsVisible()) {
-                p.showPropertyHighlightsOrVisibility(highlightTF.getText(), hideOthersRB.isSelected(), simpleCB.isSelected());
-            }
-        }
+        updateHighlightedAndSimpleVisibilites();
     }//GEN-LAST:event_hideOthersRBActionPerformed
+
+    private void undoEditMenuItemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_undoEditMenuItemActionPerformed
+        undo();
+    }//GEN-LAST:event_undoEditMenuItemActionPerformed
+
+    private void redoEditMenuItemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_redoEditMenuItemActionPerformed
+        redo();
+    }//GEN-LAST:event_redoEditMenuItemActionPerformed
+
+    final void fixUndoRedo() {
+        final boolean canUndo = undoManager.canUndo(), canRedo = undoManager.canRedo();
+        undoAction.setEnabled(canUndo);
+        redoAction.setEnabled(canRedo);
+        if (canUndo) {
+            undoAction.putValue(AbstractAction.SHORT_DESCRIPTION, undoManager.getUndoPresentationName());
+        }
+        if (canRedo) {
+            redoAction.putValue(AbstractAction.SHORT_DESCRIPTION, undoManager.getRedoPresentationName());
+        }
+    }
+
+    void undo() {
+        try {
+            undoManager.undo();
+        } catch (CannotUndoException e) {
+            Toolkit.getDefaultToolkit().beep();
+            log.warning(e.getMessage());
+        } finally {
+            fixUndoRedo();
+        }
+    }
+
+    void redo() {
+        try {
+            undoManager.redo();
+        } catch (CannotRedoException e) {
+            Toolkit.getDefaultToolkit().beep();
+            log.warning(e.getMessage());
+        } finally {
+            fixUndoRedo();
+        }
+    }
+
+    void addEdit(UndoableEdit edit) {
+        undoManager.addEdit(edit);
+//        fixUndoRedo();
+//        String s = getTitle();
+//        if (s == null) {
+//            return;
+//        }
+//        if (s.lastIndexOf('*') == -1) {
+//            setTitle(getTitle() + "*");
+//        }
+//        setFileModified(true);
+    }
 
     private void highlightOrShowOnly(String searchString) {
         if (searchString == null || searchString.isBlank()) {
@@ -913,21 +1087,22 @@ public class FilterFrame<PanelType extends FilterPanel> extends javax.swing.JFra
      * @return the panel, or null
      */
     public FilterPanel getFilterPanelForFilter(EventFilter filt) {
-        for (FilterPanel p : filterPanels) {
-            if (p.getFilter() == filt) {
-                return p;
-            } // if the panel's filter has chain, then check if filt is one of these filters
-            else if (p.getFilter().getEnclosedFilterChain() != null) {
-                FilterChain c = p.getFilter().getEnclosedFilterChain();
-                for (EventFilter enclFilt : c) {
-                    if (enclFilt == filt) { // we found the enclosed filter, now we need the panel for it
-                        return p.getEnclosedFilterPanel(enclFilt);
-                    }
-                }
-            }
-        }
-
-        return null;
+        return filter2FilterPanelMap.get(filt);
+//        for (FilterPanel p : filterPanels) {
+//            if (p.getFilter() == filt) {
+//                return p;
+//            } // if the panel's filter has chain, then check if filt is one of these filters
+//            else if (p.getFilter().getEnclosedFilterChain() != null) {
+//                FilterChain c = p.getFilter().getEnclosedFilterChain();
+//                for (EventFilter enclFilt : c) {
+//                    if (enclFilt == filt) { // we found the enclosed filter, now we need the panel for it
+//                        return p.getEnclosedFilterPanel(enclFilt);
+//                    }
+//                }
+//            }
+//        }
+//
+//        return null;
     }
 
     private void showInBrowser(String url) {
@@ -990,6 +1165,7 @@ public class FilterFrame<PanelType extends FilterPanel> extends javax.swing.JFra
     private javax.swing.JButton clearFilterJB;
     private javax.swing.JMenuItem customizeMenuItem;
     private javax.swing.JToggleButton disableFilteringToggleButton;
+    private javax.swing.JMenu editMenu;
     private javax.swing.JMenuItem exitMenuItem;
     private javax.swing.JMenuItem exportPreferencesMI;
     private javax.swing.JMenu fileMenu;
@@ -1012,6 +1188,8 @@ public class FilterFrame<PanelType extends FilterPanel> extends javax.swing.JFra
     private javax.swing.ButtonGroup modeButtonGroup;
     private javax.swing.JMenu modeMenu;
     private javax.swing.JButton overviewButton;
+    private javax.swing.JButton redoButton;
+    private javax.swing.JMenuItem redoEditMenuItem;
     private javax.swing.JRadioButtonMenuItem renderingModeMenuItem;
     private javax.swing.JButton resetAllButton;
     private javax.swing.JMenuItem resetPerformanceMeasurementMI;
@@ -1021,6 +1199,8 @@ public class FilterFrame<PanelType extends FilterPanel> extends javax.swing.JFra
     private javax.swing.JCheckBox simpleCB;
     private javax.swing.JLabel tipLabel;
     private javax.swing.JToolBar toolBar1;
+    private javax.swing.JButton undoButton;
+    private javax.swing.JMenuItem undoEditMenuItem;
     private javax.swing.JTextField updateIntervalField;
     private javax.swing.JLabel updateIntervalLabel;
     private javax.swing.JPanel updateIntervalPanel;

@@ -132,6 +132,7 @@ public class DavisRenderer extends AEChipRenderer {
     private static int NUM_RENDERED_FRAMES_WITH_NO_APS_FRAME_TO_DEACTIVATE_FRAMES = 2000;
     protected boolean renderedApsFrame = false; // flag set true on start of frame to signal not to disable frame display automatically
     private int lastTimestampFrameEndWeSentPropertyChangeFor = 0; // saves the time we sent propertyChange for a new frame to not send it multiple times during pause if the packet has a frame end in it
+    private float lastAnnotationResetValue; // last value we set annotation gray value to
 
     public DavisRenderer(final AEChip chip) {
         super(chip);
@@ -209,20 +210,24 @@ public class DavisRenderer extends AEChipRenderer {
     }
 
     public synchronized void clearAnnotationMap() {
-        resetAnnotationFrame(0);
+        resetAnnotationFrame(getGrayValue());
     }
 
     @Override
     public synchronized void resetAnnotationFrame(final float resetValue) {
         checkPixmapAllocation();
         final int n = 4 * textureWidth * textureHeight;
-        if ((grayBuffer == null) || (grayBuffer.capacity() != n)) {
+        if ((grayBuffer == null) || (grayBuffer.capacity() != n || resetValue!=lastAnnotationResetValue)) {
             grayBuffer = FloatBuffer.allocate(n); // BufferUtil.newFloatBuffer(n);
-        }
-
-        grayBuffer.rewind();
+            lastAnnotationResetValue=resetValue;
         // Fill maps with fully transparent values
-        Arrays.fill(grayBuffer.array(), resetValue);
+            float[] rgba={resetValue,resetValue,resetValue,0};
+            float[] grayArray=grayBuffer.array();
+            for(int i=0;i<n;i++){
+                grayArray[i]=rgba[i%4];
+            }
+        }
+        grayBuffer.rewind();
         System.arraycopy(grayBuffer.array(), 0, annotateMap.array(), 0, n);
 
         grayBuffer.rewind();
@@ -269,6 +274,7 @@ public class DavisRenderer extends AEChipRenderer {
         } else {
             renderPureDvsEvents(pkt);
         }
+        adaptRenderSkipping();
     }
 
     protected void renderApsDvsEvents(final EventPacket pkt) {
@@ -365,8 +371,10 @@ public class DavisRenderer extends AEChipRenderer {
                     SwingUtilities.invokeLater(() -> {
                         int ret = JOptionPane.showConfirmDialog(chip.getAeViewer(), msg, "Disable frames?", JOptionPane.YES_NO_OPTION);
                         switch (ret) {
-                            case JOptionPane.YES_OPTION -> setDisplayFrames(false);
-                            case JOptionPane.NO_OPTION -> NUM_RENDERED_FRAMES_WITH_NO_APS_FRAME_TO_DEACTIVATE_FRAMES = 0;
+                            case JOptionPane.YES_OPTION ->
+                                setDisplayFrames(false);
+                            case JOptionPane.NO_OPTION ->
+                                NUM_RENDERED_FRAMES_WITH_NO_APS_FRAME_TO_DEACTIVATE_FRAMES = 0;
                         }
                     });
 
@@ -450,12 +458,16 @@ public class DavisRenderer extends AEChipRenderer {
     }
 
     private final Random random = new Random();
-
+   
     protected void updateFrameBuffer(final ApsDvsEvent e) {
         final float[] buf = pixBuffer.array();
         // TODO if playing backwards, then frame will come out white because B sample comes before A
 
         if (e.isStartOfFrame()) {
+            // handle render skipping to not miss parts of frames
+            if (skipFrame()) {
+                return;
+            }
             startFrame(e.timestamp); // clear4sframe buffer contents, must be called first for each frame or contents will be erased
             renderedApsFrame = true;
         } else if (e.isResetRead()) {
@@ -1173,4 +1185,5 @@ public class DavisRenderer extends AEChipRenderer {
         }
 //        System.out.println("downsampling "+dvsDownsamplingValue);
     }
+   
 }
