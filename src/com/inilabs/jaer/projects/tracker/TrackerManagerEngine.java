@@ -3,7 +3,6 @@ package com.inilabs.jaer.projects.tracker;
 import com.inilabs.jaer.projects.cog.SpatialAttention;
 import com.inilabs.jaer.projects.gui.Drawable;
 import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
-import com.inilabs.jaer.projects.utils.Vector2DUtil;
 import java.awt.Color;
 import java.awt.geom.Point2D;
 import java.util.*;
@@ -14,7 +13,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.stream.Stream;
 import org.slf4j.LoggerFactory;
 
 public class TrackerManagerEngine {
@@ -38,9 +36,7 @@ public class TrackerManagerEngine {
     private final CopyOnWriteArrayList<EventCluster> eventClusters = new CopyOnWriteArrayList<>();
 
     private Color bestAgentColor = Color.RED; // Define the color for the best agents
-
     private volatile boolean freshDataAvailable = false;
-
     private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(TrackerManagerEngine.class);
     private static boolean isSaccade = false;
 
@@ -52,9 +48,6 @@ public class TrackerManagerEngine {
         scheduler.scheduleAtFixedRate(this::processPeriodically, 0, 100, TimeUnit.MILLISECONDS);
     }
 
-//    public TrackerManagerEngine() {
-//       // throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
-//    }
     private SpatialAttention getSpatialAttention() {
         return spatialAttention;
     }
@@ -88,34 +81,34 @@ public class TrackerManagerEngine {
      * @param clusters List of input clusters (real or test).
      *
      */
-//public synchronized void updateRCTClusterList(List<RectangularClusterTracker.Cluster> clusters) {
-//   
-//    if (!isIsSaccade()) { 
-//    // Convert RectangularClusterTracker.Cluster to RCTClusterAdapter
-//    List<RCTClusterAdapter> adaptedClusters = clusters.stream()
-//        .map(cluster -> new RCTClusterAdapter(cluster))
-//        .collect(Collectors.toList());
-//    freshDataAvailable = true;
-//    processClusters(adaptedClusters);
-//    processTrackers();
-//    
-//    }
-//}
+public synchronized void updateRCTClusterList(List<RectangularClusterTracker.Cluster> clusters) {
+   
+    if (!isIsSaccade()) { 
+    // Convert RectangularClusterTracker.Cluster to RCTClusterAdapter
+    List<RCTClusterAdapter> adaptedClusters = clusters.stream()
+        .map(cluster -> new RCTClusterAdapter(cluster))
+        .collect(Collectors.toList());
+    freshDataAvailable = true;
+    processClusters(adaptedClusters);
+    processTrackers();
+    
+    }
+}
     
     
 // Always process clusters when !isIsSaccade().
 // Apply the velocity filter only if referenceVelocity != null && speed > threshold.
 // Otherwise, process all clusters unfiltered.
-//    
-    public synchronized void updateRCTClusterList(List<RectangularClusterTracker.Cluster> clusters) {
+//  
+//  ***** disabling the co-directinal gimabl velocity  filtering - uncessful dt mutile noise targets, and slow gimbal loop.
+// **** will try to solve problem at DVS filter level.   19 aug 2025
+
+    public synchronized void updateRCTClusterList_DISABLE(List<RectangularClusterTracker.Cluster> clusters) {
         
-    if(true) return;  //@@@@@@@@  DEBUG
-    
     if (isIsSaccade()) return;
 
      List<RectangularClusterTracker.Cluster> filteredClusters = filterRCTClusterList(clusters);
     
-
     List<RCTClusterAdapter> adaptedClusters = filteredClusters.stream()
         .peek(c -> System.out.println("Passing cluster with velocity: " + c.getVelocity()))
         .map(RCTClusterAdapter::new)

@@ -43,7 +43,7 @@ public class EventClusterTest {
         TestClusterAdapter clusterAdapter = new TestClusterAdapter("testCluster", 45.0f, 15.0f);
 
         // Create an EventCluster using fromClusterAdapter
-        EventCluster eventCluster = EventCluster.fromClusterAdapter(clusterAdapter, lifeDurationMillis);
+        EventCluster eventCluster = EventCluster.fromClusterAdapter(clusterAdapter);
 
         // Validate encapsulation
         assert eventCluster.getEnclosedCluster() == clusterAdapter :
@@ -68,7 +68,7 @@ public class EventClusterTest {
         TestClusterAdapter clusterAdapter = new TestClusterAdapter("cluster1", 60.0f, 30.0f);
 
         // Create an EventCluster using fromClusterAdapter
-        EventCluster eventCluster = EventCluster.fromClusterAdapter(clusterAdapter, lifeDurationMillis);
+        EventCluster eventCluster = EventCluster.fromClusterAdapter(clusterAdapter);
 
         // Modify the TestClusterAdapter
         clusterAdapter.setAzimuth(90.0f);
@@ -91,7 +91,7 @@ public class EventClusterTest {
         TestClusterAdapter clusterAdapter = new TestClusterAdapter("testCluster", 30.0f, 15.0f);
 
         // Create an EventCluster
-        EventCluster eventCluster = EventCluster.fromClusterAdapter(clusterAdapter, lifeDurationMillis);
+        EventCluster eventCluster = EventCluster.fromClusterAdapter(clusterAdapter);
 
         // Validate initial visibility
         assert eventCluster.isVisible() : "Visibility mismatch! Expected: true, Found: false.";

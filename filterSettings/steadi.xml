@@ -1,0 +1,558 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE preferences SYSTEM "http://java.sun.com/dtd/preferences.dtd">
+<preferences EXTERNAL_XML_VERSION="1.0">
+  <root type="user">
+    <map/>
+    <node name="jaer">
+      <map/>
+      <node name="chips">
+        <map/>
+        <node name="DVXplorer">
+          <map>
+            <entry key="ChipCanvas.origin3dx" value="0"/>
+            <entry key="ChipCanvas.origin3dy" value="0"/>
+            <entry key="FilterFrame.filters" value="rO0ABXNyABNqYXZhLnV0aWwuQXJyYXlMaXN0eIHSHZnHYZ0DAAFJAARzaXpleHAAAAAGdwQAAAAGdABCbmV0LnNmLmphZXIuZXZlbnRwcm9jZXNzaW5nLmZpbHRlci5TcGF0aW9UZW1wb3JhbENvcnJlbGF0aW9uRmlsdGVydAAzbmV0LnNmLmphZXIuZXZlbnRwcm9jZXNzaW5nLmZpbHRlci5SZWZyYWN0b3J5RmlsdGVydAArZXUuc2VlYmV0dGVyLmluaS5jaGlwcy5kYXZpcy5Ib3RQaXhlbEZpbHRlcnQAPmNvbS5pbmlsYWJzLmphZXIucHJvamVjdHMuZXZlbnRwcm9jZXNzaW5nLmZpbHRlcnMuRFZYU3RlYWRpY2FtdAA+bmV0LnNmLmphZXIuZXZlbnRwcm9jZXNzaW5nLnRyYWNraW5nLlJlY3Rhbmd1bGFyQ2x1c3RlclRyYWNrZXJ0ACxuZXQuc2YuamFlci5ldmVudHByb2Nlc3NpbmcuZmlsdGVyLlN0ZWFkaWNhbXg="/>
+            <entry key="FilterFrame.lastFile" value="/home/rjd/Workspaces/workspace-drone/jaer/filterSettings/steadi.xml"/>
+            <entry key="FilterFrame.lastFilterSelected" value="class net.sf.jaer.eventprocessing.filter.Steadicam"/>
+            <entry key="FilterFrame.restoreFilterEnabledStateEnabled" value="true"/>
+            <entry key="borderSpacePixels" value="20"/>
+            <entry key="colorScale" value="1"/>
+            <entry key="isEventsEnabled" value="false"/>
+            <entry key="isImuEnabled" value="true"/>
+            <entry key="recentFiles" value="rO0ABXNyABNqYXZhLnV0aWwuQXJyYXlMaXN0eIHSHZnHYZ0DAAFJAARzaXpleHAAAAADdwQAAAADc3IADGphdmEuaW8uRmlsZQQtpEUODeT/AwABTAAEcGF0aHQAEkxqYXZhL2xhbmcvU3RyaW5nO3hwdAA4L2hvbWUvcmpkL1dvcmtzcGFjZXMvd29ya3NwYWNlLWRyb25lL2phZXIvZmlsdGVyU2V0dGluZ3N3AgAveHNxAH4AAnQAQy9ob21lL3JqZC9Xb3Jrc3BhY2VzL3dvcmtzcGFjZS1kcm9uZS9qYWVyL2ZpbHRlclNldHRpbmdzL3N0ZWFkaS54bWx3AgAveHNxAH4AAnQARi9ob21lL3JqZC9Xb3Jrc3BhY2VzL3dvcmtzcGFjZS1kcm9uZS9qYWVyL2ZpbHRlclNldHRpbmdzL2R2eHN0ZWFkaS54bWx3AgAveHg="/>
+          </map>
+          <node name="AccumulateAndResetFilter">
+            <map>
+              <entry key="filterEnabled" value="false"/>
+            </map>
+          </node>
+          <node name="AerCorrFilter">
+            <map>
+              <entry key="filterEnabled" value="true"/>
+            </map>
+          </node>
+          <node name="BackgroundActivityFilter">
+            <map>
+              <entry key="antiCasualEnabled" value="false"/>
+              <entry key="correlationTimeS" value="0.09678193"/>
+              <entry key="filterEnabled" value="false"/>
+              <entry key="filterHotPixels" value="true"/>
+              <entry key="letFirstEventThrough" value="true"/>
+              <entry key="showFilteringStatistics" value="true"/>
+              <entry key="showFilteringStatisticsFontSize" value="20"/>
+            </map>
+          </node>
+          <node name="CellStatsProber">
+            <map>
+              <entry key="CellStatsProber.filterEnabled" value="false"/>
+              <entry key="filterEnabled" value="false"/>
+            </map>
+            <node name="CellStatsProber.roiRects">
+              <map/>
+            </node>
+          </node>
+          <node name="DVXSteadicam">
+            <map>
+              <entry key="DVXSteadicam.bypass" value="false"/>
+              <entry key="DVXSteadicam.filterEnabled" value="false"/>
+              <entry key="DVXSteadicam.imuLagMs" value="0.0"/>
+              <entry key="DVXSteadicam.panOffset" value="0.0"/>
+              <entry key="DVXSteadicam.rollOffset" value="0.0"/>
+              <entry key="DVXSteadicam.tiltOffset" value="0.0"/>
+            </map>
+          </node>
+          <node name="DavisTextInputReader">
+            <map>
+              <entry key="checkNonMonotonicTimestamps" value="true"/>
+              <entry key="filterEnabled" value="false"/>
+              <entry key="flipPolarity" value="false"/>
+              <entry key="lastFileName" value="H:\.shortcut-targets-by-id\1TQyR9airScEEZpw8Y51jeZzdk5EFzaa3\spin-dot-event-data\moving-camera\slow-to-fast-in-three-steps.csv"/>
+              <entry key="specialEvents" value="false"/>
+              <entry key="timestampLast" value="false"/>
+              <entry key="useCSV" value="false"/>
+              <entry key="useSignedPolarity" value="false"/>
+              <entry key="useUsTimestamps" value="false"/>
+            </map>
+          </node>
+          <node name="DavisTextOutputWriter">
+            <map>
+              <entry key="filterEnabled" value="false"/>
+            </map>
+          </node>
+          <node name="EgomotionCompensator">
+            <map>
+              <entry key="EgomotionCompensator.filterEnabled" value="false"/>
+            </map>
+          </node>
+          <node name="EventRateEstimator">
+            <map>
+              <entry key="eventRateTauMs" value="100.0"/>
+              <entry key="maxRate" value="1.0E7"/>
+            </map>
+          </node>
+          <node name="FlexTimePlayer">
+            <map>
+              <entry key="filterEnabled" value="false"/>
+            </map>
+          </node>
+          <node name="FoosballFilter">
+            <map>
+              <entry key="filterEnabled" value="true"/>
+            </map>
+          </node>
+          <node name="HotPixelFilter">
+            <map>
+              <entry key="HotPixelFilter.filterEnabled" value="false"/>
+              <entry key="filterEnabled" value="false"/>
+            </map>
+            <node name="HotPixelFilter.HotPixelSet">
+              <map/>
+            </node>
+            <node name="NoiseFilterControl">
+              <map/>
+            </node>
+          </node>
+          <node name="Info">
+            <map>
+              <entry key="Info.filterEnabled" value="false"/>
+              <entry key="filterEnabled" value="false"/>
+              <entry key="useLocalTimeZone" value="true"/>
+            </map>
+            <node name="TypedEventRateEstimator">
+              <map/>
+            </node>
+            <node name="XYTypeFilter">
+              <map/>
+              <node name="XYTypeFilter.circularShapeCenterPoint">
+                <map/>
+              </node>
+              <node name="XYTypeFilter.multiSelection">
+                <map/>
+              </node>
+            </node>
+          </node>
+          <node name="JaerAviWriter">
+            <map>
+              <entry key="JaerAviWriter.filterEnabled" value="false"/>
+              <entry key="compressionQuality" value="1.0"/>
+              <entry key="filterEnabled" value="false"/>
+              <entry key="format" value="JPG"/>
+              <entry key="lastFileName" value="E:\Resilio Sync\tobi desktop data\SciDVS\rotating_chart\recordings\evk4 very dark sliding 4ev 200ms.avi"/>
+              <entry key="showTimeFactor" value="true"/>
+              <entry key="showTimeFactorTextScale" value="1.9869678"/>
+              <entry key="writeTimecodeFile" value="false"/>
+            </map>
+          </node>
+          <node name="LucasKanadeFlow">
+            <map>
+              <entry key="derivator" value="CentralFiniteDifferenceFirstOrder"/>
+              <entry key="displayGlobalMotion" value="true"/>
+              <entry key="filterEnabled" value="false"/>
+              <entry key="measureAccuracy" value="true"/>
+              <entry key="measureProcessingTime" value="false"/>
+              <entry key="xMax" value="640"/>
+              <entry key="yMax" value="480"/>
+            </map>
+          </node>
+          <node name="OpticalGyro">
+            <map>
+              <entry key="aspectRatio" value="0.475"/>
+              <entry key="dynamicSizeEnabled" value="true"/>
+              <entry key="enableClusterExitPurging" value="false"/>
+              <entry key="filterEnabled" value="false"/>
+              <entry key="filterEventsEnabled" value="true"/>
+              <entry key="growMergedSizeEnabled" value="true"/>
+              <entry key="mixingFactor" value="0.008"/>
+              <entry key="purgeIfClusterOverlapsBorder" value="false"/>
+              <entry key="showClusterMass" value="true"/>
+              <entry key="showClusterRadius" value="true"/>
+              <entry key="smoothMove" value="true"/>
+              <entry key="surroundInhibitionEnabled" value="true"/>
+              <entry key="useNearestCluster" value="true"/>
+              <entry key="vanishingPoint.x" value="NaN"/>
+              <entry key="vanishingPoint.y" value="NaN"/>
+            </map>
+          </node>
+          <node name="PanTiltTracker">
+            <map>
+              <entry key="filterEnabled" value="true"/>
+            </map>
+          </node>
+          <node name="PigTracker">
+            <map>
+              <entry key="filterEnabled" value="false"/>
+              <entry key="objectToTrack" value="Square"/>
+            </map>
+          </node>
+          <node name="RectangularClusterTracker">
+            <map>
+              <entry key="RectangularClusterTracker.aspectRatio" value="0.7711056"/>
+              <entry key="RectangularClusterTracker.clusterMassDecayTauUs" value="10000"/>
+              <entry key="RectangularClusterTracker.clusterSize" value="0.068775386"/>
+              <entry key="RectangularClusterTracker.colorClustersDifferentlyEnabled" value="true"/>
+              <entry key="RectangularClusterTracker.dynamicSizeEnabled" value="true"/>
+              <entry key="RectangularClusterTracker.enableClusterExitPurging" value="true"/>
+              <entry key="RectangularClusterTracker.filterEnabled" value="true"/>
+              <entry key="RectangularClusterTracker.locationMixingFactor" value="0.23784104"/>
+              <entry key="RectangularClusterTracker.maxNumClusters" value="5"/>
+              <entry key="RectangularClusterTracker.mixingFactorInverseWithEventRate" value="true"/>
+              <entry key="RectangularClusterTracker.numEventsStoredInCluster" value="100"/>
+              <entry key="RectangularClusterTracker.purgeIfClusterOverlapsBorder" value="true"/>
+              <entry key="RectangularClusterTracker.showAllClusters" value="false"/>
+              <entry key="RectangularClusterTracker.showClusterEpsPerPx" value="false"/>
+              <entry key="RectangularClusterTracker.showClusterNumber" value="true"/>
+              <entry key="RectangularClusterTracker.showClusterVelocityVector" value="true"/>
+              <entry key="RectangularClusterTracker.showPaths" value="true"/>
+              <entry key="RectangularClusterTracker.thresholdEventRatePerPixelForVisibleClusterHz" value="0.18581443"/>
+              <entry key="RectangularClusterTracker.thresholdMassForVisibleCluster" value="30"/>
+              <entry key="RectangularClusterTracker.useEllipticalClusters" value="false"/>
+              <entry key="RectangularClusterTracker.useVelocity" value="false"/>
+              <entry key="RectangularClusterTracker.vanishingPoint.x" value="NaN"/>
+              <entry key="RectangularClusterTracker.vanishingPoint.y" value="NaN"/>
+              <entry key="RectangularClusterTracker.zoomFactor" value="6.1688356"/>
+              <entry key="RectangularClusterTracker.zoomOnTrackedCluster" value="false"/>
+              <entry key="angleFollowsVelocity" value="false"/>
+              <entry key="aspectRatio" value="0.73749995"/>
+              <entry key="clusterLoggingMethod" value="LogClusters"/>
+              <entry key="clusterMassDecayTauUs" value="10000"/>
+              <entry key="clusterSize" value="0.15f"/>
+              <entry key="colorClustersDifferentlyEnabled" value="false"/>
+              <entry key="dontMergeEver" value="false"/>
+              <entry key="dynamicAngleEnabled" value="false"/>
+              <entry key="dynamicAspectRatioEnabled" value="false"/>
+              <entry key="dynamicSizeEnabled" value="true"/>
+              <entry key="ellipticalClusterEdgeThickness" value="0.2"/>
+              <entry key="enableClusterExitPurging" value="false"/>
+              <entry key="eventRatePerPixelLowpassTauS" value="0.18"/>
+              <entry key="filterEnabled" value="true"/>
+              <entry key="filterEventsEnabled" value="true"/>
+              <entry key="growMergedSizeEnabled" value="true"/>
+              <entry key="highwayPerspectiveEnabled" value="false"/>
+              <entry key="initializeVelocityToAverage" value="false"/>
+              <entry key="locationMixingFactor" value="0.025000015"/>
+              <entry key="maxNumClusters" value="10"/>
+              <entry key="maxSizeScaleRatio" value="4.1770945"/>
+              <entry key="mixingFactor" value="0.020000001"/>
+              <entry key="mixingFactorInverseWithEventRate" value="true"/>
+              <entry key="numEventsStoredInCluster" value="100"/>
+              <entry key="pathsEnabled" value="true"/>
+              <entry key="purgeIfClusterOverlapsBorder" value="false"/>
+              <entry key="showAllClusters" value="false"/>
+              <entry key="showClusterEps" value="false"/>
+              <entry key="showClusterEpsPerPx" value="true"/>
+              <entry key="showClusterMass" value="false"/>
+              <entry key="showClusterNumber" value="true"/>
+              <entry key="showClusterRadius" value="false"/>
+              <entry key="showClusterVelocity" value="false"/>
+              <entry key="showClusterVelocityVector" value="false"/>
+              <entry key="showClustermeasuredRadius" value="true"/>
+              <entry key="showPaths" value="false"/>
+              <entry key="smoothIntegral" value="7.071067E-4"/>
+              <entry key="smoothMove" value="false"/>
+              <entry key="smoothPosition" value="0.0014142134"/>
+              <entry key="smoothWeight" value="100.0"/>
+              <entry key="surround" value="5.64"/>
+              <entry key="surroundInhibitionCost" value="1.0"/>
+              <entry key="surroundInhibitionEnabled" value="false"/>
+              <entry key="thresholdEventRatePerPixelForVisibleClusterHz" value="0.29925215"/>
+              <entry key="thresholdMassForVisibleCluster" value="30"/>
+              <entry key="thresholdVelocityForVisibleCluster" value="2.0"/>
+              <entry key="updateClustersOnlyFromEventsNearEdge" value="false"/>
+              <entry key="useEllipticalClusters" value="false"/>
+              <entry key="useEventRatePerPixelForVisibilty" value="true"/>
+              <entry key="useNearestCluster" value="true"/>
+              <entry key="useOffPolarityOnlyEnabled" value="false"/>
+              <entry key="useVelocity" value="true"/>
+              <entry key="vanishingPoint.x" value="NaN"/>
+              <entry key="vanishingPoint.y" value="NaN"/>
+              <entry key="velAngDiffDegToNotMerge" value="0.0"/>
+              <entry key="velocityInitialization" value="Zero"/>
+              <entry key="velocityTauMs" value="270.85074"/>
+              <entry key="velocityVectorScaling" value="1.0905075"/>
+            </map>
+          </node>
+          <node name="RefractoryFilter">
+            <map>
+              <entry key="RefractoryFilter.filterEnabled" value="false"/>
+              <entry key="correlationTimeS" value="0.024389323"/>
+              <entry key="filterEnabled" value="false"/>
+              <entry key="showFilteringStatisticsFontSize" value="68"/>
+            </map>
+            <node name="NoiseFilterControl">
+              <map/>
+            </node>
+          </node>
+          <node name="ResidualSegmenter">
+            <map>
+              <entry key="ResidualSegmenter.filterEnabled" value="false"/>
+            </map>
+          </node>
+          <node name="RotateFilter">
+            <map>
+              <entry key="RotateFilter.filterEnabled" value="false"/>
+              <entry key="filterEnabled" value="false"/>
+              <entry key="invertY" value="true"/>
+            </map>
+          </node>
+          <node name="SpatioTemporalCorrelationFilter">
+            <map>
+              <entry key="SpatioTemporalCorrelationFilter.filterEnabled" value="true"/>
+              <entry key="correlationTimeS" value="0.012009599"/>
+              <entry key="filterEnabled" value="true"/>
+              <entry key="filterHotPixels" value="false"/>
+              <entry key="letFirstEventThrough" value="false"/>
+              <entry key="numMustBeCorrelated" value="3"/>
+              <entry key="showFilteringStatisticsFontSize" value="54"/>
+              <entry key="sigmaDistPixels" value="2"/>
+            </map>
+            <node name="NoiseFilterControl">
+              <map/>
+            </node>
+          </node>
+          <node name="Speedometer">
+            <map>
+              <entry key="endPoint.t" value="4015745"/>
+              <entry key="endPoint.x" value="518"/>
+              <entry key="endPoint.y" value="457"/>
+              <entry key="filterEnabled" value="false"/>
+              <entry key="startPoint.t" value="3795738"/>
+              <entry key="startPoint.x" value="451"/>
+              <entry key="startPoint.y" value="471"/>
+            </map>
+          </node>
+          <node name="Steadicam">
+            <map>
+              <entry key="Steadicam.filterEnabled" value="false"/>
+              <entry key="Steadicam.panTiltEnabled" value="false"/>
+              <entry key="Steadicam.positionComputer" value="VORSensor"/>
+              <entry key="filterEnabled" value="false"/>
+              <entry key="panTiltEnabled" value="false"/>
+              <entry key="positionComputer" value="VORSensor"/>
+            </map>
+          </node>
+          <node name="TimeLapse">
+            <map>
+              <entry key="filterEnabled" value="false"/>
+            </map>
+          </node>
+          <node name="TrackerManager">
+            <map>
+              <entry key="filterEnabled" value="true"/>
+            </map>
+          </node>
+          <node name="TrackerManagerV2">
+            <map>
+              <entry key="TrackerManagerV2.filterEnabled" value="false"/>
+              <entry key="filterEnabled" value="true"/>
+            </map>
+            <node name="LoggingStatePropertyChangeFilter">
+              <map/>
+            </node>
+            <node name="RectangularClusterTracker">
+              <map>
+                <entry key="RectangularClusterTracker.angleFollowsVelLead" value="0.5"/>
+                <entry key="RectangularClusterTracker.angleFollowsVelocity" value="false"/>
+                <entry key="RectangularClusterTracker.aspectRatio" value="0.7711056"/>
+                <entry key="RectangularClusterTracker.clusterLoggingMethod" value="LogFrames"/>
+                <entry key="RectangularClusterTracker.clusterMassDecayTauUs" value="1000000"/>
+                <entry key="RectangularClusterTracker.clusterSize" value="0.068775386"/>
+                <entry key="RectangularClusterTracker.colorClustersDifferentlyEnabled" value="true"/>
+                <entry key="RectangularClusterTracker.dontMergeEver" value="false"/>
+                <entry key="RectangularClusterTracker.dynamicAngleEnabled" value="false"/>
+                <entry key="RectangularClusterTracker.dynamicAspectRatioEnabled" value="false"/>
+                <entry key="RectangularClusterTracker.dynamicSizeEnabled" value="true"/>
+                <entry key="RectangularClusterTracker.ellipticalClusterEdgeThickness" value="0.2"/>
+                <entry key="RectangularClusterTracker.enableClusterExitPurging" value="true"/>
+                <entry key="RectangularClusterTracker.eventRatePerPixelLowpassTauS" value="0.1"/>
+                <entry key="RectangularClusterTracker.filterEnabled" value="false"/>
+                <entry key="RectangularClusterTracker.filterEventsEnabled" value="false"/>
+                <entry key="RectangularClusterTracker.frictionTauMs" value="NaN"/>
+                <entry key="RectangularClusterTracker.growMergedSizeEnabled" value="false"/>
+                <entry key="RectangularClusterTracker.highwayPerspectiveEnabled" value="false"/>
+                <entry key="RectangularClusterTracker.initializeVelocityToAverage" value="false"/>
+                <entry key="RectangularClusterTracker.locationMixingFactor" value="0.2388"/>
+                <entry key="RectangularClusterTracker.maxNumClusters" value="6"/>
+                <entry key="RectangularClusterTracker.maxSizeScaleRatio" value="4.0"/>
+                <entry key="RectangularClusterTracker.mixingFactor" value="0.020000001"/>
+                <entry key="RectangularClusterTracker.mixingFactorInverseWithEventRate" value="true"/>
+                <entry key="RectangularClusterTracker.numEventsStoredInCluster" value="100"/>
+                <entry key="RectangularClusterTracker.pathLength" value="100"/>
+                <entry key="RectangularClusterTracker.pathsEnabled" value="true"/>
+                <entry key="RectangularClusterTracker.purgeIfClusterOverlapsBorder" value="true"/>
+                <entry key="RectangularClusterTracker.showAllClusters" value="false"/>
+                <entry key="RectangularClusterTracker.showClusterEps" value="false"/>
+                <entry key="RectangularClusterTracker.showClusterEpsPerPx" value="false"/>
+                <entry key="RectangularClusterTracker.showClusterMass" value="false"/>
+                <entry key="RectangularClusterTracker.showClusterNumber" value="true"/>
+                <entry key="RectangularClusterTracker.showClusterRadius" value="false"/>
+                <entry key="RectangularClusterTracker.showClusterVelocity" value="false"/>
+                <entry key="RectangularClusterTracker.showClusterVelocityVector" value="true"/>
+                <entry key="RectangularClusterTracker.showPaths" value="true"/>
+                <entry key="RectangularClusterTracker.smoothMove" value="false"/>
+                <entry key="RectangularClusterTracker.surround" value="2.0"/>
+                <entry key="RectangularClusterTracker.surroundInhibitionCost" value="1.0"/>
+                <entry key="RectangularClusterTracker.surroundInhibitionEnabled" value="false"/>
+                <entry key="RectangularClusterTracker.thresholdEventRatePerPixelForVisibleClusterHz" value="0.18581443"/>
+                <entry key="RectangularClusterTracker.thresholdMassForVisibleCluster" value="30"/>
+                <entry key="RectangularClusterTracker.thresholdVelocityForVisibleCluster" value="0.0"/>
+                <entry key="RectangularClusterTracker.updateClustersOnlyFromEventsNearEdge" value="false"/>
+                <entry key="RectangularClusterTracker.useEllipticalClusters" value="false"/>
+                <entry key="RectangularClusterTracker.useEventRatePerPixelForVisibilty" value="true"/>
+                <entry key="RectangularClusterTracker.useNearestCluster" value="true"/>
+                <entry key="RectangularClusterTracker.useOffPolarityOnlyEnabled" value="false"/>
+                <entry key="RectangularClusterTracker.useOnePolarityOnlyEnabled" value="false"/>
+                <entry key="RectangularClusterTracker.useVelocity" value="false"/>
+                <entry key="RectangularClusterTracker.vanishingPoint.x" value="NaN"/>
+                <entry key="RectangularClusterTracker.vanishingPoint.y" value="NaN"/>
+                <entry key="RectangularClusterTracker.velAngDiffDegToNotMerge" value="60.0"/>
+                <entry key="RectangularClusterTracker.velocityInitialization" value="Zero"/>
+                <entry key="RectangularClusterTracker.velocityTauMs" value="100.0"/>
+                <entry key="RectangularClusterTracker.velocityVectorScaling" value="1.0"/>
+                <entry key="RectangularClusterTracker.zoomFactor" value="6.1688356"/>
+                <entry key="RectangularClusterTracker.zoomHUD" value="true"/>
+                <entry key="RectangularClusterTracker.zoomOnTrackedCluster" value="false"/>
+                <entry key="clusterMassDecayTauUs" value="10000"/>
+                <entry key="clusterSize" value="0.15f"/>
+                <entry key="filterEnabled" value="false"/>
+                <entry key="maxNumClusters" value="10"/>
+                <entry key="numEventsStoredInCluster" value="100"/>
+                <entry key="thresholdMassForVisibleCluster" value="30"/>
+                <entry key="vanishingPoint.x" value="NaN"/>
+                <entry key="vanishingPoint.y" value="NaN"/>
+              </map>
+            </node>
+            <node name="TrackerManagerV2">
+              <map>
+                <entry key="RectangularClusterTracker.angleFollowsVelocity" value="false"/>
+                <entry key="RectangularClusterTracker.aspectRatio" value="0.7711056"/>
+                <entry key="RectangularClusterTracker.clusterLoggingMethod" value="LogClusters"/>
+                <entry key="RectangularClusterTracker.clusterMassDecayTauUs" value="10000"/>
+                <entry key="RectangularClusterTracker.clusterSize" value="0.068775386"/>
+                <entry key="RectangularClusterTracker.colorClustersDifferentlyEnabled" value="true"/>
+                <entry key="RectangularClusterTracker.dontMergeEver" value="false"/>
+                <entry key="RectangularClusterTracker.dynamicAngleEnabled" value="false"/>
+                <entry key="RectangularClusterTracker.dynamicAspectRatioEnabled" value="false"/>
+                <entry key="RectangularClusterTracker.dynamicSizeEnabled" value="true"/>
+                <entry key="RectangularClusterTracker.enableClusterExitPurging" value="true"/>
+                <entry key="RectangularClusterTracker.eventRatePerPixelLowpassTauS" value="0.18"/>
+                <entry key="RectangularClusterTracker.filterEnabled" value="true"/>
+                <entry key="RectangularClusterTracker.filterEventsEnabled" value="true"/>
+                <entry key="RectangularClusterTracker.growMergedSizeEnabled" value="true"/>
+                <entry key="RectangularClusterTracker.highwayPerspectiveEnabled" value="false"/>
+                <entry key="RectangularClusterTracker.initializeVelocityToAverage" value="false"/>
+                <entry key="RectangularClusterTracker.locationMixingFactor" value="0.23784104"/>
+                <entry key="RectangularClusterTracker.maxNumClusters" value="11"/>
+                <entry key="RectangularClusterTracker.maxSizeScaleRatio" value="4.1770945"/>
+                <entry key="RectangularClusterTracker.mixingFactor" value="0.020000001"/>
+                <entry key="RectangularClusterTracker.mixingFactorInverseWithEventRate" value="true"/>
+                <entry key="RectangularClusterTracker.numEventsStoredInCluster" value="100"/>
+                <entry key="RectangularClusterTracker.pathsEnabled" value="true"/>
+                <entry key="RectangularClusterTracker.purgeIfClusterOverlapsBorder" value="true"/>
+                <entry key="RectangularClusterTracker.showAllClusters" value="false"/>
+                <entry key="RectangularClusterTracker.showClusterEps" value="false"/>
+                <entry key="RectangularClusterTracker.showClusterEpsPerPx" value="false"/>
+                <entry key="RectangularClusterTracker.showClusterMass" value="false"/>
+                <entry key="RectangularClusterTracker.showClusterNumber" value="true"/>
+                <entry key="RectangularClusterTracker.showClusterRadius" value="false"/>
+                <entry key="RectangularClusterTracker.showClusterVelocity" value="false"/>
+                <entry key="RectangularClusterTracker.showClusterVelocityVector" value="true"/>
+                <entry key="RectangularClusterTracker.showPaths" value="false"/>
+                <entry key="RectangularClusterTracker.smoothMove" value="false"/>
+                <entry key="RectangularClusterTracker.surround" value="5.64"/>
+                <entry key="RectangularClusterTracker.surroundInhibitionCost" value="1.0"/>
+                <entry key="RectangularClusterTracker.surroundInhibitionEnabled" value="false"/>
+                <entry key="RectangularClusterTracker.thresholdEventRatePerPixelForVisibleClusterHz" value="0.18581443"/>
+                <entry key="RectangularClusterTracker.thresholdMassForVisibleCluster" value="30"/>
+                <entry key="RectangularClusterTracker.thresholdVelocityForVisibleCluster" value="2.0"/>
+                <entry key="RectangularClusterTracker.updateClustersOnlyFromEventsNearEdge" value="false"/>
+                <entry key="RectangularClusterTracker.useEllipticalClusters" value="false"/>
+                <entry key="RectangularClusterTracker.useEventRatePerPixelForVisibilty" value="true"/>
+                <entry key="RectangularClusterTracker.useNearestCluster" value="true"/>
+                <entry key="RectangularClusterTracker.useOffPolarityOnlyEnabled" value="false"/>
+                <entry key="RectangularClusterTracker.useVelocity" value="false"/>
+                <entry key="RectangularClusterTracker.vanishingPoint.x" value="NaN"/>
+                <entry key="RectangularClusterTracker.vanishingPoint.y" value="NaN"/>
+                <entry key="RectangularClusterTracker.velAngDiffDegToNotMerge" value="0.0"/>
+                <entry key="RectangularClusterTracker.velocityInitialization" value="Zero"/>
+                <entry key="RectangularClusterTracker.velocityTauMs" value="270.0"/>
+                <entry key="RectangularClusterTracker.velocityVectorScaling" value="1.0905075"/>
+                <entry key="RectangularClusterTracker.zoomFactor" value="6.1688356"/>
+                <entry key="RectangularClusterTracker.zoomOnTrackedCluster" value="false"/>
+                <entry key="angleFollowsVelocity" value="false"/>
+                <entry key="aspectRatio" value="0.73749995"/>
+                <entry key="clusterLoggingMethod" value="LogClusters"/>
+                <entry key="clusterMassDecayTauUs" value="59072"/>
+                <entry key="clusterSize" value="0.04401624"/>
+                <entry key="colorClustersDifferentlyEnabled" value="false"/>
+                <entry key="dontMergeEver" value="false"/>
+                <entry key="dynamicAngleEnabled" value="false"/>
+                <entry key="dynamicAspectRatioEnabled" value="false"/>
+                <entry key="dynamicSizeEnabled" value="true"/>
+                <entry key="ellipticalClusterEdgeThickness" value="0.2"/>
+                <entry key="enableClusterExitPurging" value="false"/>
+                <entry key="eventRatePerPixelLowpassTauS" value="0.18"/>
+                <entry key="filterEnabled" value="false"/>
+                <entry key="filterEventsEnabled" value="true"/>
+                <entry key="growMergedSizeEnabled" value="true"/>
+                <entry key="highwayPerspectiveEnabled" value="false"/>
+                <entry key="initializeVelocityToAverage" value="false"/>
+                <entry key="locationMixingFactor" value="0.025000015"/>
+                <entry key="maxNumClusters" value="8"/>
+                <entry key="maxSizeScaleRatio" value="4.1770945"/>
+                <entry key="mixingFactor" value="0.020000001"/>
+                <entry key="mixingFactorInverseWithEventRate" value="true"/>
+                <entry key="numEventsStoredInCluster" value="100"/>
+                <entry key="pathsEnabled" value="true"/>
+                <entry key="purgeIfClusterOverlapsBorder" value="false"/>
+                <entry key="showAllClusters" value="false"/>
+                <entry key="showClusterEps" value="false"/>
+                <entry key="showClusterEpsPerPx" value="true"/>
+                <entry key="showClusterMass" value="false"/>
+                <entry key="showClusterNumber" value="true"/>
+                <entry key="showClusterRadius" value="false"/>
+                <entry key="showClusterVelocity" value="false"/>
+                <entry key="showClusterVelocityVector" value="false"/>
+                <entry key="showClustermeasuredRadius" value="true"/>
+                <entry key="showPaths" value="false"/>
+                <entry key="smoothIntegral" value="7.071067E-4"/>
+                <entry key="smoothMove" value="false"/>
+                <entry key="smoothPosition" value="0.0014142134"/>
+                <entry key="smoothWeight" value="100.0"/>
+                <entry key="surround" value="5.64"/>
+                <entry key="surroundInhibitionCost" value="1.0"/>
+                <entry key="surroundInhibitionEnabled" value="false"/>
+                <entry key="thresholdEventRatePerPixelForVisibleClusterHz" value="0.29925215"/>
+                <entry key="thresholdMassForVisibleCluster" value="1000"/>
+                <entry key="thresholdVelocityForVisibleCluster" value="2.0"/>
+                <entry key="updateClustersOnlyFromEventsNearEdge" value="false"/>
+                <entry key="useEllipticalClusters" value="false"/>
+                <entry key="useEventRatePerPixelForVisibilty" value="true"/>
+                <entry key="useNearestCluster" value="true"/>
+                <entry key="useOffPolarityOnlyEnabled" value="false"/>
+                <entry key="useVelocity" value="true"/>
+                <entry key="vanishingPoint.x" value="NaN"/>
+                <entry key="vanishingPoint.y" value="NaN"/>
+                <entry key="velAngDiffDegToNotMerge" value="0.0"/>
+                <entry key="velocityInitialization" value="Zero"/>
+                <entry key="velocityTauMs" value="270.85074"/>
+                <entry key="velocityVectorScaling" value="1.0905075"/>
+              </map>
+            </node>
+          </node>
+          <node name="XYTypeFilter">
+            <map>
+              <entry key="XYTypeFilter.filterEnabled" value="false"/>
+              <entry key="filterEnabled" value="false"/>
+            </map>
+            <node name="XYTypeFilter.circularShapeCenterPoint">
+              <map/>
+            </node>
+            <node name="XYTypeFilter.multiSelection">
+              <map/>
+            </node>
+          </node>
+        </node>
+      </node>
+    </node>
+  </root>
+</preferences>

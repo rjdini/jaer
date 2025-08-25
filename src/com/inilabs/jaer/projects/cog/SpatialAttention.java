@@ -131,7 +131,7 @@ public class SpatialAttention {
                     
              //       if (getBestTrackerAgent().getSupportQuality() >= getSupportQualityThreshold()) {
                         // If the agent is good, send its coords as pose to gimbal
-                        log.info("TRACK AGENT--- BestTrackerAgent: {} ", getBestTrackerAgent().getKey() );
+                    log.info("TRACK AGENT--- BestTrackerAgent: {} ", getBestTrackerAgent().getKey() );
                         
                     gimbal.setGimbalPose(getBestTrackerAgent().getAzimuth(), 0f, getBestTrackerAgent().getElevation());
                     

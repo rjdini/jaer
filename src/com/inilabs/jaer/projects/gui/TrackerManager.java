@@ -262,7 +262,7 @@ public class TrackerManager extends EventFilter2DMouseAdaptor implements FrameAn
     
     private AgentDrawable assignTrackerAgentDrawable() {
         if ((trackerAgentDrawable == null ) && ( polarSpaceGUI != null )) {
-            trackerAgentDrawable = new TrackerAgentDrawable(0,0,2000)  ;
+            trackerAgentDrawable = new TrackerAgentDrawable(0,0)  ;
             polarSpaceGUI.getPolarSpaceDisplay().addDrawable(trackerAgentDrawable) ;
         }
         return trackerAgentDrawable ;
