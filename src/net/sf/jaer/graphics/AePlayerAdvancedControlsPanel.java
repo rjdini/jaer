@@ -10,7 +10,11 @@
  */
 package net.sf.jaer.graphics;
 
+import java.awt.Point;
 import java.awt.event.ActionEvent;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.awt.event.MouseWheelEvent;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.util.Hashtable;
@@ -20,7 +24,11 @@ import javax.swing.Action;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPopupMenu;
+import javax.swing.JSlider;
+import javax.swing.plaf.basic.BasicSliderUI;
+import javax.swing.plaf.basic.BasicSliderUI.TrackListener;
 import net.sf.jaer.eventio.AEFileInputStream;
+import net.sf.jaer.eventio.AEFileInputStream.Marks;
 import net.sf.jaer.eventio.AEFileInputStreamInterface;
 import net.sf.jaer.eventio.AEInputStream;
 import net.sf.jaer.graphics.AbstractAEPlayer.PlaybackMode;
@@ -37,9 +45,9 @@ public class AePlayerAdvancedControlsPanel extends javax.swing.JPanel implements
     private final AEViewer aeViewer;
     MoreLessAction moreLessAction = new MoreLessAction();
     private volatile boolean sliderDontProcess = false; // semaphore used to prevent slider actions when slider is set programmatically
-    private final Hashtable<Integer, JLabel> markTable = new Hashtable<Integer, JLabel>(); // lookup from slider position to label, given to slider to draw labels at markers
-    private final JLabel markInLabel, markOutLabel;
-    private Integer markInPosition = null, markOutPosition = null; // store keys in markTable so we can remove them
+    private final Hashtable<Integer, JLabel> marksTable = new Hashtable<Integer, JLabel>(); // lookup from slider position to label, given to slider to draw labels at markers
+    private final JLabel markInLabel, markOutLabel, markerLabel;
+    private Integer markInPosition = null, markOutPosition = null, markPosition = null; // store keys in markTable so we can remove them
     private JPopupMenu markerPopupMenu = null;
 
     /**
@@ -50,17 +58,44 @@ public class AePlayerAdvancedControlsPanel extends javax.swing.JPanel implements
     public AePlayerAdvancedControlsPanel(AEViewer viewer) {
         this.markOutLabel = new JLabel("]");
         this.markInLabel = new JLabel("[");
+        this.markerLabel = new JLabel("^");
         markInLabel.setToolTipText("IN marker");
         markOutLabel.setToolTipText("OUT marker");
+        markerLabel.setToolTipText("Marker");
         this.aeViewer = viewer;
         this.aePlayer = viewer.getAePlayer();
         initComponents();
         setAePlayer(viewer.getAePlayer()); // TODO double set needed because aePlayer is needed in initComponents and we still need to do more component binding in setAePlayer
         moreControlsPanel.setVisible(false);
         markerPopupMenu = new JPopupMenu("Markers");
+        markerPopupMenu.add(aePlayer.pausePlayAction);
         markerPopupMenu.add(aePlayer.markInAction);
         markerPopupMenu.add(aePlayer.markOutAction);
+        markerPopupMenu.add(aePlayer.toggleMarkerAction);
         markerPopupMenu.add(aePlayer.clearMarksAction);
+        // https://stackoverflow.com/questions/518471/jslider-question-position-after-leftclick
+        MouseListener[] listeners = playerSlider.getMouseListeners();
+        for (MouseListener l : listeners) {
+            removeMouseListener(l); // remove UI-installed TrackListener
+        }
+        final BasicSliderUI ui = (BasicSliderUI) playerSlider.getUI();
+        BasicSliderUI.TrackListener tl = ui.new TrackListener() {
+            // this is where we jump to absolute value of click
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                Point p = e.getPoint();
+                int value = ui.valueForXPosition(p.x);
+
+                playerSlider.setValue(value);
+            }
+
+            // disable check that will invoke scrollDueToClickInTrack
+            @Override
+            public boolean shouldScroll(int dir) {
+                return false;
+            }
+        };
+        playerSlider.addMouseListener(tl);
         playerSlider.setComponentPopupMenu(markerPopupMenu);
 //        playerSlider.setExtent(100);
         repeatPlaybackButton.setSelected(aePlayer.isRepeat());
@@ -112,7 +147,7 @@ public class AePlayerAdvancedControlsPanel extends javax.swing.JPanel implements
                 } else if (evt.getPropertyName().equals(AEInputStream.EVENT_MARK_IN_SET)) {
                     synchronized (aePlayer) {
                         if (markInPosition != null) {
-                            markTable.remove(markInPosition);
+                            marksTable.remove(markInPosition);
                         }
                         if (evt.getSource() instanceof AEPlayer) {
                             sliderDontProcess = true;
@@ -122,32 +157,52 @@ public class AePlayerAdvancedControlsPanel extends javax.swing.JPanel implements
                         }
                         {
                             markInPosition = playerSlider.getValue();
-                            markTable.put(markInPosition, markInLabel);
-                            playerSlider.setLabelTable(markTable);
+                            marksTable.put(markInPosition, markInLabel);
+                            playerSlider.setLabelTable(marksTable);
                             playerSlider.setPaintLabels(true);
+                            playerSlider.repaint();
                         }
                     }
                 } else if (evt.getPropertyName().equals(AEInputStream.EVENT_MARK_OUT_SET)) {
                     synchronized (aePlayer) {
                         if (markOutPosition != null) {
-                            markTable.remove(markOutPosition);
+                            marksTable.remove(markOutPosition);
                         }
-                         if (evt.getSource() instanceof AEPlayer) {
+                        if (evt.getSource() instanceof AEPlayer) {
                             sliderDontProcess = true;
                             long pos = (long) evt.getNewValue();
                             playerSlider.setValue(Math.round((float) pos / aePlayer.getAEInputStream().size() * playerSlider.getMaximum()));
-
                         }
                         markOutPosition = playerSlider.getValue();
-                        markTable.put(markOutPosition, markOutLabel);
-                        playerSlider.setLabelTable(markTable);
+                        marksTable.put(markOutPosition, markOutLabel);
+                        playerSlider.setLabelTable(marksTable);
                         playerSlider.setPaintLabels(true);
+                        playerSlider.repaint();
+                    }
+                } else if (evt.getPropertyName().equals(AEInputStream.EVENT_MARK_TOGGLED)) {
+                    synchronized (aePlayer) {
+                        Object oldLocation=evt.getOldValue(), newLocation=evt.getNewValue();
+                        boolean added=newLocation!=null;
+                        markPosition = convertToSlider(added?(long)newLocation:(long)oldLocation);
+                        if (marksTable.get(markPosition) != null) {
+                            marksTable.remove(markPosition);
+                        } else {
+                            marksTable.put(markPosition, markerLabel);
+                        }
+                        playerSlider.setLabelTable(marksTable);
+                        playerSlider.setPaintLabels(true);
+                        playerSlider.repaint();
                     }
                 } else if (evt.getPropertyName().equals(AEInputStream.EVENT_MARKS_CLEARED)) {
                     playerSlider.setPaintLabels(false);
-                    markTable.clear();
+                    marksTable.clear();
                     markInPosition = null;
                     markOutPosition = null;
+                    playerSlider.repaint();
+                } else if (evt.getPropertyName().equals(AEInputStream.EVENT_MARKS_LOADED)) {
+                    AEFileInputStream.Marks marks = (Marks) evt.getNewValue();
+                    setMarks(marks);
+                    playerSlider.repaint();
                 }
             } else if (evt.getPropertyName().equals(AbstractAEPlayer.EVENT_TIMESLICE_US)) { // TODO replace with public static Sttring
                 timesliceSpinner.setValue(aePlayer.getTimesliceUs());
@@ -222,9 +277,29 @@ public class AePlayerAdvancedControlsPanel extends javax.swing.JPanel implements
         clearMarksB.setAction(aePlayer.clearMarksAction);
         setInB.setAction(aePlayer.markInAction);
         setOutB.setAction(aePlayer.markOutAction);
+        toggleMarkerB.setAction(aePlayer.toggleMarkerAction);
 
         showMoreControlsButton.setAction(moreLessAction);
 
+    }
+
+    public void setMarks(Marks marks) {
+        marksTable.clear();
+        markInPosition = null;
+        markOutPosition = null;
+        markInPosition = convertToSlider(marks.markIn);
+        markOutPosition = convertToSlider(marks.markOut);
+        marksTable.put(markOutPosition, markOutLabel);
+        marksTable.put(markInPosition, markInLabel);
+        for (long pos : marks.otherMarks) {
+            marksTable.put(convertToSlider(pos), markerLabel);
+        }
+        playerSlider.setLabelTable(marksTable);
+        playerSlider.setPaintLabels(true);
+    }
+
+    private Integer convertToSlider(long pos) {
+        return Math.round((float) pos / aePlayer.getAEInputStream().size() * playerSlider.getMaximum());
     }
 
     /**
@@ -275,6 +350,7 @@ public class AePlayerAdvancedControlsPanel extends javax.swing.JPanel implements
         clearMarksB = new javax.swing.JButton();
         setInB = new javax.swing.JButton();
         setOutB = new javax.swing.JButton();
+        toggleMarkerB = new javax.swing.JButton();
         repeatPlaybackButton = new javax.swing.JToggleButton();
         jPanel3 = new javax.swing.JPanel();
         playerStatusPanel = new javax.swing.JPanel();
@@ -310,6 +386,11 @@ public class AePlayerAdvancedControlsPanel extends javax.swing.JPanel implements
         playerSlider.addChangeListener(new javax.swing.event.ChangeListener() {
             public void stateChanged(javax.swing.event.ChangeEvent evt) {
                 playerSliderStateChanged(evt);
+            }
+        });
+        playerSlider.addMouseWheelListener(new java.awt.event.MouseWheelListener() {
+            public void mouseWheelMoved(java.awt.event.MouseWheelEvent evt) {
+                playerSliderMouseWheelMoved(evt);
             }
         });
         playerSlider.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -428,6 +509,13 @@ public class AePlayerAdvancedControlsPanel extends javax.swing.JPanel implements
         setOutB.setIconTextGap(2);
         setOutB.setMargin(new java.awt.Insets(2, 5, 2, 5));
         playerControlPanel.add(setOutB);
+
+        toggleMarkerB.setAction(aePlayer.markOutAction);
+        toggleMarkerB.setIcon(new javax.swing.ImageIcon(getClass().getResource("/net/sf/jaer/graphics/icons/ToggleMarker16.gif"))); // NOI18N
+        toggleMarkerB.setHideActionText(true);
+        toggleMarkerB.setIconTextGap(2);
+        toggleMarkerB.setMargin(new java.awt.Insets(2, 5, 2, 5));
+        playerControlPanel.add(toggleMarkerB);
 
         repeatPlaybackButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/net/sf/jaer/graphics/icons/Repeat.gif"))); // NOI18N
         repeatPlaybackButton.setSelected(true);
@@ -752,6 +840,11 @@ public class AePlayerAdvancedControlsPanel extends javax.swing.JPanel implements
         aePlayer.setRepeat(repeatPlaybackButton.isSelected());
     }//GEN-LAST:event_repeatPlaybackButtonActionPerformed
 
+    private void playerSliderMouseWheelMoved(java.awt.event.MouseWheelEvent evt) {//GEN-FIRST:event_playerSliderMouseWheelMoved
+//       log.info(String.format("Scrolling %,d clicks",evt.getWheelRotation()));
+       playerSlider.setValue(playerSlider.getValue()+evt.getWheelRotation());
+    }//GEN-LAST:event_playerSliderMouseWheelMoved
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.ButtonGroup buttonGroup1;
     private javax.swing.JButton clearMarksB;
@@ -790,5 +883,6 @@ public class AePlayerAdvancedControlsPanel extends javax.swing.JPanel implements
     private javax.swing.JTextField timeField;
     private javax.swing.JLabel timeFieldLabel;
     private javax.swing.JSpinner timesliceSpinner;
+    private javax.swing.JButton toggleMarkerB;
     // End of variables declaration//GEN-END:variables
 }

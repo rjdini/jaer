@@ -83,7 +83,7 @@ public class JAERViewer {
     private boolean syncEnabled = prefs.getBoolean("JAERViewer.syncEnabled", false); // default false so that all viewers are independent
     ArrayList<AbstractButton> syncEnableButtons = new ArrayList<AbstractButton>(); // list of all viewer sync enable buttons, used here to change boolean state because this is not property of Action that buttons understand
     private ToggleSyncEnabledAction toggleSyncEnabledAction = new ToggleSyncEnabledAction();
-
+    
     public ToggleSyncEnabledAction getToggleSyncEnabledAction() {
         return toggleSyncEnabledAction;
     }
@@ -128,7 +128,7 @@ public class JAERViewer {
 //        GLProfile.initSingleton(); // recommneded by https://sites.google.com/site/justinscsstuff/jogl-tutorial-2 especially for linux systems
 //        final GLCapabilities caps = new GLCapabilities(GLProfile.getDefault());
 //        final GLProfile glp = GLProfile.getMaximum(true);// FixedFunc(true);
-////        final GLProfile glp = caps.getGLProfile();
+        ////        final GLProfile glp = caps.getGLProfile();
 //        final boolean createNewDevice = true; // use 'own' display device!
 //        sharedDrawable = GLDrawableFactory.getFactory(glp).createDummyAutoDrawable(null, createNewDevice, caps, null);
 //        sharedDrawable.display(); // triggers GLContext object creation and native realization. sharedDrawable is a static variable that can be used by all AEViewers and file preview dialogs
@@ -157,8 +157,11 @@ public class JAERViewer {
         Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
             public void run() {
+                System.out.println("JAERViewer shutdown hook - start of shutdown");
+                System.out.flush();
                 if ((viewers != null) && !viewers.isEmpty()) {
-                    System.out.println("JAERViewer shutdown hook - saving list of AEViewer chip classes");
+                    System.out.println("JAERViewer shutdown hook - shutting down AEViewers");
+                    System.out.flush();
                     try {
 
                         ArrayList<String> viewerChipClassNames = new ArrayList<String>();
@@ -180,7 +183,7 @@ public class JAERViewer {
                     } catch (IllegalArgumentException e2) {
                         System.err.println("tried to store too many classes in last chip classes? " + e2.toString());
                     } catch (BackingStoreException ex) {
-                        System.err.println("could not flush the preferences holding AEChip class names: "+ex.toString());
+                        System.err.println("could not flush the preferences holding AEChip class names: " + ex.toString());
                     }
                     System.out.println("JAERViewer shutdown hook - saving possible open data logging");
                     try {
@@ -203,6 +206,7 @@ public class JAERViewer {
                     }
                 }
                 System.out.println("JAERViewer shutdown hook - end of shutdown");
+                System.out.flush();
 
             }
         });
@@ -578,6 +582,19 @@ public class JAERViewer {
                 v.getPlayerControls().setAePlayer(p);
             }
         }
+    }
+    
+    /** Returns true if any AEViewer (or its HardwareConfiguration or FilterSetting) windows are active, i.e. has focus
+     * 
+     * @return true if some jAER window has focus
+     */
+    public boolean isAnyWindowActive(){
+        for(AEViewer v:viewers){
+            if(v.isAnyWindowActive()){
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

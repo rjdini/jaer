@@ -4,6 +4,7 @@
 package net.sf.jaer.eventprocessing.filter;
 
 import java.beans.PropertyChangeEvent;
+import static java.lang.Math.random;
 import java.util.Arrays;
 import java.util.Random;
 
@@ -27,8 +28,8 @@ import net.sf.jaer.util.RemoteControlCommand;
  * @author Tobi Delbruck and Shasha Guo, with discussion with Moritz Milde, Dave
  * Karpul, Elisabetta Chicca, Chiara Bartolozzi Telluride 2017
  */
-@Description("Denoises uncorrelated noise events based on work with Shasha Guo, from earlier Telluride 2017  discussions with Moritz Milde, Dave Karpul, Elisabetta\n"
-        + " * Chicca, and Chiara Bartolozzi, later with Rui Graca, Brian McReynolds")
+@Description("<html>Denoises uncorrelated noise events by multiple events in spatiotemporal neighborhood."
+        + "<p>Published in Guo & Delbruck, T-PAMI 2022 <a href=\"http://dx.doi.org/10.1109/TPAMI.2022.3152999\">10.1109/TPAMI.2022.3152999</a>")
 @DevelopmentStatus(DevelopmentStatus.Status.Stable)
 public class SpatioTemporalCorrelationFilter extends AbstractNoiseFilter {
 
@@ -39,7 +40,7 @@ public class SpatioTemporalCorrelationFilter extends AbstractNoiseFilter {
     private boolean filterAlternativePolarityShotNoiseEnabled = getBoolean("filterAlternativePolarityShotNoiseEnabled", false);
 //    protected boolean favorLines = getBoolean("favorLines", false);
     protected float shotNoiseCorrelationTimeS = getFloat("shotNoiseCorrelationTimeS", 1e-3f);
-    private int numShotNoiseTests = 0, numAlternatingPolarityShotNoiseEventsFilteredOut = 0;
+    protected int numShotNoiseTests = 0, numAlternatingPolarityShotNoiseEventsFilteredOut = 0;
 
     protected int sxm1; // size of chip minus 1
     protected int sym1;
@@ -78,158 +79,81 @@ public class SpatioTemporalCorrelationFilter extends AbstractNoiseFilter {
         ssy = sym1 >> subsampleBy;
         // for each event only keep it if it is within dt of the last time
         // an event happened in the direct neighborhood
-        final boolean record = recordFilteredOutEvents; // to speed up loop, maybe
         final boolean fhp = filterHotPixels;
         final NnbRange nnbRange = new NnbRange();
-        
-        final boolean hasPolarites=in.getEventPrototype() instanceof PolarityEvent;
 
-        if (record) { // branch here to save a tiny bit if not instrumenting denoising
-            for (BasicEvent e : in) {
-                if (e == null) {
-                    continue;
-                }
-                // comment out to support special "noise" events that are labeled special for denoising study
-//                if (e.isSpecial()) {
-//                    continue;
-//                }
-                totalEventCount++;
-                final int ts = e.timestamp;
-                final int x = (e.x >> subsampleBy), y = (e.y >> subsampleBy); // subsampling address
-                if ((x < 0) || (x > ssx) || (y < 0) || (y > ssy)) { // out of bounds, discard (maybe bad USB or something)
-                    filterOut(e);
-                    continue;
-                }
-                if (timestampImage[x][y] == DEFAULT_TIMESTAMP) {
-                    storeTimestampPolarity(x, y, e);
-                    if (letFirstEventThrough) {
-                        filterIn(e);
-                        continue;
-                    } else {
-                        filterOut(e);
-                        continue;
-                    }
-                }
-
-                // finally the real denoising starts here
-                int ncorrelated = 0;
-                byte nnb = 0;
-                int bit = 0;
-                nnbRange.compute(x, y, ssx, ssy);
-                outerloop:
-                for (int xx = nnbRange.x0; xx <= nnbRange.x1; xx++) {
-                    final int[] col = timestampImage[xx];
-                    final byte [] polCol=polImage[xx];
-                    for (int yy = nnbRange.y0; yy <= nnbRange.y1; yy++) {
-                        if (fhp && xx == x && yy == y) {
-                            continue; // like BAF, don't correlate with ourself
-                        }
-                        final int lastT = col[yy];
-                        final int deltaT = (ts - lastT); // note deltaT will be very negative for DEFAULT_TIMESTAMP because of overflow
-
-                        boolean occupied = false;
-                        if (deltaT < dt && lastT != DEFAULT_TIMESTAMP) { // ignore correlations for DEFAULT_TIMESTAMP that are neighbors which never got event so far
-                            if (!polaritiesMustMatch  || !hasPolarites) {
-                                ncorrelated++;
-                                occupied = true;
-                            } else {
-                                PolarityEvent pe=(PolarityEvent)e;
-                                if(pe.getPolaritySignum()==polCol[yy]){
-                                    ncorrelated++;
-                                    occupied=true;
-                                }
-                            }
-                        }
-                        if (occupied) {
-                            // nnb bits are like this
-                            // 0 3 5
-                            // 1 x 6
-                            // 2 4 7
-                            nnb |= (0xff & (1 << bit));
-                        }
-                        bit++;
-                    }
-                }
-                if (ncorrelated < numMustBeCorrelated) {
-                    filterOut(e);
-                } else {
-                    // correlated, but might be shot noise event with opposite polarity to recent event from this same pixel
-                    if (testFilterOutShotNoiseOppositePolarity(x, y, e)) {
-                        filterOut(e);
-                    } else {
-                        filterIn(e);
-                    }
-                }
-                storeTimestampPolarity(x, y, e);
-            } // event packet loop
-        } else { // not keep stats
-            for (BasicEvent e : in) {
-                if (e == null) {
-                    continue;
-                }
-//                if (e.isSpecial()) {
-//                    continue;
-//                }
-                totalEventCount++;
-                int ts = e.timestamp;
-                final int x = (e.x >> subsampleBy), y = (e.y >> subsampleBy); // subsampling address
-                if ((x < 0) || (x > ssx) || (y < 0) || (y > ssy)) { // out of bounds, discard (maybe bad USB or something)
-                    filterOut(e);
-                    continue;
-                }
-                if (timestampImage[x][y] == DEFAULT_TIMESTAMP) {
-                    storeTimestampPolarity(x, y, e);
-                    if (letFirstEventThrough) {
-                        filterIn(e);
-                        continue;
-                    } else {
-                        filterOut(e);
-                        continue;
-                    }
-                }
-
-                // finally the real denoising starts here
-                int ncorrelated = 0;
-                nnbRange.compute(x, y, ssx, ssy);
-                outerloop:
-                for (int xx = nnbRange.x0; xx <= nnbRange.x1; xx++) {
-                    final int[] col = timestampImage[xx];
-                    final byte [] polCol=polImage[xx];
-                    for (int yy = nnbRange.y0; yy <= nnbRange.y1; yy++) {
-                        if (fhp && xx == x && yy == y) {
-                            continue; // like BAF, don't correlate with ourself
-                        }
-                        final int lastT = col[yy];
-                        final int deltaT = (ts - lastT); // note deltaT will be very negative for DEFAULT_TIMESTAMP because of overflow
-
-                        if (deltaT < dt && lastT != DEFAULT_TIMESTAMP) { // ignore correlations for DEFAULT_TIMESTAMP that are neighbors which never got event so far
-                            if (!polaritiesMustMatch  || !hasPolarites) {
-                                ncorrelated++;
-                            } else {
-                                PolarityEvent pe=(PolarityEvent)e;
-                                if(pe.getPolaritySignum()==polCol[yy]){
-                                    ncorrelated++;
-                                }
-                            }
-                            if (ncorrelated >= numMustBeCorrelated) {
-                                break outerloop; // csn stop checking now
-                            }
-                        }
-                       
-                    }
-                }
-                if (ncorrelated < numMustBeCorrelated) {
-                    filterOut(e);
-                } else {
-                    if (testFilterOutShotNoiseOppositePolarity(x, y, e)) {
-                        filterOut(e);
-                    } else {
-                        filterIn(e);
-                    }
-                }
-                storeTimestampPolarity(x, y, e);
+        final boolean hasPolarites = in.getEventPrototype() instanceof PolarityEvent;
+        for (BasicEvent e : in) {
+            if (e == null) {
+                continue;
             }
+//                if (e.isSpecial()) {
+//                    continue;
+//                }
+            totalEventCount++;
+            int ts = e.timestamp;
+            final int x = (e.x >> subsampleBy), y = (e.y >> subsampleBy); // subsampling address
+            if ((x < 0) || (x > ssx) || (y < 0) || (y > ssy)) { // out of bounds, discard (maybe bad USB or something)
+                filterOut(e);
+                continue;
+            }
+            if (timestampImage[x][y] == DEFAULT_TIMESTAMP) {
+                storeTimestampPolarity(x, y, e);
+                if (letFirstEventThrough) {
+                    filterIn(e);
+                    continue;
+                } else {
+                    filterOut(e);
+                    continue;
+                }
+            }
+
+            // finally the real denoising starts here
+            int ncorrelated = 0;
+            nnbRange.compute(x, y, ssx, ssy);
+            outerloop:
+            for (int xx = nnbRange.x0; xx <= nnbRange.x1; xx++) {
+                final int[] col = timestampImage[xx];
+                final byte[] polCol = polImage[xx];
+                for (int yy = nnbRange.y0; yy <= nnbRange.y1; yy++) {
+                    if (fhp && xx == x && yy == y) {
+                        continue; // like BAF, don't correlate with ourself. Makes no difference if polaritiesMustMatch because shot noise events almost never follow each other with same polarity
+                    }
+                    final int lastT = col[yy];
+                    final int deltaT = (ts - lastT); // note deltaT will be very negative for DEFAULT_TIMESTAMP because of overflow
+
+                    if (deltaT < dt && lastT != DEFAULT_TIMESTAMP) { // ignore correlations for DEFAULT_TIMESTAMP that are neighbors which never got event so far
+                        if (!polaritiesMustMatch || !hasPolarites) {
+                            ncorrelated++;
+                        } else {
+                            PolarityEvent pe = (PolarityEvent) e;
+                            if (pe.getPolaritySignum() == polCol[yy]) {
+                                ncorrelated++;
+                            }
+                        }
+                        if (ncorrelated >= numMustBeCorrelated) {
+                            break outerloop; // csn stop checking now
+                        }
+                    }
+
+                }
+            }
+            if (ncorrelated < numMustBeCorrelated) {
+                filterOut(e);
+            } else {
+                if (testIsShotNoiseOppositePolarity(x, y, e)) {
+                    filterOut(e);
+                } else {
+                    filterIn(e);
+                }
+            }
+
+            storeTimestampPolarity(x, y, e);
         }
+        // debug SignalNoisePacket
+//        if (in instanceof SignalNoisePacket signalNoisePacket) {
+//            signalNoisePacket.countClassifications(false);
+//        }
         getNoiseFilterControl().maybePerformControl(in);
         return in;
     }
@@ -246,7 +170,7 @@ public class SpatioTemporalCorrelationFilter extends AbstractNoiseFilter {
         super.resetFilter();
 //        log.info("resetting SpatioTemporalCorrelationFilter");
         if (timestampImage == null) {
-            log.warning("tried to clear lastTimesMap but it is null");
+//            log.warning("tried to clear lastTimesMap but it is null");
             return;
         }
         for (int[] arrayRow : timestampImage) {
@@ -278,8 +202,8 @@ public class SpatioTemporalCorrelationFilter extends AbstractNoiseFilter {
     }
 
     /**
-     * Fills timestampImage with waiting times drawn from Poisson process with
-     * rate noiseRateHz
+     * Fills timestampImage and polImage with waiting times drawn from Poisson
+     * process with rate noiseRateHz
      *
      * @param noiseRateHz rate in Hz
      * @param lastTimestampUs the last timestamp; waiting times are created
@@ -287,15 +211,7 @@ public class SpatioTemporalCorrelationFilter extends AbstractNoiseFilter {
      */
     @Override
     public void initializeLastTimesMapForNoiseRate(float noiseRateHz, int lastTimestampUs) {
-        Random random = new Random();
-        for (final int[] arrayRow : timestampImage) {
-            for (int i = 0; i < arrayRow.length; i++) {
-                final double p = random.nextDouble();
-                final double t = -noiseRateHz * Math.log(1 - p);
-                final int tUs = (int) (1000000 * t);
-                arrayRow[i] = lastTimestampUs - tUs;
-            }
-        }
+        fill2dTimestampAndPolarityImagesWithNoiseEvents(noiseRateHz, lastTimestampUs, timestampImage, polImage);
     }
 
     // </editor-fold>
@@ -325,6 +241,7 @@ public class SpatioTemporalCorrelationFilter extends AbstractNoiseFilter {
      * @param numMustBeCorrelated the numMustBeCorrelated to set
      */
     public void setNumMustBeCorrelated(int numMustBeCorrelated) {
+        int old = this.numMustBeCorrelated;
         if (numMustBeCorrelated < 1) {
             numMustBeCorrelated = 1;
         } else if (numMustBeCorrelated > getNumNeighbors()) {
@@ -332,7 +249,7 @@ public class SpatioTemporalCorrelationFilter extends AbstractNoiseFilter {
         }
         putInt("numMustBeCorrelated", numMustBeCorrelated);
         this.numMustBeCorrelated = numMustBeCorrelated;
-        getSupport().firePropertyChange("numMustBeCorrelated", this.numMustBeCorrelated, numMustBeCorrelated);
+        getSupport().firePropertyChange("numMustBeCorrelated", old, this.numMustBeCorrelated);
     }
 
     @Override
@@ -381,7 +298,7 @@ public class SpatioTemporalCorrelationFilter extends AbstractNoiseFilter {
             String s = super.infoString() + String.format(" k=%d onOffShot=%s onOffFilt=%6.1f", numMustBeCorrelated, filterAlternativePolarityShotNoiseEnabled, shotFilteredOut);
             return s;
         } else {
-            return super.infoString() + String.format(" k=%d", numMustBeCorrelated);
+            return super.infoString() + String.format(" k=%d usePol=%s", numMustBeCorrelated, isPolaritiesMustMatch());
         }
     }
 
@@ -395,7 +312,7 @@ public class SpatioTemporalCorrelationFilter extends AbstractNoiseFilter {
      *
      * @return true if noise event, false if signal
      */
-    protected boolean testFilterOutShotNoiseOppositePolarity(int x, int y, BasicEvent e) {
+    protected boolean testIsShotNoiseOppositePolarity(int x, int y, BasicEvent e) {
         if (!filterAlternativePolarityShotNoiseEnabled) {
             return false;
         }

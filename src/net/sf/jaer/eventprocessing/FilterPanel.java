@@ -5,9 +5,11 @@
  */
 package net.sf.jaer.eventprocessing;
 
+import com.sun.java.accessibility.util.AWTEventMonitor;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
+import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridLayout;
@@ -18,11 +20,15 @@ import java.awt.Toolkit;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ContainerEvent;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.awt.geom.Point2D;
 import java.beans.BeanInfo;
 import java.beans.IntrospectionException;
@@ -35,21 +41,27 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.Type;
 import java.text.NumberFormat;
 import java.text.ParseException;
-import java.util.AbstractList;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.AbstractAction;
 
 import javax.swing.AbstractButton;
+import static javax.swing.Action.ACCELERATOR_KEY;
+import static javax.swing.Action.NAME;
+import static javax.swing.Action.SELECTED_KEY;
+import static javax.swing.Action.SHORT_DESCRIPTION;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -60,16 +72,17 @@ import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
-import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JSlider;
 import javax.swing.JTextField;
 import javax.swing.JToggleButton;
+import javax.swing.KeyStroke;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.ToolTipManager;
 import javax.swing.border.Border;
+import javax.swing.border.LineBorder;
 import javax.swing.border.TitledBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
@@ -77,6 +90,7 @@ import javax.swing.event.UndoableEditListener;
 import javax.swing.undo.StateEdit;
 import javax.swing.undo.StateEditable;
 import javax.swing.undo.UndoableEditSupport;
+import net.sf.jaer.Description;
 import net.sf.jaer.Preferred;
 import net.sf.jaer.eventprocessing.EventFilter.PrefsKeyClassValueDefault;
 import static net.sf.jaer.eventprocessing.FilterFrame.prefs;
@@ -207,19 +221,21 @@ import net.sf.jaer.util.XMLFileFilter;
  * setPropertyTooltip(tim,"dtRejectThreshold", "reject delta times more than this time in us to reduce effect of very old events");
  * setPropertyTooltip("multiOriOutputEnabled", "Enables multiple event output for all events that pass test");
  * </pre>
- * 
+ *
  * <strong>
- *Preferred parameters.</strong>
+ * Preferred parameters.</strong>
  * <p>
- * Mark a field or get or set method with the @Preferred annotation to show the property in bold and enable it to be shown in the Simple view.
- * Search for usage of @Preferred to see how to use this.
+ * Mark a field or get or set method with the @Preferred annotation to show the
+ * property in bold and enable it to be shown in the Simple view. Search for
+ * usage of @Preferred to see how to use this.
  * </p>
- * 
+ *
  * <strong>
  * Enums and ComboBoxModels.</strong>
  * <p>
- * To show ComboBox for either enum or ComboBox model, define get and set methods for them.
- * See NoiseTesterFilter for how to use a ComboBoxModel for classes.
+ * To show ComboBox for either enum or ComboBox model, define get and set
+ * methods for them. See NoiseTesterFilter for how to use a ComboBoxModel for
+ * classes.
  * </p>
  *
  *
@@ -260,11 +276,11 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
     /**
      * maps from key group name string to the panel holding the properties
      */
-    private final HashMap<String, Container> groupContainerMap = new HashMap<>();
+    private final HashMap<String, GroupPanel> groupName2GroupPanelMap = new HashMap<>();
     /**
      * Maps from property name to the group container panel holding the property
      */
-    private final HashMap<String, Container> propertyToGroupPanelMap = new HashMap<>();
+    private final HashMap<String, GroupPanel> propName2GroupPanelMap = new HashMap<>();
     /**
      * Set of all property groups that have at least one item in them
      */
@@ -278,11 +294,11 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
     /**
      * Map from property name to its control
      */
-    private final HashMap<String, MyControl> propertyControlMap = new HashMap();
-    private JComponent ungroupedControls = null;
-    private float DEFAULT_REAL_VALUE = 0.01f; // value jumped to from zero on key or wheel up
+    private final HashMap<String, MyControl> propName2MyControlMap = new HashMap();
+    private GroupPanel ungroupedControlsGroupPanel = null;
+    private final float DEFAULT_REAL_VALUE = 0.01f; // value jumped to from zero on key or wheel up
     ArrayList<AbstractButton> doButList = new ArrayList();
-    MyContainer butPanel = null;
+    ButtonPanel butPanel = null;
 
     /**
      * Flag to show simple view of only preferred properties
@@ -309,7 +325,7 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
      * Flag setUndoableState by FilterFrame that says only show the filtered
      * property
      */
-    private boolean hideOthers = false;
+    private boolean hideOthers = true;
 
     /**
      * Creates new form FilterPanel
@@ -372,30 +388,25 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
 //            log.warning("controls already has "+propertyControlMap.get(propertyName));
 //        }
         if (!getFilter().hasPropertyGroups()) {
-            ungroupedControls.add(comp);
+            ungroupedControlsGroupPanel.add(comp);
             controls.add(comp);
-            propertyControlMap.put(propertyName, comp);
+            propName2MyControlMap.put(propertyName, comp);
+            propName2GroupPanelMap.put(propertyName, ungroupedControlsGroupPanel);
             return;
         }
         String groupName = getFilter().getPropertyGroup(propertyName);
         if (groupName != null) {
-            Container container = groupContainerMap.get(groupName);
-//            comp.setAlignmentX(Component.LEFT_ALIGNMENT);
-//            if(inherited){
-//                JPanel inherPan=new JPanel();
-//                inherPan.setBorder(BorderFactory.createLineBorder(Color.yellow) );
-//                inherPan.add(comp,BorderLayout.WEST);
-//                container.add(inherPan);
-//            }else{
+            GroupPanel container = groupName2GroupPanelMap.get(groupName);
             container.add(comp);
             populatedGroupSet.add(groupName); // add to list of populated groups
-            propertyToGroupPanelMap.put(propertyName, container);
+            propName2GroupPanelMap.put(propertyName, container);
 //            }
         } else {
-            ungroupedControls.add(comp);
+            ungroupedControlsGroupPanel.add(comp);
+            propName2GroupPanelMap.put(propertyName, ungroupedControlsGroupPanel);
         }
         controls.add(comp);
-        propertyControlMap.put(propertyName, comp);
+        propName2MyControlMap.put(propertyName, comp);
     }
 
     private void clearHighlights() {
@@ -419,7 +430,7 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
      * @return the panel or null if none
      */
     private Container getGroupPanel(String propertyName) {
-        return propertyToGroupPanelMap.get(propertyName);
+        return propName2GroupPanelMap.get(propertyName);
     }
 
     /**
@@ -438,23 +449,43 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         for (Component c : controls) {
             remove(c);
         }
-
+        controls.clear();
     }
 
     private void buildPanel() {
         addIntrospectedControls();
         clearHighlights();
         highlightNonDefaultProperties();
+        if (getFilterFrame() != null) {
+            getFilterFrame().pack();
+        }
+        getFilter().initGUI();
     }
 
     private void highlightNonDefaultProperties() {
         HashMap<String, PrefsKeyClassValueDefault> prefsMap = getFilter().getNonDefaultProperties();
         for (var e : prefsMap.entrySet()) {
-            MyControl c = propertyControlMap.get(e.getValue().key());
+            MyControl c = propName2MyControlMap.get(e.getValue().key());
             if (c != null) {
                 c.highlightModified();
             }
         }
+    }
+
+    private String splitCamelCase(String s) {
+        String delim = "(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])";
+        String[] words = s.splitWithDelimiters(delim, 0);
+        StringBuilder s1 = new StringBuilder();
+        for (String w : words) {
+            if (w.isEmpty()) {
+                s1.append(" ");
+            } else {
+                s1.append(w);
+            }
+        }
+        String s2 = s1.toString();
+        String s3 = s2.replaceAll(" ([A-Z])s", "$1s");
+        return s3;
     }
 
     // gets getter/setter methods for the filter and makes controls for them. enclosed filters are also added as submenus
@@ -463,12 +494,7 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         doButList.clear();
         preferredButtons.clear();
         notPreferredButtons.clear();
-        String u = "(Ungrouped)";
-        ungroupedControls = new MyContainer(u);
-        ungroupedControls.setName(u);
-        ungroupedControls.setBorder(new TitledBorder(u));
-        ungroupedControls.setLayout(new BoxLayout(ungroupedControls, BoxLayout.Y_AXIS));
-        controls.add(ungroupedControls);
+        ungroupedControlsGroupPanel = new GroupPanel("(Ungrouped)");
         MyControl control = null;
         EventFilter filter = getFilter();
         try {
@@ -496,7 +522,9 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
                                 && (releasedMethod.getReturnType() == void.class)) {
                             //found corresponding release method, add action listeners for press and release
                             numDoButtons++;
-                            final AbstractButton button = new JButton(method.getName().substring(7));
+                            String camelCaseLabel = method.getName().substring(7);
+                            String wordsLabel = splitCamelCase(camelCaseLabel);
+                            final AbstractButton button = new JButton(wordsLabel);
                             prefButton = button;
                             button.setMargin(butInsets);
                             button.setFont(button.getFont().deriveFont(9f));
@@ -549,7 +577,9 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
                                 && (toggleOffMethod.getReturnType() == void.class)) {
                             //found corresponding release method, add action listeners for toggle on and toggle off
                             numDoButtons++;
-                            final AbstractButton button = new JToggleButton(method.getName().substring(10));
+                            String camelCaseLabel = method.getName().substring(10);
+                            String wordsLabel = splitCamelCase(camelCaseLabel);
+                            final AbstractButton button = new JToggleButton(wordsLabel);
                             prefButton = button;
                             button.setMargin(butInsets);
                             button.setFont(button.getFont().deriveFont(9f));
@@ -576,6 +606,15 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
                                 }
                             });
 
+                            filter.getSupport().addPropertyChangeListener(toggleOffMethod.getName(), new PropertyChangeListener() {
+                                @Override
+                                public void propertyChange(PropertyChangeEvent pce) {
+                                    log.fine(pce + ": deselected button");
+                                    button.setSelected(false);
+                                }
+
+                            });
+
                             addTip(f, button);
                             doButList.add(button);
                             break; // don't bother with rest of methods
@@ -588,7 +627,9 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
                         && (method.getParameterTypes().length == 0)
                         && (method.getReturnType() == void.class)) {
                     numDoButtons++;
-                    final AbstractButton button = new JButton(method.getName().substring(2));
+                    String camelCaseLabel = method.getName().substring(2);
+                    String wordsLabel = splitCamelCase(camelCaseLabel);
+                    final AbstractButton button = new JButton(wordsLabel);
                     prefButton = button;
                     button.setMargin(butInsets);
                     button.setFont(button.getFont().deriveFont(9f));
@@ -600,11 +641,7 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
                         public void actionPerformed(ActionEvent e) {
                             try {
                                 meth.invoke(f);
-                            } catch (IllegalArgumentException ex) {
-                                ex.printStackTrace();
-                            } catch (InvocationTargetException ex) {
-                                ex.printStackTrace();
-                            } catch (IllegalAccessException ex) {
+                            } catch (IllegalArgumentException | InvocationTargetException | IllegalAccessException ex) {
                                 ex.printStackTrace();
                             }
                         }
@@ -637,15 +674,11 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
             Collections.sort(doButList, butComp);
             if (!doButList.isEmpty()) {
 
-                butPanel = new MyContainer("Control buttons");
-                butPanel.setLayout(new GridLayout(0, 3, 3, 3));
+                butPanel = new ButtonPanel();
                 for (AbstractButton b : doButList) {
                     butPanel.add(b);
                 }
-                TitledBorder tb = new TitledBorder("Control buttons");
-                tb.getBorderInsets(this).set(1, 1, 1, 1);
-                butPanel.setBorder(tb);
-                add(butPanel);
+                controlsPanel.add(butPanel);
                 controls.add(butPanel);
             }
 
@@ -702,10 +735,11 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
                         if (enclFilter != null) {
 //                            log.info("EventFilter "+filter.getClass().getSimpleName()+" encloses EventFilter2D "+enclFilter.getClass().getSimpleName());
                             FilterPanel enclPanel = new FilterPanel(enclFilter, filterFrame);
-                            this.add(enclPanel);
+                            controlsPanel.add(enclPanel);
                             controls.add(enclPanel);
                             enclosedFilterPanels.put(enclFilter, enclPanel);
-                            ((TitledBorder) enclPanel.getBorder()).setTitle("enclosed: " + enclFilter.getClass().getSimpleName());
+                            enclPanel.setControlsVisible(false);
+                            ((TitledBorder) enclPanel.getBorder()).setTitle(getFilter().getClass().getSimpleName() + ":" + enclFilter.getClass().getSimpleName());
                         }
 //                        FilterChain chain=getFilter().getEnclosedFilterChain();
 //                        if(chain!=null){
@@ -731,15 +765,17 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
                             for (EventFilter f : chain) {
 
                                 FilterPanel enclPanel = new FilterPanel(f, filterFrame);
-                                if (f.isControlsVisible()) {
-                                    enclPanel.setControlsVisible(true);
-                                }
+//                                if (f.isControlsVisible()) {
+//                                    log.fine(String.format("Hiding controls on enclosed filter panel for %s", f));
+//                                    enclPanel.setControlsVisible(false);
+//                                }
                                 Dimension d = enclPanel.getPreferredSize();
                                 d.setSize(Integer.MAX_VALUE, d.getHeight()); // setUndoableState height to preferred value, and width to max; see https://stackoverflow.com/questions/26596839/how-to-use-verticalglue-in-box-layout
-                                enclPanel.setMaximumSize(d); // extra space to bottom
-                                this.add(enclPanel);
+//                                enclPanel.setMaximumSize(d); // extra space to bottom
+                                controlsPanel.add(enclPanel);
                                 controls.add(enclPanel);
                                 enclosedFilterPanels.put(f, enclPanel);
+//                                enclPanel.setControlsVisible(false);
                                 ((TitledBorder) enclPanel.getBorder()).setTitle("enclosed: " + f.getClass().getSimpleName());
                                 if (getFilter().isHideNonEnabledEnclosedFilters() && !f.isFilterEnabled()) {
                                     // if this filter is part of chain but not enabled, then don't show the panel if hideNonEnabledEnclosedFilters is true
@@ -767,13 +803,10 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
                 setList.addAll(groupSet);
                 Collections.sort(setList);
                 for (String s : setList) {
-                    JPanel groupPanel = new MyContainer(s);
-                    groupPanel.setName(s);
-                    groupPanel.setBorder(new TitledBorder(s));
-                    groupPanel.setLayout(new BoxLayout(groupPanel, BoxLayout.Y_AXIS));
-                    groupPanel.setAlignmentX(0);
-                    groupContainerMap.put(s, groupPanel); // point from group name to its panel container
-                    add(groupPanel);
+                    GroupPanel groupPanel = new GroupPanel(s);
+
+                    groupName2GroupPanelMap.put(s, groupPanel); // point from group name to its panel container
+                    controlsPanel.add(groupPanel);
                     controls.add(groupPanel); // visibility list
                 }
             }
@@ -887,24 +920,40 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         }
 
 //        add(Box.createHorizontalGlue());
-        if (ungroupedControls.getComponentCount() > 0) {
-            add(Box.createVerticalStrut(0));
-            add(ungroupedControls);
+        if (ungroupedControlsGroupPanel.isPopulated()) {
+            controlsPanel.add(Box.createVerticalStrut(0));
+            controlsPanel.add(ungroupedControlsGroupPanel);
         }
         // now remove group containers that are not populated.
-        for (String s : groupContainerMap.keySet()) {
+        for (String s : groupName2GroupPanelMap.keySet()) {
             if (!populatedGroupSet.contains(s)) { // remove this group
 //                log.info("Removing emtpy container " + s + " from " + filter.getClass().getSimpleName());
-                controls.remove(groupContainerMap.get(s));
-                remove(groupContainerMap.get(s));
+                controls.remove(groupName2GroupPanelMap.get(s));
+                controlsPanel.remove(groupName2GroupPanelMap.get(s));
             }
         }
 
-        setControlsVisible(wasSelected);
+        add(Box.createVerticalGlue());
+
+        setControlsVisible(isControlsVisible());
+    }
+
+    void addTip(EventFilter f, JLabel label, String propName) {
+        String s = getTip(f, propName);
+        if (s == null) {
+            return;
+        }
+        label.setToolTipText(s);
+        label.setForeground(Color.BLUE);
+        if (f.isPropertyPreferred(label.getText())) {
+            label.setFont(label.getFont().deriveFont(Font.BOLD));
+        }
+        // add map from property name to label so we can change the tooltip dynamically
+        getFilter().tooltipSupport.property2ComponentMap.put(propName, label);
     }
 
     void addTip(EventFilter f, JLabel label) {
-        String s = f.getPropertyTooltip(label.getText());
+        String s = getTip(f, label.getText());
         if (s == null) {
             return;
         }
@@ -918,7 +967,7 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
     }
 
     void addTip(EventFilter f, AbstractButton b) {
-        String s = f.getPropertyTooltip(b.getText());
+        String s = getTip(f, b.getText().replaceAll(" ", ""));
         if (s == null) {
             return;
         }
@@ -927,8 +976,44 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         getFilter().tooltipSupport.property2ComponentMap.put(b.getText(), b);
     }
 
+    /** Returns tooltip for property if it exists, either from tooltipSupport or from direct @Description annotation of a field
+     * 
+     * @param f the EventFilter, e.g. instance of BackgroundActivityFilter
+     * @param propertyName the property name, e.g. "dt"
+     * @return the tooltip string, e.g. "Correlation time"
+     */
+    private String getTip(EventFilter f, String propertyName) {
+        String s = f.getPropertyTooltip(propertyName);
+        if (s != null  ) {
+            return s;
+        }
+        if(this.props==null){
+            return null;
+        }
+        
+        for (PropertyDescriptor p : props) {
+            if ((propertyName == null ? p.getName() == null : propertyName.equals(p.getName())) 
+                    && p.getReadMethod() != null && p.getWriteMethod() != null) {
+                try {
+                    Field field = getFilter().getClass().getDeclaredField(p.getName());
+                    Annotation annotation = field.getAnnotation(Description.class);
+                    if (annotation != null && annotation.annotationType()==Description.class) {
+                        Description description = (Description)annotation;
+                        return description.value();
+                    }else{
+                        return null;
+                    }
+                } catch (NoSuchFieldException e) {
+                    // only get super-class when we couldn't find field
+                }
+            }
+        }
+        log.fine(String.format("EventFilter %s has no tooltip for property %s", f.getClass().getSimpleName(), propertyName));
+        return null;
+    }
+
     void addTip(EventFilter f, JCheckBox label) {
-        String s = f.getPropertyTooltip(label.getText());
+        String s = getTip(f, label.getText());
         if (s == null) {
             return;
         }
@@ -940,18 +1025,26 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         getFilter().tooltipSupport.property2ComponentMap.put(label.getText(), label);
     }
 
-    class MyContainer extends JPanel {
+    class LeftAlignedPanel extends JPanel {
 
-        String name;
-
-        MyContainer(String name) {
-            this.name = name;
+        public LeftAlignedPanel() {
             setAlignmentX(LEFT_ALIGNMENT);
             setAlignmentY(TOP_ALIGNMENT);
         }
     }
 
-    abstract class MyControl extends MyContainer implements StateEditable {
+    class MyButton extends AbstractButton {
+
+        public MyButton() {
+            super();
+            setMaximumSize(new Dimension(1000, 30));
+        }
+
+    }
+
+    abstract class MyControl extends LeftAlignedPanel implements StateEditable {
+
+        String name = "(unnamed)";
 
         PropertyDescriptor p;
         /**
@@ -962,16 +1055,26 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         private boolean addedUndoListener = false;
         StateEdit edit = null;
         Object currentState = null;
+        boolean preferred = false;
+        boolean touched = false;
+        boolean nonDefaultValue = false;
+        JLabel label = null;
+        AbstractButton button = null;
 
-        public MyControl(String name, PropertyDescriptor p) {
-            super(name);
-            setterMap.put(name, this);
+        public MyControl(PropertyDescriptor p) {
+            setName(p.getName());
+            setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
+            setAlignmentX(LEFT_ALIGNMENT);
             filter = getFilter();
             this.p = p;
             if (p != null) {
+                this.name = p.getName();
                 write = p.getWriteMethod();
                 read = p.getReadMethod();
             }
+            setterMap.put(name, this);
+            nonDefaultValue = filter.isPreferenceStored(name);
+            preferred = filter.isPropertyPreferred(name);
 
             addAncestorListener(new javax.swing.event.AncestorListener() {
 
@@ -1002,6 +1105,11 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         }
 
         @Override
+        public String toString() {
+            return this.getClass().getSimpleName() + ": " + getName();
+        }
+
+        @Override
         public Dimension getMaximumSize() {
             Dimension d = getPreferredSize();
             d.setSize(1000, d.getHeight());
@@ -1009,8 +1117,13 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         }
 
         public void highlightModified() {
-            setBorder(blueLineBorder);
-            invalidate();
+            Color c = Color.green.darker().darker().darker();
+            if (label != null) {
+                label.setForeground(c);
+                invalidate();
+            } else if (button != null) {
+                button.setForeground(c);
+            }
             modifiedControls.add(this);
         }
 
@@ -1023,7 +1136,13 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         }
 
         public void clearHighlight() {
-            setBorder(null);
+            Color c = Color.BLACK;
+            if (label != null) {
+                label.setForeground(c);
+                invalidate();
+            } else if (button != null) {
+                button.setForeground(c);
+            }
         }
 
         abstract void setGuiState(Object o);
@@ -1042,13 +1161,15 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
                 Object ro = read.invoke(getFilter()); // constrain by writer
                 setCurrentState(ro);
                 setGuiState(o);
+                touched = true;
                 return ro;
             } catch (IllegalAccessException | InvocationTargetException ex) {
-                Logger.getLogger(FilterPanel.class.getName()).log(Level.SEVERE, null, ex);
+                ex.printStackTrace();
+                log.warning(String.format("Exception invoking setUndoableState with object %s, writer %s and reader %s: %s", o.toString(), write, read, ex.toString()));
+                throw new RuntimeException(ex.getCause());
             } finally {
                 endEdit();
             }
-            return null;
         }
 
         public void setCurrentState(Object o) {
@@ -1118,10 +1239,9 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         final JComboBox control;
 
         public EnumControl(final String name, final PropertyDescriptor p, final Class<? extends Enum> c) {
-            super(name, p);
+            super(p);
             setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
-            setAlignmentX(LEFT_ALIGNMENT);
-            final JLabel label = new JLabel(name);
+            label = new JLabel((name));
             label.setAlignmentX(LEFT_ALIGNMENT);
             setFontSizeStyle(label);
             addTip(getFilter(), label);
@@ -1184,7 +1304,7 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
 //     * @return true if return is JList
 //     */
 //    private static boolean returnsJList(Method m) {
-////        Type returnType = m.getGenericReturnType();
+    ////        Type returnType = m.getGenericReturnType();
 //        return JList.class.isAssignableFrom(m.getReturnType());
 ////        if (returnType instanceof ParameterizedType parameterisedReturnType) {
 ////            return JList.class.isAssignableFrom(m.getReturnType());
@@ -1194,8 +1314,12 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
 ////        }
 //    }
 //
-    /** Used when a filter has a method that returns a ComboBoxModel. 
-     * A ComboBox is constructed that displays the currently-selected item and whose ActiopListener calls setSelectedItem
+    /**
+     * Used when a filter has a method that returns a ComboBoxModel. A ComboBox
+     * is constructed that displays the currently-selected item and whose
+     * ActiopListener calls setSelectedItem
+     * 
+     * The coder must implement the desired action listener on the model. See NoiseTesterFilter for example.
      */
     class ComboBoxControl extends MyControl {
 
@@ -1205,16 +1329,17 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         final ComboBoxModel model;
 
         public ComboBoxControl(final String name, final PropertyDescriptor p) throws InvocationTargetException, IllegalAccessException {
-            super(name, p); // set read and write fields to get and set methods
-            model=(ComboBoxModel)read.invoke(getFilter());
+            super(p); // set read and write fields to get and set methods
+            setName(name.substring(0, name.indexOf("ComboBoxModel"))); // fix name to remove long trailing ComboBoxModel
+            model = (ComboBoxModel) p.getReadMethod().invoke(getFilter());
             setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
-            setAlignmentX(LEFT_ALIGNMENT);
-            final JLabel label = new JLabel(name);
+            label = new JLabel(getName());
             label.setAlignmentX(LEFT_ALIGNMENT);
             setFontSizeStyle(label);
-            addTip(getFilter(), label);
+            addTip(getFilter(), label, name);
             add(label);
 
+            // https://stackoverflow.com/questions/5258596/how-to-avoid-firing-actionlistener-event-of-jcombobox-when-an-item-is-get-added
             control = new JComboBox(model) {
                 /**
                  * Do not fire if set by program.
@@ -1233,19 +1358,20 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
             add(control);
             add(Box.createHorizontalGlue());
 
-            try {
-                Object x = read.invoke(getFilter());  // TODO read returns entire list but state is one selected String from list
-                if (x == null) {
-                    log.warning("null Object returned from read method " + read);
-                    return;
-                }
-                x=((ComboBoxModel)x).getSelectedItem(); // set current state to the selected ComboBoxModel item
-                setCurrentState(x);
-                setGuiState(x);
-            } catch (Exception e) {
-                log.warning("cannot access the field named " + name + " is the class or method not public?");
-                e.printStackTrace();
-            }
+            // TODO note that user must set the initial selected item in their ComboBoxModel
+//            try {
+//                Object x = read.invoke(getFilter());  // TODO read returns entire list but state is one selected String from list
+//                if (x == null) {
+//                    log.warning("null Object returned from read method " + read);
+//                    return;
+//                }
+//                x = ((ComboBoxModel) x).getSelectedItem(); // set current state to the selected ComboBoxModel item
+//                setCurrentState(x);
+//                setGuiState(x);
+//            } catch (Exception e) {
+//                log.warning("cannot access the field named " + name + " is the class or method not public?");
+//                e.printStackTrace();
+//            }
             control.addActionListener(new ActionListener() {
 
                 @Override
@@ -1271,13 +1397,10 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         EventFilter filter;
         boolean initValue = false, nval;
         final JTextField textField;
-        final JLabel label;
 
         public StringControl(final String name, final PropertyDescriptor p) {
-            super(name, p);
-            setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
-            setAlignmentX(LEFT_ALIGNMENT);
-            label = new JLabel(name);
+            super(p);
+            label = new JLabel((name));
             label.setAlignmentX(LEFT_ALIGNMENT);
             setFontSizeStyle(label);
             addTip(getFilter(), label);
@@ -1310,8 +1433,15 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
                     highlightClearingOthers();
                     try {
                         setUndoableState(textField.getText());
+                        textField.setBackground(Color.white);
+                        textField.setForeground(Color.black);
                     } catch (Exception e2) {
-                        e2.printStackTrace();
+                        log.warning(e2.toString());
+//                        e2.printStackTrace();
+//                        textField.selectAll();
+                        textField.setBackground(Color.red);
+                        textField.setForeground(Color.white);
+                        Toolkit.getDefaultToolkit().beep();
                     }
                 }
             });
@@ -1335,19 +1465,17 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
 
         EventFilter filter;
         boolean initValue = false, nval;
-        final JCheckBox checkBox;
 
         public BooleanControl(final String name, PropertyDescriptor p) {
-            super(name, p);
+            super(p);
             setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
-            setAlignmentX(LEFT_ALIGNMENT);
 //            setLayout(new FlowLayout(FlowLayout.LEADING));
-            checkBox = new JCheckBox(name);
-            checkBox.setAlignmentX(LEFT_ALIGNMENT);
-            checkBox.setHorizontalTextPosition(SwingConstants.LEFT);
-            setFontSizeStyle(checkBox);
-            addTip(getFilter(), checkBox);
-            add(checkBox);
+            button = new JCheckBox(name);
+            button.setAlignmentX(LEFT_ALIGNMENT);
+            button.setHorizontalTextPosition(SwingConstants.LEFT);
+            setFontSizeStyle(button);
+            addTip(getFilter(), button);
+            add(button);
 
 //            add(Box.createVerticalStrut(0));
             try {
@@ -1365,12 +1493,12 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
                 log.warning("cannot access the field named " + name + " is the class or method not public?");
                 e.printStackTrace();
             }
-            checkBox.addActionListener(new ActionListener() {
+            button.addActionListener(new ActionListener() {
 
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     highlightClearingOthers();
-                    setUndoableState(checkBox.isSelected());
+                    setUndoableState(button.isSelected());
                 }
             });
         }
@@ -1386,10 +1514,10 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         void setGuiState(Object o) {
             if (o instanceof Boolean) {
                 Boolean b = (Boolean) o;
-                checkBox.setSelected(b);
+                button.setSelected(b);
                 // check if we need to setUndoableState toggle button for boolean control
                 for (AbstractButton but : doButList) {
-                    if (but.getText().toLowerCase().equals(checkBox.getText().toLowerCase())) {
+                    if (but.getText().toLowerCase().equals(button.getText().toLowerCase())) {
                         but.setSelected(b);
                     }
 
@@ -1397,13 +1525,13 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
             } else if (o instanceof String) {
                 try {
                     Boolean i = Boolean.parseBoolean((String) o);
-                    checkBox.setSelected(i);
+                    button.setSelected(i);
                 } catch (NumberFormatException e) {
                     log.warning(String.format("could not parse value %s", o));
                 }
             }
-            if (checkBox.hasFocus()) {
-                checkBox.setFont(checkBox.getFont().deriveFont(Font.BOLD | Font.ITALIC));
+            if (button.hasFocus()) {
+                button.setFont(button.getFont().deriveFont(Font.BOLD | Font.ITALIC));
             }
 
         }
@@ -1418,9 +1546,7 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         private boolean sliderDontProcess = false;
 
         public IntSliderControl(final String name, final PropertyDescriptor p, final SliderParams params) {
-            super(name, p);
-            setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
-            setAlignmentX(LEFT_ALIGNMENT);
+            super(p);
 
             final IntControl ic = new IntControl(name, p);
 
@@ -1503,9 +1629,7 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         float minValue, maxValue, currentValue;
 
         public FloatSliderControl(final String name, final PropertyDescriptor p, final SliderParams params) {
-            super(name, p);
-            setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
-            setAlignmentX(LEFT_ALIGNMENT);
+            super(p);
 
             fc = new FloatControl(name, p);
             add(fc);
@@ -1570,18 +1694,15 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         EventFilter filter;
         int initValue = 0, nval;
         final JTextField tf;
-        final JLabel label;
         String PROPERTY_VALUE = "value";
         boolean signed = false;
 
         public IntControl(final String name, final PropertyDescriptor p) {
-            super(name, p);
+            super(p);
             signed = isSigned(write);
 
-            setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
-            setAlignmentX(LEFT_ALIGNMENT);
 //            setLayout(new FlowLayout(FlowLayout.LEADING));
-            label = new JLabel(name);
+            label = new JLabel((name));
             label.setAlignmentX(LEFT_ALIGNMENT);
             label.setFont(label.getFont().deriveFont(fontSize));
             setFontSizeStyle(label);
@@ -1810,16 +1931,14 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         EventFilter filter;
         float initValue = 0, nval;
         final JTextField tf;
-        final JLabel label;
         boolean signed = false;
 
         public FloatControl(final String name, final PropertyDescriptor p) {
-            super(name, p);
+            super(p);
             signed = isSigned(write);
             setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
-            setAlignmentX(LEFT_ALIGNMENT);
 //            setLayout(new FlowLayout(FlowLayout.LEADING));
-            label = new JLabel(name);
+            label = new JLabel((name));
             label.setAlignmentX(LEFT_ALIGNMENT);
             setFontSizeStyle(label);
             addTip(getFilter(), label);
@@ -2025,16 +2144,6 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
                 boolean yes = (Boolean) propertyChangeEvent.getNewValue();
                 enabledCheckBox.setSelected(yes);
                 setBorderActive(yes);
-//                if (yes) {
-//                    log.info("selecting checkbox from " + propertyChangeEvent);
-//                }
-            } else if (propertyChangeEvent.getPropertyName().startsWith("doToggleOff")) {
-                // handle toggle off property changes to disable buttons that may have started logging, for example
-                for (AbstractButton b : doButList) {
-                    if ((b instanceof JToggleButton) && b.getText().equals(propertyChangeEvent.getPropertyName().substring(11))) {
-                        b.setSelected(false);
-                    }
-                }
             } else {
                 // we need to find the control and setUndoableState it appropriately. we don't need to setUndoableState the property itself since this has already been done!
                 try {
@@ -2042,7 +2151,16 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
 //                            propertyChangeEvent.getSource() + " for property=" +
 //                            propertyChangeEvent.getPropertyName() +
 //                            " newValue=" + propertyChangeEvent.getNewValue());
-                    final MyControl setter = setterMap.get(getFilter().getClass().getSimpleName() + "." + propertyChangeEvent.getPropertyName());
+//                    final MyControl setter = setterMap.get(propertyChangeEvent.getPropertyName());
+                    // we have to override get method here because strings are not always matching
+                    MyControl tmpSetter = null;
+                    String k = propertyChangeEvent.getPropertyName();
+                    for (String s : setterMap.keySet()) {
+                        if (s.equals(k)) {
+                            tmpSetter = setterMap.get(s);
+                        }
+                    }
+                    final MyControl setter = tmpSetter;
                     if (setter == null) {
                         if (!printedSetterWarning) {
                             log.warning("in filter " + getFilter() + " there is no setter for property change from property named " + propertyChangeEvent.getPropertyName());
@@ -2086,10 +2204,27 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
      * WARNING: Do NOT modify this code. The content of this method is always
      * regenerated by the Form Editor.
      */
+    /**
+     * Overridden to set enclosed filters visible or not depending on
+     * FilterFrame hideDisabled flag
+     *
+     * @param visible
+     */
+    @Override
+    public void setVisible(boolean visible) {
+        super.setVisible(visible);
+        if (getFilterFrame() == null) {
+            return;
+        }
+        for (FilterPanel ep : getEnclosedFilterPanels()) {
+            ep.setVisible(!getFilterFrame().isHideDisabled() || ep.getFilter().isFilterEnabled());
+        }
+    }
+
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        jPanel1 = new javax.swing.JPanel();
+        controlButtonsPanel = new javax.swing.JPanel();
         enableResetControlsHelpPanel = new javax.swing.JPanel();
         enabledCheckBox = new javax.swing.JCheckBox();
         resetButton = new javax.swing.JButton();
@@ -2103,11 +2238,13 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         exportImportPanel = new javax.swing.JPanel();
         exportB = new javax.swing.JButton();
         importB = new javax.swing.JButton();
+        controlsPanel = new javax.swing.JPanel();
 
+        setAlignmentY(0.0F);
         setLayout(new javax.swing.BoxLayout(this, javax.swing.BoxLayout.Y_AXIS));
 
-        jPanel1.setAlignmentX(0.0F);
-        jPanel1.setLayout(new javax.swing.BoxLayout(jPanel1, javax.swing.BoxLayout.X_AXIS));
+        controlButtonsPanel.setAlignmentX(0.0F);
+        controlButtonsPanel.setLayout(new javax.swing.BoxLayout(controlButtonsPanel, javax.swing.BoxLayout.X_AXIS));
 
         enableResetControlsHelpPanel.setToolTipText("General controls for this EventFilter");
         enableResetControlsHelpPanel.setAlignmentX(0.0F);
@@ -2134,23 +2271,16 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         });
         enableResetControlsHelpPanel.add(resetButton);
 
+        showControlsToggleButton.setAction(new ToggleControlsVisibleAction());
         showControlsToggleButton.setFont(new java.awt.Font("Tahoma", 0, 9)); // NOI18N
-        showControlsToggleButton.setText("Controls");
-        showControlsToggleButton.setToolTipText("Show filter parameters, hides other filters. Click again to see all filters.");
         showControlsToggleButton.setMargin(new java.awt.Insets(1, 5, 1, 5));
-        showControlsToggleButton.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                showControlsToggleButtonActionPerformed(evt);
-            }
-        });
         enableResetControlsHelpPanel.add(showControlsToggleButton);
 
-        jPanel1.add(enableResetControlsHelpPanel);
-        jPanel1.add(filler1);
+        controlButtonsPanel.add(enableResetControlsHelpPanel);
+        controlButtonsPanel.add(filler1);
 
-        copyPasteDefaultsPanel.setMaximumSize(new java.awt.Dimension(150, 17));
+        copyPasteDefaultsPanel.setAlignmentX(0.0F);
         copyPasteDefaultsPanel.setMinimumSize(new java.awt.Dimension(150, 17));
-        copyPasteDefaultsPanel.setPreferredSize(new java.awt.Dimension(150, 17));
         copyPasteDefaultsPanel.setLayout(new javax.swing.BoxLayout(copyPasteDefaultsPanel, javax.swing.BoxLayout.X_AXIS));
 
         copyB.setFont(new java.awt.Font("Tahoma", 0, 9)); // NOI18N
@@ -2186,12 +2316,11 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         });
         copyPasteDefaultsPanel.add(defaultsB);
 
-        jPanel1.add(copyPasteDefaultsPanel);
-        jPanel1.add(filler2);
+        controlButtonsPanel.add(copyPasteDefaultsPanel);
+        controlButtonsPanel.add(filler2);
 
-        exportImportPanel.setMaximumSize(new java.awt.Dimension(98, 17));
+        exportImportPanel.setAlignmentX(0.0F);
         exportImportPanel.setMinimumSize(new java.awt.Dimension(98, 17));
-        exportImportPanel.setPreferredSize(new java.awt.Dimension(98, 17));
         exportImportPanel.setLayout(new javax.swing.BoxLayout(exportImportPanel, javax.swing.BoxLayout.X_AXIS));
 
         exportB.setFont(new java.awt.Font("Tahoma", 0, 9)); // NOI18N
@@ -2216,9 +2345,13 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         });
         exportImportPanel.add(importB);
 
-        jPanel1.add(exportImportPanel);
+        controlButtonsPanel.add(exportImportPanel);
 
-        add(jPanel1);
+        add(controlButtonsPanel);
+
+        controlsPanel.setAlignmentY(0.0F);
+        controlsPanel.setLayout(new javax.swing.BoxLayout(controlsPanel, javax.swing.BoxLayout.Y_AXIS));
+        add(controlsPanel);
     }// </editor-fold>//GEN-END:initComponents
 
     public boolean isControlsVisible() {
@@ -2233,47 +2366,33 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
      */
     public void setControlsVisible(boolean visible) {
         getFilter().controlsVisible = visible;
-        getFilter().setSelected(visible); // exposing controls 'selects' this filter
+
+        ToggleControlsVisibleAction action = (ToggleControlsVisibleAction) showControlsToggleButton.getAction();
+        action.setLabel();
+        getFilter().setSelected(true); // exposing controls 'selects' this filter
         setBorderActive(visible);
+
+        // show/hide everything to start
+        controlsPanel.setVisible(visible);
         for (JComponent p : controls) {
             p.setVisible(visible);
-            p.invalidate();
-        }
-
-        invalidate();
-        Container c = getTopLevelAncestor();
-        if (c == null) {
-            return;
-        }
-
-        // TODO fix bug here with enclosed filters not showing up if they are enclosed in enclosed filter, unless they are declared as enclosed
-        if (!getFilter().isEnclosed() && ((c instanceof Window))) {
-            if (c instanceof FilterFrame) {
-                // hide all filters except one that is being modified, *unless* we are an enclosed filter
-                FilterFrame<FilterPanel> ff = (FilterFrame) c;
-                for (FilterPanel fp : ff.filterPanels) {
-                    if (fp == this) {  // for us and if !visible
-                        fp.setVisible(true); // always set us as visible in chain since we are the one being touched
-                        continue;
-                    }
-
-                    fp.setVisible(!visible); // hide / show other filters
-                }
-
-            }
+//            p.invalidate();
         }
 
         // handle enclosed filters that are disabled and have parent enclosing filter that does not want to show them in GUI
-        if (getFilter().isEnclosed() && !getFilter().isFilterEnabled() && getFilter().getEnclosingFilter().isHideNonEnabledEnclosedFilters()) {
+        if (!visible && getFilter().isEnclosed() && !getFilter().isFilterEnabled() && getFilter().getEnclosingFilter().isHideNonEnabledEnclosedFilters()) {
+            log.info(String.format("Hiding %s because it is enclosed and the enclosing filter %s has set hideNonEnabledEnclosedFilters. Check the Hide diabled option in Filters window.",
+                    getFilter().getClass().getSimpleName(),
+                    getFilter().getEnclosingFilter().getClass().getSimpleName()));
             setVisible(false);
         } else {
+            // if we are not enclosed in another filter, then make us visible
             setVisible(true);
         }
 
-        if (additionalCustomControlsPanel != null) {
-            additionalCustomControlsPanel.setVisible(visible);
-        }
-
+//        if (additionalCustomControlsPanel != null) {
+//            additionalCustomControlsPanel.setVisible(visible);
+//        }
         if (!getFilter().isEnclosed()) { // store last selected top level filter
             if (visible) {
                 getFilter().getChip().getPrefs().put(FilterFrame.LAST_FILTER_SELECTED_KEY, getFilter().getClass().toString());
@@ -2282,17 +2401,9 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
             }
         }
 
-        if (visible) {
-            // Show only controls.
-            showControlsToggleButton.setSelected(true);
-            showControlsToggleButton.setText("Back to filters list");
-        } else {
-            showControlsToggleButton.setSelected(false);
-            showControlsToggleButton.setText("Controls");
-        }
-        if (getFilterFrame() != null) {
-            getFilterFrame().updateHighlightedAndSimpleVisibilites();
-        }
+        showPropertyHighlightsOrVisibility(null, isSimple());
+        revalidate();
+        repaint();
     }
 
     private void setBorderActive(final boolean yes) {
@@ -2344,6 +2455,10 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         return enclosedFilterPanels.get(filter);
     }
 
+    public Collection<FilterPanel> getEnclosedFilterPanels() {
+        return enclosedFilterPanels.values();
+    }
+
     private void enabledCheckBoxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_enabledCheckBoxActionPerformed
         boolean yes = enabledCheckBox.isSelected();
         if (getFilter() != null) {
@@ -2368,10 +2483,6 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         }
         getFilter().setSelected(true);
     }//GEN-LAST:event_resetButtonActionPerformed
-
-    private void showControlsToggleButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_showControlsToggleButtonActionPerformed
-        setControlsVisible(showControlsToggleButton.isSelected());
-    }//GEN-LAST:event_showControlsToggleButtonActionPerformed
 
     private void exportBActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_exportBActionPerformed
         exportPrefsDialog();
@@ -2441,7 +2552,7 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
     private void restoreDefaultPropertyValues() {
         HashMap<String, EventFilter.PrefsKeyClassValueDefault> clearedProperties = getFilter().restoreDefaultPreferences();
         for (String k : clearedProperties.keySet()) {
-            MyControl control = propertyControlMap.get(k);
+            MyControl control = propName2MyControlMap.get(k);
             if (control != null && (control.write != null)) {
                 EventFilter.PrefsKeyClassValueDefault prefsValue = clearedProperties.get(k);
                 try {
@@ -2453,9 +2564,13 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
             }
         }
         getFilter().restoreDefaultPreferences(); // once more to remove keys from preferences so they are back to hard-coded defaults
+        clearHighlights();
+        clearModifed();
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JPanel controlButtonsPanel;
+    private javax.swing.JPanel controlsPanel;
     private javax.swing.JButton copyB;
     private javax.swing.JPanel copyPasteDefaultsPanel;
     private javax.swing.JButton defaultsB;
@@ -2466,7 +2581,6 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
     private javax.swing.Box.Filler filler1;
     private javax.swing.Box.Filler filler2;
     private javax.swing.JButton importB;
-    private javax.swing.JPanel jPanel1;
     private javax.swing.JButton pasteB;
     private javax.swing.JButton resetButton;
     private javax.swing.JToggleButton showControlsToggleButton;
@@ -2597,11 +2711,9 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         }
 
         public Point2DControl(final String name, PropertyDescriptor p) {
-            super(name, p);
-            setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
-            setAlignmentX(LEFT_ALIGNMENT);
+            super(p);
 //            setLayout(new FlowLayout(FlowLayout.LEADING));
-            JLabel label = new JLabel(name);
+            label = new JLabel((name));
             label.setAlignmentX(LEFT_ALIGNMENT);
             label.setFont(label.getFont().deriveFont(fontSize));
             addTip(getFilter(), label);
@@ -2671,19 +2783,58 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
 //    ArrayList<JPanel> customControls=new ArrayList();
     JPanel additionalCustomControlsPanel;
 
+    /**
+     * Shows a tooltip for the entry field for a given property
+     *
+     * @param propName
+     * @param text
+     */
+    public void displayTooltip(String propName, String text) {
+        MyControl control = propName2MyControlMap.get(propName);
+        if (control != null) {
+            if (control.label != null) {
+                displayToolTip(control.label, text);
+            } else if (control instanceof BooleanControl) {
+                displayToolTip(control, text);
+            }
+        }
+    }
+
+    private void displayToolTip(final JComponent comp, final String text) {
+        final ToolTipManager ttm = ToolTipManager.sharedInstance();
+        final MouseEvent event = new MouseEvent(comp, 0, 0, 0,
+                0, 0, // X-Y of the mouse for the tool tip
+                0, false);
+        final int oldDelay = ttm.getInitialDelay();
+        final String oldText = comp.getToolTipText(event);
+        comp.setToolTipText(text);
+        ttm.setInitialDelay(0);
+        ttm.setDismissDelay(1000);
+        ttm.mouseMoved(event);
+
+        new Timer().schedule(new TimerTask() {
+            @Override
+            public void run() {
+                ttm.setInitialDelay(oldDelay);
+                comp.setToolTipText(oldText);
+            }
+        }, ttm.getDismissDelay());
+    }
+
     public void addCustomControls(JPanel control) {
         if (additionalCustomControlsPanel == null) {
-            additionalCustomControlsPanel = new JPanel();
+            additionalCustomControlsPanel = new LeftAlignedPanel();
             additionalCustomControlsPanel.setAlignmentY(TOP_ALIGNMENT);
             BoxLayout boxLayout = new BoxLayout(additionalCustomControlsPanel, BoxLayout.Y_AXIS);
             additionalCustomControlsPanel.setLayout(boxLayout);
-            this.add(additionalCustomControlsPanel);
+            controlsPanel.add(additionalCustomControlsPanel);
+            controls.add(additionalCustomControlsPanel);
         }
 
         this.additionalCustomControlsPanel.add(control);
 //        this.customControls.add(controls);
 
-        setControlsVisible(true);
+//        setControlsVisible(true);
 //        this.repaint();
 //        this.revalidate();
     }
@@ -2726,90 +2877,67 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
      * @param hideOthers to hide other properties
      * @param simple boolean to show only preferred properties
      */
-    public void showPropertyHighlightsOrVisibility(String searchString, boolean hideOthers, boolean simple) {
-
+    public void showPropertyHighlightsOrVisibility(String searchString, boolean simple) {
+        if (searchString == null) {
+            searchString = "";
+        }
         setSearchString(searchString);
-        setHideOthers(hideOthers);
         setSimple(simple);
         if (butPanel != null) {
-            if (simple && preferredButtons.isEmpty()) {
-                butPanel.setVisible(false);
-            } else {
-                butPanel.setVisible(true);
-                butPanel.removeAll();
-                for (AbstractButton b : doButList) {
-                    if (!simple) {
-                        butPanel.add(b);
-
-                    } else {
-                        if (preferredButtons.contains(b)) {
-                            butPanel.add(b);
-                        }
-                    }
-                }
-            }
+            butPanel.showHideButtons(simple, searchString);
         }
         if (searchString.isBlank()) { // just show everything that should be shown
-            for (String propName : propertyControlMap.keySet()) {
-                MyControl c = propertyControlMap.get(propName);
+            for (String propName : propName2MyControlMap.keySet()) {
+                MyControl c = propName2MyControlMap.get(propName);
                 if (c == null) {
                     continue;
                 }
-                c.setBorder(null);
                 c.setVisible(isPropertyVisible(propName));
+                GroupPanel gp = propName2GroupPanelMap.get(propName);
+                if (gp != null) {
+                    if (gp.isCollapsed()) {
+                        gp.setCollapased(true);
+                    }
+                    gp.setVisible(true);
+                }
+                c.setBorder(null);
                 c.invalidate();
             }
-            for (Container c : groupContainerMap.values()) {
-                c.setVisible(true);
-                c.invalidate();
-            }
+
         } else { // there is a search string, so setUndoableState each property to either highlightClearingOthers or show, hiding others
 
             highlightedControls.clear();
             // if hideOthers, hide all groups and later only show those that match
-            for (Container c : groupContainerMap.values()) {
+            for (GroupPanel c : groupName2GroupPanelMap.values()) {
                 c.setVisible(false);
             }
 
-            for (String propName : propertyControlMap.keySet()) { // consider each property
-                MyControl c = propertyControlMap.get(propName);
-                if (isHideOthers()) {
-                    if (isPropertyVisible(propName)) {
-                        log.fine(String.format("Showing match: %s is in %s", searchString, propName));
-                        highlightedControls.add(c);
-                        c.setVisible(true);
-                        setGroupContainerWithPropertyVisible(propName, true);
-                    } else { // no match, then hide it
-                        c.setVisible(false);
-                    }
-                } else { // highlightClearingOthers
-                    setGroupContainerWithPropertyVisible(propName, false);
+            for (String propName : propName2MyControlMap.keySet()) { // consider each property
+                MyControl c = propName2MyControlMap.get(propName);
+                if (isPropertyVisible(propName)) {
+                    log.fine(String.format("Showing match: %s is in %s", searchString, propName));
+                    highlightedControls.add(c);
                     c.setVisible(true);
                     setGroupContainerWithPropertyVisible(propName, true);
-                    if (isPropertyVisible(propName)) {
-                        log.fine(String.format("Hightlighting Match: %s is in %s", searchString, propName));
-                        c.setBorder(redLineBorder); // highlightClearingOthers it
-                        highlightedControls.add(c);
-                    } else { // no match, then hide it if hideOthers setUndoableState, otherwise show it
-                        c.setBorder(null);
-                    }
+                } else { // no match, then hide it
+                    c.setVisible(false);
                 }
                 c.invalidate();
             }
         }
-        for (Component c : groupContainerMap.values()) {
+        for (Component c : groupName2GroupPanelMap.values()) {
             c.invalidate();
         }
         // handle enclosed filters, but only filter them if the controls are visible
         for (EventFilter f : enclosedFilterPanels.keySet()) {
             if (f.isControlsVisible()) {
                 FilterPanel p = getEnclosedFilterPanel(f);
-                p.showPropertyHighlightsOrVisibility(searchString, hideOthers, simple);
+                p.showPropertyHighlightsOrVisibility(searchString, simple);
             }
         }
-        this.invalidate();
-        revalidate();
-        repaint();
+//        this.invalidate();
+//        revalidate();
+//        repaint();
     }
 
     /**
@@ -2837,20 +2965,6 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
      */
     public boolean isSimple() {
         return simple;
-    }
-
-    /**
-     * @return the hideOthers
-     */
-    public boolean isHideOthers() {
-        return hideOthers;
-    }
-
-    /**
-     * @param hideOthers the hideOthers to setUndoableState
-     */
-    public void setHideOthers(boolean hideOthers) {
-        this.hideOthers = hideOthers;
     }
 
     /**
@@ -2959,6 +3073,261 @@ public class FilterPanel extends javax.swing.JPanel implements PropertyChangeLis
         public String toString() {
             return String.format("StateEdit: object=%s, property=%s", this.object.getClass().getSimpleName(), this.undoRedoName);
         }
+    }
+
+    private class ButtonPanel extends LeftAlignedPanel {
+
+        final private int NUM_PER_ROW = 3;
+        private int counter = 0;
+        private LeftAlignedPanel currentPanel;
+
+        public ButtonPanel() {
+            setBorder(new TitledBorder("Control buttons"));
+            setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+            addRow();
+        }
+
+        @Override
+        public Component add(Component comp) {
+            comp.setMaximumSize(new Dimension(200, 20));
+            Component c = currentPanel.add(comp);
+            counter++;
+            if (counter >= NUM_PER_ROW) {
+                addRow();
+            }
+            return c;
+        }
+
+        @Override
+        public void removeAll() {
+            super.removeAll();
+            addRow();
+        }
+
+        private void addRow() {
+            currentPanel = new LeftAlignedPanel();
+            currentPanel.setLayout(new BoxLayout(currentPanel, BoxLayout.X_AXIS));
+            super.add(currentPanel);
+            counter = 0;
+        }
+
+        private void showHideButtons(boolean simple, String searchString) {
+            if (simple && preferredButtons.isEmpty()) {
+                setVisible(false);
+            } else {
+                setVisible(true);
+                removeAll();
+                for (AbstractButton b : doButList) {
+                    if (!simple) {
+                        if (include(b, searchString)) {
+                            add(b);
+                        }
+                    } else {
+                        if (preferredButtons.contains(b)) {
+                            add(b);
+                        }
+                    }
+                }
+            }
+        }
+
+        private boolean include(AbstractButton b, String searchString) {
+            if (searchString == null || searchString.isEmpty()) {
+                return true;
+            }
+            if (b.getText().startsWith(searchString.toLowerCase())) {
+                return true;
+            }
+            return false;
+        }
+
+    }
+
+    // https://stackoverflow.com/questions/8177955/how-to-have-collapsable-expandable-jpanel-in-java-swing
+    private class GroupPanel extends LeftAlignedPanel {
+
+        final private TitledBorder border;
+        private Dimension mouseHotArea;
+        private boolean collapsible = true, collapsed;
+        final String collapsedKey;
+        final JPanel placeholderPanel = new JPanel();
+        Cursor normalCursor = new Cursor(Cursor.DEFAULT_CURSOR),
+                uncollapseCursor = new Cursor(Cursor.N_RESIZE_CURSOR),
+                collapseCursor = new Cursor(Cursor.S_RESIZE_CURSOR);
+//        ArrayList<Component> hiddenControls=new ArrayList();
+
+        public GroupPanel(String title) {
+
+            setName(title);
+            collapsedKey = getFilter().getShortName() + ".GroupPanel." + getName() + "." + "collapsed";
+
+            setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+            setAlignmentX(LEFT_ALIGNMENT);
+            setAlignmentY(TOP_ALIGNMENT);
+
+            border = new TitledBorder(getName());
+            border.setTitleColor(Color.black);
+            fixTooltip();
+            // because TitledBorder has no access to the Label we fake the size data ;)
+            final JLabel l = new JLabel(title);
+            Dimension d = l.getPreferredSize(); // size of title text of TitledBorder
+            mouseHotArea = new Dimension(d.width, d.height + 5); // l.getPreferredSize(); // size of title text of TitledBorder
+
+            collapsed = prefs.getBoolean(collapsedKey, false);
+            placeholderPanel.setName("(placeholder)");
+            placeholderPanel.setAlignmentX(LEFT_ALIGNMENT);
+            placeholderPanel.setMinimumSize(new Dimension(d.width, 2));
+            placeholderPanel.setMaximumSize(new Dimension(1000, 4));
+            placeholderPanel.setVisible(true); // needs to be visible even if size is zero or the whole panel including titledBorder disappears when collapsed
+            add(placeholderPanel);
+            setTitle();
+//            placeholderPanel.setLayout(new BoxLayout(placeholderPanel, BoxLayout.Y_AXIS));
+//            JPanel labelHolder = new JPanel();
+//            labelHolder.setLayout(new BoxLayout(labelHolder, BoxLayout.X_AXIS));
+//            labelHolder.add(new JLabel("collapsed"));
+//            labelHolder.add(Box.createGlue());
+//            placeholderPanel.add(labelHolder);
+//            placeholderPanel.setPreferredSize(new Dimension(d.width, 1));
+
+            addContainerListener(new java.awt.event.ContainerAdapter() {
+                @Override
+                public void componentAdded(java.awt.event.ContainerEvent evt) {
+                    if (!collapsed) {
+                        return;
+                    }
+                    Component c = evt.getChild();
+                    if (c != placeholderPanel) {
+                        c.setVisible(false);
+                    }
+                }
+            });
+
+            addMouseMotionListener(new MouseMotionAdapter() {
+                @Override
+                public void mouseMoved(MouseEvent e) {
+                    if (isMouseInHotArea(e)) {
+                        if (collapsed) {
+                            setCursor(uncollapseCursor);
+                        } else {
+                            setCursor(collapseCursor);
+                        }
+                    } else {
+                        setCursor(normalCursor);
+                    }
+                }
+
+            });
+            addMouseListener(new MouseAdapter() {
+
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    if (!collapsible) {
+                        return;
+                    }
+
+                    if (isMouseInHotArea(e)) {
+                        setCollapased(!collapsed);
+                        log.info(String.format("Set %s collapsed=%s", getName(), collapsed));
+                        prefs.putBoolean(collapsedKey, GroupPanel.this.isCollapsed());
+                        e.consume();
+                    }
+                }
+
+            });
+        }
+
+        private void fixTooltip() {
+            setToolTipText(String.format("Group %s (click title to %s)",
+                    getName(), collapsed ? "expand" : "collapse"));
+        }
+
+        public boolean isPopulated() {
+            return getComponentCount() > 1;
+        }
+
+        @Override
+        public String toString() {
+            return "GroupPanel: " + getName();
+        }
+
+        void collapse() {
+            setCollapased(true);
+        }
+
+        void expand() {
+            setCollapased(false);
+        }
+
+        final void setCollapased(boolean collapsed) {
+            this.collapsed = collapsed;
+            for (Component c : getComponents()) {
+                if (c != null && c != placeholderPanel) {
+                    c.setVisible(!collapsed);
+                }
+            }
+
+            setTitle();
+//            revalidate();
+            repaint();
+        }
+
+        private boolean isMouseInHotArea(MouseEvent e) {
+            if (e.getX() < mouseHotArea.width && e.getY() < mouseHotArea.height) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        private void setTitle() {
+            if (!collapsed) {
+                border.setTitle(getName());
+            } else {
+                border.setTitle("> " + getName());
+            }
+            setBorder(border);
+            fixTooltip();
+        }
+
+        final public void setCollapsible(boolean collapsible) {
+            this.collapsible = collapsible;
+        }
+
+        final public boolean isCollapsible() {
+            return this.collapsible;
+        }
+
+        final public void setTitle(String title) {
+            border.setTitle(title);
+        }
+
+        /**
+         * @return the collapsed
+         */
+        final public boolean isCollapsed() {
+            return collapsed;
+        }
+    }
+
+    private class ToggleControlsVisibleAction extends AbstractAction {
+
+        public ToggleControlsVisibleAction() {
+            putValue(SHORT_DESCRIPTION, "Expand to show property controls");
+            putValue(SELECTED_KEY, isControlsVisible());
+            setLabel();
+//            putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_Y, java.awt.event.InputEvent.CTRL_DOWN_MASK));
+        }
+
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            setControlsVisible(!isControlsVisible());
+            setLabel();
+        }
+
+        final void setLabel() {
+            putValue(NAME, isControlsVisible() ? "Collapse controls" : "Show controls");
+        }
+
     }
 
 }
