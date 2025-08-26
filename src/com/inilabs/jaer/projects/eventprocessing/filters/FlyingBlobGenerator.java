@@ -18,8 +18,12 @@
  */
 package com.inilabs.jaer.projects.eventprocessing.filters;
 
-import com.inilabs.jaer.projects.tracker.TrackerManagerV2;
+import com.inilabs.jaer.projects.space3d.Space3D;
+import com.inilabs.jaer.projects.space3d.Agent3DInterface;
+import com.inilabs.jaer.projects.space3d.TargetAgent;
+
 import java.awt.geom.Point2D;
+
 import net.sf.jaer.Description;
 import net.sf.jaer.DevelopmentStatus;
 import net.sf.jaer.Preferred;
@@ -27,37 +31,53 @@ import net.sf.jaer.chip.AEChip;
 import net.sf.jaer.event.BasicEvent;
 import net.sf.jaer.event.EventPacket;
 import net.sf.jaer.event.OutputEventIterator;
-import net.sf.jaer.eventprocessing.EventFilter2DMouseAdaptor;
-import net.sf.jaer.util.EngineeringFormat;
-import org.apache.commons.math3.geometry.euclidean.threed.Vector3D;
-import org.apache.commons.math3.geometry.euclidean.twod.Vector2D;
 import net.sf.jaer.event.PolarityEvent;
 import net.sf.jaer.event.PolarityEvent.Polarity;
+import net.sf.jaer.eventprocessing.EventFilter2DMouseAdaptor;
+
+import org.apache.commons.math3.geometry.euclidean.threed.Vector3D;
+import org.apache.commons.math3.geometry.euclidean.twod.Vector2D;
+
+import net.sf.jaer.util.EngineeringFormat;
 import org.slf4j.LoggerFactory;
 
 /**
- * Generates and injects synthetic blobs of events from model of flying object
- * into the event stream.
+ * Generates and injects synthetic blobs of events from an external moving
+ * object into the event stream. The object (e.g., TargetAgent) is provided by
+ * the app.
  *
- * @author tobid
+ * Refactor notes: - NO internal target creation. Use setSpace3D() and
+ * setTargetAgent(). - Each filterPacket(): 1) read target ENU (x,y,z) w.r.t.
+ * DVX at origin, 2) compute az/el/dist, check FOV, 3) project to pixel, compute
+ * pixel radius from distance, 4) inject blob events.
  */
-@Description("Generates and injects synthetic blobs of events from model of flying object into the event stream")
-@net.sf.jaer.DevelopmentStatus(DevelopmentStatus.Status.InDevelopment)
+@Description("Generates and injects synthetic blobs of events from external moving object into the event stream")
+@DevelopmentStatus(DevelopmentStatus.Status.InDevelopment)
 public class FlyingBlobGenerator extends EventFilter2DMouseAdaptor {
 
-private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(FlyingBlobGenerator.class);    
+    private static final ch.qos.logback.classic.Logger log
+            = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(FlyingBlobGenerator.class);
+
+    // === External world/agent integration (provided by the app) ===
+    private Space3D space3D;                  // world (optional but useful for GUI)
+    private Agent3DInterface targetAgent;     // moving target (must be set)
+
+    // cache FOV in degrees (computed in initFilter)
+    private double fovXDeg = Double.NaN, fovYDeg = Double.NaN;
+
+    private final EngineeringFormat eng = new EngineeringFormat();
     
-    
-    private EngineeringFormat eng = new EngineeringFormat();
+    private long lastLogMs = 0;
+
+    // --- Legacy params kept for UI compatibility (some may be unused now) ---
     @Preferred
     @Description("Mean velocity for flying blobs")
     public float velocityMps = getFloat("velocityMps", 5);
 
-    //@Description("Lens focal length (default 3.7mm for Kowa 3.5mm)")
-    @Description("Lens focal length (default 22.5 mm birdland lens)")
-    public float lensFocalLengthMm = getFloat("lensFocalLengthMm", 22.5f);  // this lens value is given by the helmut project coverage calculation
+    @Description("Lens focal length (mm)")
+    public float lensFocalLengthMm = getFloat("lensFocalLengthMm", 22.5f);
 
-    @Description("Blob size in meters")
+    @Description("Blob size in meters (legacy)")
     public float blobSizeM = getFloat("blobSizeM", .25f);
 
     @Preferred
@@ -67,60 +87,42 @@ private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic
     @Description("Enable/disable synthetic blob injection")
     public boolean injectEnabled = getBoolean("injectEnabled", true);
 
-    @Description("Blob center as fraction of chip width/height")
+    @Description("Blob center as fraction of chip width (legacy - not used)")
     public float centerXFrac = getFloat("centerXFrac", 0.60f);
 
-    @Description("Blob center as fraction of chip width/height")
+    @Description("Blob center as fraction of chip height (legacy - not used)")
     public float centerYFrac = getFloat("centerYFrac", 0.60f);
 
-    @Description("Blob radius in pixels")
+    @Description("Blob radius in pixels (legacy fallback)")
     public int blobRadiusPx = getInt("blobRadiusPx", 5);
 
     @Description("Number of synthetic events to inject per packet")
-    public int eventsPerPacket = getInt("eventsPerPacket", 200); // computed in initFilter
+    public int eventsPerPacket = getInt("eventsPerPacket", 200);
 
-    @Description(value = "Polarity for injected events: +1=ON, 0=alternate, -1=OFF (if PolarityEvent)")
+    @Description(value = "Polarity for injected events: +1=ON, 0=alternate, -1=OFF")
     public int injectedPolarity = getInt("injectedPolarity", +1);
+
+    @Description("Agent key to follow (looked up in Space3DRegistry if targetAgent is null)")
+    public String targetAgentKey = getString("targetAgentKey", "tgt-FBG");
+
+    @Description("If true, FBG will try Space3DRegistry.get() in initFilter() to resolve space/agent")
+    public boolean autoConnectRegistry = getBoolean("autoConnectRegistry", true);
+
+    // debug vectors (kept for potential UI/telemetry)
     public Vector3D blobPosition = new Vector3D(0, 0, 0);
     public Vector3D blobVelocity = new Vector3D(0, 0, 0);
     public Vector2D blob2dPosition = new Vector2D(0, 0);
     public Vector2D blob2dVelocity = new Vector2D(0, 0);
+
     public float startingDistanceM = Float.NaN;
     public EventPacket outPacket = null;
 
-    public double pathLenM = 0.0;
-    public double sAlongM = 0.0;
-    public Vector3D uAB = Vector3D.ZERO;
-    public long motionStartUs = -1L;
-
-    // ---- 3D motion & projection ----
+    // ---- 3D target parameters ----
     @Description("Target diameter in meters")
-    public float targetDiameterM = 1.0f; // 1 m diameter
+    public float targetDiameterM = 1.0f; // default 1 m
 
-    @Description("Waypoint A distance (m) near RIGHT FOV edge")
-    public float waypointADistM = 500f;
-
-    @Description("Waypoint B distance (m) near LEFT FOV edge")
-    public float waypointBDistM = 50f;
-
-    @Description("Edge factor (0<k<1): how close to horizontal FOV edge (0.9 => 90%)")
-    public float edgeFrac = 0.90f;
-
-    @Description("Flight speed (m/s)")
-    public float flightSpeedMps = 10f;
-
-    @Description("Edge margin in pixels to keep target inside the image")
-    public int edgeMarginPx = getInt("edgeMarginPx", 8);
-
-    @Description("Synthetic event density (events per pixel^2 of blob area)")
+    @Description("Synthetic event density (events per pixel^2 of blob area) [unused if eventsPerPacket fixed]")
     public float eventDensityPerPx2 = getFloat("eventDensityPerPx2", 0.3f);
-
-    public Vector3D waypointA = Vector3D.ZERO;
-    public Vector3D waypointB = Vector3D.ZERO;
-    public Vector3D currentPos = Vector3D.ZERO;
-    public Vector3D currentVel = Vector3D.ZERO;
-    public int motionDir = +1;               // +1: A->B, -1: B->A
-    private int lastUpdateTs = Integer.MIN_VALUE;  // μs timestamps
 
     private final java.util.Random rng = new java.util.Random();
 
@@ -128,228 +130,120 @@ private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic
         super(chip);
     }
 
-    private void preparePathAB() {
-        Vector3D d = getWaypointB().subtract(getWaypointA());
-        setPathLenM(d.getNorm());
-        setsAlongM(0.0);
-        setCurrentPos(getWaypointA());
-        setCurrentVel(d.normalize().scalarMultiply(getFlightSpeedMps())); // initial vel A->B
-        setMotionDir(+1);
-    }
+    /* ================= Lifecycle ================= */
+    @Override
+    public void initFilter() {
+        computeStartingDistance();
+        Point2D.Double fovDeg = computeFoVDeg();  // HFOV/VFOV from chip + focal
+        fovXDeg = fovDeg.x;
+        fovYDeg = fovDeg.y;
 
-    private void injectBlob(OutputEventIterator outItr, int ts) {
-        if (!isInjectEnabled() || getEventsPerPacket() <= 0 || getBlobRadiusPx() <= 0) {
-            return;
+        if (getOutPacket() == null) {
+            setOutPacket(new EventPacket(PolarityEvent.class));
         }
+        getOutPacket().clear();
 
-        final int w = chip.getSizeX();
-        final int h = chip.getSizeY();
-        final int cx = Math.round(getCenterXFrac() * (w - 1));
-        final int cy = Math.round(getCenterYFrac() * (h - 1));
+        log.info("FBG initialized. HFOV={} deg, VFOV={} deg", eng.format(fovXDeg), eng.format(fovYDeg));
 
-        // Generate points uniformly over a disk
-        for (int i = 0; i < getEventsPerPacket(); i++) {
-            // polar sampling with sqrt for uniform area
-            double theta = 2.0 * Math.PI * rng.nextDouble();
-            double r = getBlobRadiusPx() * Math.sqrt(rng.nextDouble());
-            int x = cx + (int) Math.round(r * Math.cos(theta));
-            int y = cy + (int) Math.round(r * Math.sin(theta));
-
-            if (x < 0 || x >= w || y < 0 || y >= h) {
-                continue;
-            }
-
-            BasicEvent e = outItr.nextOutput();
-            e.x = (short) x;
-            e.y = (short) y;
-            e.timestamp = ts;
-
-            // If the stream uses polarity, set it
-            // (Depending on your jAER version, either use boolean field or setter)
-            if (e instanceof PolarityEvent) {
-                PolarityEvent pe = (PolarityEvent) e;
-                if (getInjectedPolarity() == 0) {
-                    // Alternate On/Off for visibility
-                    pe.setPolarity(((i & 1) == 0) ? Polarity.On : Polarity.Off);
+        // Try auto-connect if nothing has been injected yet
+        if (autoConnectRegistry && (space3D == null || targetAgent == null)) {
+            Space3D s = com.inilabs.jaer.projects.space3d.Space3DRegistry.get();
+            if (s != null) {
+                this.space3D = s;
+                if (this.targetAgent == null && targetAgentKey != null) {
+                    Agent3DInterface a = s.getAgent(targetAgentKey);
+                    if (a != null) {
+                        this.targetAgent = a;
+                        log.info("FBG: auto-connected to Space3D and target agent '{}'", targetAgentKey);
+                    } else {
+                        log.warn("FBG: Space3D present, but no agent with key '{}'", targetAgentKey);
+                    }
                 } else {
-                    pe.setPolarity(getInjectedPolarity() > 0 ? Polarity.On : Polarity.Off);
+                    log.info("FBG: auto-connected to Space3D (target already set)");
                 }
+            } else {
+                log.warn("FBG: no Space3D in Space3DRegistry; setSpace3D()/setTargetAgent() or run launcher in SAME JVM.");
             }
         }
     }
 
     @Override
+    public void resetFilter() {
+        initFilter();
+    }
+
+    @Override
+    public void cleanup() {
+        // nothing to stop here (target thread owned outside)
+    }
+
+    /* ================= Core processing ================= */
+    @Override
     public EventPacket<? extends BasicEvent> filterPacket(EventPacket<? extends BasicEvent> in) {
-        // Initialize output packet once, but CLEAR it every call
-        if (getOutPacket() == null) {
-            setOutPacket(new EventPacket(in.getEventClass()));
+        if (outPacket == null) {
+            outPacket = new EventPacket(in.getEventClass());
         }
-        getOutPacket().clear();
+        outPacket.clear();
 
-        OutputEventIterator outItr = getOutPacket().outputIterator();
+        final OutputEventIterator outItr = outPacket.outputIterator();
 
-        // Pass-through: copy input events
+        // Pass-through inputs
         for (BasicEvent ie : in) {
             BasicEvent oe = outItr.nextOutput();
             oe.copyFrom(ie);
         }
 
-        // Inject the synthetic blob at the end of the packet, timestamped to the packet tail
-        //       int ts = in.getSize() > 0 ? in.getLastTimestamp() : (int) (System.nanoTime() / 1000_000); // fallback µs-ish
-        //       injectBlob(outItr, ts);
-        // Inject the synthetic blob at the end of the packet, timestamped to the packet tail
-        int ts = in.getSize() > 0 ? in.getLastTimestamp()
-                : (int) (System.nanoTime() / 1000); // μs fallback
-        stepMotionWall();  // update 3D position based on real time (μs)
+        // Timestamp for synthetic events
+        final int ts = in.getSize() > 0 ? in.getLastTimestamp() : (int) (System.nanoTime() / 1000);
 
-        // in filterPacket, just before projecting
-        org.apache.commons.math3.geometry.euclidean.threed.Vector3D P = getCurrentPos();
-        Point2D.Float px = projectToPixel(P);
+        // === External target → compute az/el/dist, FOV gate, project, inject ===
+        if (injectEnabled && targetAgent != null) {
+            Space3D.Vec3 p = targetAgent.getPositionDVX(); // ENU w.r.t. DVX at origin
+            AzElDist aed = azElDistFromCamera(p.x, p.y, p.z);
 
-        if (isInjectEnabled() && px != null) {
-            int rpx = pixelRadiusFromDistance(getCurrentPos().getZ());
-            int events = Math.max(12, Math.round((float) (Math.PI * rpx * rpx) * getEventDensityPerPx2()));
-            setEventsPerPacket(events); // reuse your existing field if you like
-
-            injectBlobAt(outItr, ts, Math.round(px.x), Math.round(px.y), rpx);
+            if (insideFOV(aed)) {
+                Point2D.Float px = projectToPixel(p.x, p.y, p.z);
+                if (px != null) {
+                    int rpx = pixelRadiusFromDistance(aed.distM); // uses targetDiameterM
+                    injectBlobAt(outItr, ts, Math.round(px.x), Math.round(px.y), rpx);
+                }
+            }
         }
-
-        return getOutPacket();
-    }
-
-    private void computeBlobProjection() {
-        // computes projection from 3d blob to 2d image
-    }
-
-    /**
-     * Called in rewind or when user wants to reset filter state.
-     *
-     */
-    @Override
-    public void resetFilter() {
-   initFilter();
-    }
-
-    /**
-     * Called after AEChip and this are fully constructed.
-     *
-     */
-    //@Override
-    // public void initFilter() {
-    //     computeStartingDistance();
-    //    computeFoVDeg();
-    // }
-    @Override
-    public void initFilter() {
-        // lens & chip geometry
-        final float pitchM = getPixelPitchM();           // meters
-        final float fM = getFocalLenM();             // meters
-        final int w = chip.getSizeX();
-        final float uEdgePx = (w / 2f) - getEdgeMarginPx();   // how far from center
         
-        // exact horizontal angle that maps to the chosen pixel margin
-        final double thetaEdge = Math.atan((uEdgePx * pitchM) / fM);
-
-        // distances: far right (e.g., 500 m), near left (e.g., 50 m)
-        final double zRight = getWaypointADistM();
-        final double zLeft = getWaypointBDistM();
-
-        computeFoVDeg() ;
-        
-        // Waypoint centers (Y=0); ensure they project to cx±uEdgePx
-        setWaypointA(new Vector3D(Math.tan(+thetaEdge) * zRight, 0, zRight)); // right/far
-        setWaypointB(new Vector3D(Math.tan(-thetaEdge) * zLeft, 0, zLeft));  // left/near
-
-        // Precompute path geometry
-        Vector3D d = getWaypointB().subtract(getWaypointA());
-        setPathLenM(d.getNorm());
-        setuAB((getPathLenM() > 0) ? d.scalarMultiply(1.0 / getPathLenM()) : Vector3D.ZERO);
-
-        
-        
-        // Start at A
-        setsAlongM(0.0);
-        setCurrentPos(getWaypointA());
-        setCurrentVel(getuAB().scalarMultiply(getFlightSpeedMps()));
-        setMotionStartUs(-1);     // (re)init wall-clock
-        lastUpdateTs = Integer.MIN_VALUE;
-    }
-
-    private Vector3D directionFor(Vector3D from, Vector3D to) {
-        Vector3D d = to.subtract(from);
-        double L = d.getNorm();
-        return (L > 0) ? d.scalarMultiply(1.0 / L) : Vector3D.ZERO;
-    }
-
-    private float radToDeg(float rad) {
-        return (float) Math.toDegrees(rad);
-    }
-
-    private void stepMotionWall() {
-        final long nowUs = System.nanoTime() / 1000L; // microseconds
-        if (getMotionStartUs() < 0) {
-            setMotionStartUs(nowUs);
-            return;
-        }
-        if (getPathLenM() <= 1e-9) {
-            return;
-        }
-
-        final double tSec = (nowUs - getMotionStartUs()) * 1e-6;
-        final double L = getPathLenM();
-        final double twoL = 2.0 * L;
-
-        // Distance travelled along the infinite line at speed v
-        double s = (getFlightSpeedMps() * tSec) % twoL;
-        if (s < 0) {
-            s += twoL;
-        }
-
-        // Reflect into [0, L] => triangle wave
-        final int dir; // +1 A->B, -1 B->A
-        if (s <= L) {
-            setsAlongM(s);
-            dir = +1;
+        if (injectEnabled) {
+        if (targetAgent == null) {
+            throttleLog("FBG: targetAgent is null; no injection.");
         } else {
-            setsAlongM(twoL - s);
-            dir = -1;
+            Space3D.Vec3 p = targetAgent.getPositionDVX();
+            AzElDist aed = azElDistFromCamera(p.x, p.y, p.z);
+            boolean inFov = insideFOV(aed);
+            throttleLog(String.format("FBG: tgt=(%.1f,%.1f,%.1f)m az=%.2f° el=%.2f° d=%.1fm FOV=%s",
+                    p.x, p.y, p.z, aed.azDeg, aed.elDeg, aed.distM, inFov ? "IN" : "OUT"));
+            if (inFov) {
+                Point2D.Float px = projectToPixel(p.x, p.y, p.z);
+                if (px != null) {
+                    int rpx = pixelRadiusFromDistance(aed.distM);
+                    injectBlobAt(outItr, ts, Math.round(px.x), Math.round(px.y), rpx);
+                } else {
+                    throttleLog("FBG: projection returned null (clipped).");
+                }
+            }
         }
-
-        setCurrentPos(getWaypointA().add(getuAB().scalarMultiply(getsAlongM())));
-        setCurrentVel(getuAB().scalarMultiply(getFlightSpeedMps() * dir));
     }
 
-    
+        return outPacket;
+    }
 
-    private Point2D.Double computeFoVDeg() {
-          // computes the horizontal and vertical field of view in degrees 
-    final double f_m   = getLensFocalLengthMm() * 1e-3;                  // focal length [m]
-    final double w_px  = chip.getPixelWidthUm()  * 1e-6;                 // pixel pitch X [m]
-    final double h_px  = chip.getPixelHeightUm() * 1e-6;                 // pixel pitch Y [m]
-    final double W_m   = chip.getSizeX() * w_px;                          // sensor width [m]
-    final double H_m   = chip.getSizeY() * h_px;                          // sensor height [m]
-    final double fovX  = Math.toDegrees(2.0 * Math.atan(W_m / (2.0 * f_m)));
-    final double fovY  = Math.toDegrees(2.0 * Math.atan(H_m / (2.0 * f_m)));
-     log.debug("lensFL(m): {} pxPitch(m): {}  pixels:  x: {},  y: {},   FOV: {}  {}", 
-                           f_m,  w_px, chip.getSizeX(), chip.getSizeY(), fovX, fovY);
-    return new Point2D.Double(fovX, fovY);
+    private void throttleLog(String msg){
+    long now = System.currentTimeMillis();
+    if (now - lastLogMs >= 500) { // log at most twice a second
+        log.info(msg);
+        lastLogMs = now;
+    }
 }
-
-
-    private void computeStartingDistance() {
-        // compute starting distance such that blobs are 1 pixel in size
-        float pxSizeM = chip.getPixelWidthUm() * 1e-6f;
-        float pxAngRad = pxSizeM / (getLensFocalLengthMm() * 1e-3f); // approx tan
-        // when blob size/distance =pxAngRad the blob will be one pizel.
-        // therefore distance=blob size/pxAngRad
-        setStartingDistanceM(getBlobSizeM() / pxAngRad);
-        log.info(String.format("Pixels subtend %s deg and blob starting distance is %sm",
-                eng.format(radToDeg(pxAngRad)),
-                eng.format(getStartingDistanceM()))
-        );
-    }
-
-    // --- Projection helpers (pinhole) ---
+    
+    
+    /* ================= Geometry & helpers ================= */
     private float getPixelPitchM() {
         return chip.getPixelWidthUm() * 1e-6f;
     }
@@ -358,9 +252,8 @@ private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic
         return getLensFocalLengthMm() * 1e-3f;
     }
 
-    // drop this next to the existing projectToPixel(Vector3D)
     private Point2D.Float projectToPixel(double x, double y, double z) {
-        return projectToPixel(new org.apache.commons.math3.geometry.euclidean.threed.Vector3D(x, y, z));
+        return projectToPixel(new Vector3D(x, y, z));
     }
 
     /**
@@ -372,7 +265,7 @@ private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic
         if (P.getZ() <= 0) {
             return null; // behind camera
         }
-        final double u_m = f * (P.getX() / P.getZ()); // meters on sensor
+        final double u_m = f * (P.getX() / P.getZ());
         final double v_m = f * (P.getY() / P.getZ());
         final double pitch = getPixelPitchM();
         final double u_px = u_m / pitch;
@@ -390,7 +283,8 @@ private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic
     }
 
     /**
-     * Pixel radius from distance using small-angle pinhole geometry.
+     * Pixel radius from distance using small-angle pinhole geometry and
+     * targetDiameterM.
      */
     private int pixelRadiusFromDistance(double distM) {
         if (distM <= 0) {
@@ -415,7 +309,6 @@ private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic
             double rr = r * Math.sqrt(rng.nextDouble());
             int x = cx + (int) Math.round(rr * Math.cos(theta));
             int y = cy + (int) Math.round(rr * Math.sin(theta));
-
             if (x < 0 || x >= w || y < 0 || y >= h) {
                 continue;
             }
@@ -424,7 +317,6 @@ private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic
             e.x = (short) x;
             e.y = (short) y;
             e.timestamp = ts;
-
             if (e instanceof PolarityEvent) {
                 PolarityEvent pe = (PolarityEvent) e;
                 if (getInjectedPolarity() == 0) {
@@ -436,459 +328,217 @@ private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic
         }
     }
 
+    private Point2D.Double computeFoVDeg() {
+        // HFOV/VFOV from chip size and focal length
+        final double f_m = getLensFocalLengthMm() * 1e-3;
+        final double w_px = chip.getPixelWidthUm() * 1e-6;
+        final double h_px = chip.getPixelHeightUm() * 1e-6;
+        final double W_m = chip.getSizeX() * w_px;
+        final double H_m = chip.getSizeY() * h_px;
+        final double fovX = Math.toDegrees(2.0 * Math.atan(W_m / (2.0 * f_m)));
+        final double fovY = Math.toDegrees(2.0 * Math.atan(H_m / (2.0 * f_m)));
+        log.debug("lensFL(m): {} pxPitch(m): {} pixels: x={}, y={} FOV: {}° {}°",
+                f_m, w_px, chip.getSizeX(), chip.getSizeY(), fovX, fovY);
+        return new Point2D.Double(fovX, fovY);
+    }
+
+    private void computeStartingDistance() {
+        // distance at which a blob of size blobSizeM subtends one pixel
+        float pxSizeM = chip.getPixelWidthUm() * 1e-6f;
+        float pxAngRad = pxSizeM / (getLensFocalLengthMm() * 1e-3f);
+        setStartingDistanceM(getBlobSizeM() / pxAngRad);
+        log.info("Pixel angle {} deg; 1px blob distance {}", eng.format(Math.toDegrees(pxAngRad)), eng.format(getStartingDistanceM()));
+    }
+
+    /* ============== Az/El gate ============== */
+    private static double toDeg(double rad) {
+        return Math.toDegrees(rad);
+    }
+
+    private static final class AzElDist {
+
+        final double azDeg, elDeg, distM;
+
+        AzElDist(double azDeg, double elDeg, double distM) {
+            this.azDeg = azDeg;
+            this.elDeg = elDeg;
+            this.distM = distM;
+        }
+    }
+
     /**
-     * @return the velocityMps
+     * Camera at origin; +Z forward (optical axis), +X right/East, +Y up.
      */
+    private AzElDist azElDistFromCamera(double x, double y, double z) {
+        double dist = Math.sqrt(x * x + y * y + z * z);
+        if (z <= 0) {
+            return new AzElDist(Double.NaN, Double.NaN, dist); // behind
+        }
+        double az = toDeg(Math.atan2(x, z)); // horiz angle vs optical axis
+        double el = toDeg(Math.atan2(y, z)); // vert angle vs optical axis
+        return new AzElDist(az, el, dist);
+    }
+
+    private boolean insideFOV(AzElDist aed) {
+        if (Double.isNaN(aed.azDeg) || Double.isNaN(aed.elDeg)) {
+            return false;
+        }
+        double hx = fovXDeg * 0.5, hy = fovYDeg * 0.5;
+        return Math.abs(aed.azDeg) <= hx && Math.abs(aed.elDeg) <= hy;
+    }
+
+    /* ================= Setters/Getters for integration ================= */
+    public void setSpace3D(Space3D s) {
+        this.space3D = s;
+    }
+
+    public Space3D getSpace3D() {
+        return space3D;
+    }
+
+    public void setTargetAgent(Agent3DInterface a) {
+        this.targetAgent = a;
+    }
+
+    public Agent3DInterface getTargetAgent() {
+        return targetAgent;
+    }
+
     public float getVelocityMps() {
         return velocityMps;
     }
 
-    /**
-     * @param velocityMps the velocityMps to set
-     */
-    public void setVelocityMps(float velocityMps) {
-        this.velocityMps = velocityMps;
-        putFloat("velocityMps", velocityMps);
+    public void setVelocityMps(float v) {
+        velocityMps = v;
+        putFloat("velocityMps", v);
     }
 
-    /**
-     * @return the lensFocalLengthMm
-     */
     public float getLensFocalLengthMm() {
         return lensFocalLengthMm;
     }
 
-    /**
-     * @param lensFocalLengthMm the lensFocalLengthMm to set
-     */
-    public void setLensFocalLengthMm(float lensFocalLengthMm) {
-        this.lensFocalLengthMm = lensFocalLengthMm;
-        putFloat("lensFocalLengthMm", lensFocalLengthMm);
+    public void setLensFocalLengthMm(float mm) {
+        lensFocalLengthMm = mm;
+        putFloat("lensFocalLengthMm", mm);
         computeStartingDistance();
         computeFoVDeg();
     }
 
-    /**
-     * @return the blobSizeM
-     */
     public float getBlobSizeM() {
         return blobSizeM;
     }
 
-    /**
-     * @param blobSizeM the blobSizeM to set
-     */
-    public void setBlobSizeM(float blobSizeM) {
-        this.blobSizeM = blobSizeM;
-        putFloat("blobSizeM", blobSizeM);
+    public void setBlobSizeM(float m) {
+        blobSizeM = m;
+        putFloat("blobSizeM", m);
         computeStartingDistance();
     }
 
-    /**
-     * @return the covSpeed
-     */
     public float getCovSpeed() {
         return covSpeed;
     }
 
-    /**
-     * @param covSpeed the covSpeed to set
-     */
-    public void setCovSpeed(float covSpeed) {
-        this.covSpeed = covSpeed;
-        putFloat("covSpeed", covSpeed);
+    public void setCovSpeed(float v) {
+        covSpeed = v;
+        putFloat("covSpeed", v);
     }
 
-    /**
-     * @return the injectEnabled
-     */
     public boolean isInjectEnabled() {
         return injectEnabled;
     }
 
-    /**
-     * @param injectEnabled the injectEnabled to set
-     */
-    public void setInjectEnabled(boolean injectEnabled) {
-        this.injectEnabled = injectEnabled;
+    public void setInjectEnabled(boolean v) {
+        injectEnabled = v;
     }
 
-    /**
-     * @return the centerXFrac
-     */
-    public float getCenterXFrac() {
-        return centerXFrac;
-    }
-
-    /**
-     * @param centerXFrac the centerXFrac to set
-     */
-    public void setCenterXFrac(float centerXFrac) {
-        this.centerXFrac = centerXFrac;
-    }
-
-    /**
-     * @return the centerYFrac
-     */
-    public float getCenterYFrac() {
-        return centerYFrac;
-    }
-
-    /**
-     * @param centerYFrac the centerYFrac to set
-     */
-    public void setCenterYFrac(float centerYFrac) {
-        this.centerYFrac = centerYFrac;
-    }
-
-    /**
-     * @return the blobRadiusPx
-     */
-    public int getBlobRadiusPx() {
-        return blobRadiusPx;
-    }
-
-    /**
-     * @param blobRadiusPx the blobRadiusPx to set
-     */
-    public void setBlobRadiusPx(int blobRadiusPx) {
-        this.blobRadiusPx = blobRadiusPx;
-    }
-
-    /**
-     * @return the eventsPerPacket
-     */
     public int getEventsPerPacket() {
         return eventsPerPacket;
     }
 
-    /**
-     * @param eventsPerPacket the eventsPerPacket to set
-     */
-    public void setEventsPerPacket(int eventsPerPacket) {
-        this.eventsPerPacket = eventsPerPacket;
+    public void setEventsPerPacket(int n) {
+        eventsPerPacket = n;
     }
 
-    /**
-     * @return the injectedPolarity
-     */
     public int getInjectedPolarity() {
         return injectedPolarity;
     }
 
-    /**
-     * @param injectedPolarity the injectedPolarity to set
-     */
-    public void setInjectedPolarity(int injectedPolarity) {
-        this.injectedPolarity = injectedPolarity;
+    public void setInjectedPolarity(int p) {
+        injectedPolarity = p;
     }
 
-    /**
-     * @return the blobPosition
-     */
-    public Vector3D getBlobPosition() {
-        return blobPosition;
-    }
-
-    /**
-     * @param blobPosition the blobPosition to set
-     */
-    public void setBlobPosition(Vector3D blobPosition) {
-        this.blobPosition = blobPosition;
-    }
-
-    /**
-     * @return the blobVelocity
-     */
-    public Vector3D getBlobVelocity() {
-        return blobVelocity;
-    }
-
-    /**
-     * @param blobVelocity the blobVelocity to set
-     */
-    public void setBlobVelocity(Vector3D blobVelocity) {
-        this.blobVelocity = blobVelocity;
-    }
-
-    /**
-     * @return the blob2dPosition
-     */
-    public Vector2D getBlob2dPosition() {
-        return blob2dPosition;
-    }
-
-    /**
-     * @param blob2dPosition the blob2dPosition to set
-     */
-    public void setBlob2dPosition(Vector2D blob2dPosition) {
-        this.blob2dPosition = blob2dPosition;
-    }
-
-    /**
-     * @return the blob2dVelocity
-     */
-    public Vector2D getBlob2dVelocity() {
-        return blob2dVelocity;
-    }
-
-    /**
-     * @param blob2dVelocity the blob2dVelocity to set
-     */
-    public void setBlob2dVelocity(Vector2D blob2dVelocity) {
-        this.blob2dVelocity = blob2dVelocity;
-    }
-
-    /**
-     * @return the startingDistanceM
-     */
-    public float getStartingDistanceM() {
-        return startingDistanceM;
-    }
-
-    /**
-     * @param startingDistanceM the startingDistanceM to set
-     */
-    public void setStartingDistanceM(float startingDistanceM) {
-        this.startingDistanceM = startingDistanceM;
-    }
-
-    /**
-     * @return the targetDiameterM
-     */
     public float getTargetDiameterM() {
         return targetDiameterM;
     }
 
-    /**
-     * @param targetDiameterM the targetDiameterM to set
-     */
-    public void setTargetDiameterM(float targetDiameterM) {
-        this.targetDiameterM = targetDiameterM;
+    public void setTargetDiameterM(float m) {
+        targetDiameterM = m;
     }
 
-    /**
-     * @return the waypointADistM
-     */
-    public float getWaypointADistM() {
-        return waypointADistM;
-    }
-
-    /**
-     * @param waypointADistM the waypointADistM to set
-     */
-    public void setWaypointADistM(float waypointADistM) {
-        this.waypointADistM = waypointADistM;
-    }
-
-    /**
-     * @return the waypointBDistM
-     */
-    public float getWaypointBDistM() {
-        return waypointBDistM;
-    }
-
-    /**
-     * @param waypointBDistM the waypointBDistM to set
-     */
-    public void setWaypointBDistM(float waypointBDistM) {
-        this.waypointBDistM = waypointBDistM;
-    }
-
-    /**
-     * @return the flightSpeedMps
-     */
-    public float getFlightSpeedMps() {
-        return flightSpeedMps;
-    }
-
-    /**
-     * @param flightSpeedMps the flightSpeedMps to set
-     */
-    public void setFlightSpeedMps(float flightSpeedMps) {
-        this.flightSpeedMps = flightSpeedMps;
-    }
-
-    /**
-     * @return the waypointA
-     */
-    public Vector3D getWaypointA() {
-        return waypointA;
-    }
-
-    /**
-     * @param waypointA the waypointA to set
-     */
-    public void setWaypointA(Vector3D waypointA) {
-        this.waypointA = waypointA;
-    }
-
-    /**
-     * @return the waypointB
-     */
-    public Vector3D getWaypointB() {
-        return waypointB;
-    }
-
-    /**
-     * @param waypointB the waypointB to set
-     */
-    public void setWaypointB(Vector3D waypointB) {
-        this.waypointB = waypointB;
-    }
-
-    /**
-     * @return the currentPos
-     */
-    public Vector3D getCurrentPos() {
-        return currentPos;
-    }
-
-    /**
-     * @param currentPos the currentPos to set
-     */
-    public void setCurrentPos(Vector3D currentPos) {
-        this.currentPos = currentPos;
-    }
-
-    /**
-     * @return the currentVel
-     */
-    public Vector3D getCurrentVel() {
-        return currentVel;
-    }
-
-    /**
-     * @param currentVel the currentVel to set
-     */
-    public void setCurrentVel(Vector3D currentVel) {
-        this.currentVel = currentVel;
-    }
-
-    /**
-     * @return the motionDir
-     */
-    public int getMotionDir() {
-        return motionDir;
-    }
-
-    /**
-     * @param motionDir the motionDir to set
-     */
-    public void setMotionDir(int motionDir) {
-        this.motionDir = motionDir;
-    }
-
-    /**
-     * @return the outPacket
-     */
     public EventPacket getOutPacket() {
         return outPacket;
     }
 
-    /**
-     * @param outPacket the outPacket to set
-     */
-    public void setOutPacket(EventPacket outPacket) {
-        this.outPacket = outPacket;
+    public void setOutPacket(EventPacket out) {
+        outPacket = out;
     }
 
-    /**
-     * @return the pathLenM
-     */
-    public double getPathLenM() {
-        return pathLenM;
+    public Vector3D getBlobPosition() {
+        return blobPosition;
     }
 
-    /**
-     * @param pathLenM the pathLenM to set
-     */
-    public void setPathLenM(double pathLenM) {
-        this.pathLenM = pathLenM;
+    public void setBlobPosition(Vector3D p) {
+        blobPosition = p;
     }
 
-    /**
-     * @return the sAlongM
-     */
-    public double getsAlongM() {
-        return sAlongM;
+    public Vector3D getBlobVelocity() {
+        return blobVelocity;
     }
 
-    /**
-     * @param sAlongM the sAlongM to set
-     */
-    public void setsAlongM(double sAlongM) {
-        this.sAlongM = sAlongM;
+    public void setBlobVelocity(Vector3D v) {
+        blobVelocity = v;
     }
 
-    /**
-     * @return the uAB
-     */
-    public Vector3D getuAB() {
-        return uAB;
+    public Vector2D getBlob2dPosition() {
+        return blob2dPosition;
     }
 
-    /**
-     * @param uAB the uAB to set
-     */
-    public void setuAB(Vector3D uAB) {
-        this.uAB = uAB;
+    public void setBlob2dPosition(Vector2D p) {
+        blob2dPosition = p;
     }
 
-    /**
-     * @return the motionStartUs
-     */
-    public long getMotionStartUs() {
-        return motionStartUs;
+    public Vector2D getBlob2dVelocity() {
+        return blob2dVelocity;
     }
 
-    /**
-     * @param motionStartUs the motionStartUs to set
-     */
-    public void setMotionStartUs(long motionStartUs) {
-        this.motionStartUs = motionStartUs;
+    public void setBlob2dVelocity(Vector2D v) {
+        blob2dVelocity = v;
     }
 
-    /**
-     * @return the edgeFrac
-     */
-    public float getEdgeFrac() {
-        return edgeFrac;
+    public float getStartingDistanceM() {
+        return startingDistanceM;
     }
 
-    /**
-     * @param edgeFrac the edgeFrac to set
-     */
-    public void setEdgeFrac(float edgeFrac) {
-        this.edgeFrac = edgeFrac;
+    public void setStartingDistanceM(float d) {
+        startingDistanceM = d;
     }
 
-    /**
-     * @return the edgeMarginPx
-     */
-    public int getEdgeMarginPx() {
-        return edgeMarginPx;
+    public String getTargetAgentKey() {
+        return targetAgentKey;
     }
 
-    /**
-     * @param edgeMarginPx the edgeMarginPx to set
-     */
-    public void setEdgeMarginPx(int edgeMarginPx) {
-        this.edgeMarginPx = edgeMarginPx;
+    public void setTargetAgentKey(String key) {
+        targetAgentKey = key;
+        putString("targetAgentKey", key);
     }
 
-    /**
-     * @return the eventDensityPerPx2
-     */
-    public float getEventDensityPerPx2() {
-        return eventDensityPerPx2;
+    public boolean isAutoConnectRegistry() {
+        return autoConnectRegistry;
     }
 
-    /**
-     * @param eventDensityPerPx2 the eventDensityPerPx2 to set
-     */
-    public void setEventDensityPerPx2(float eventDensityPerPx2) {
-        this.eventDensityPerPx2 = eventDensityPerPx2;
+    public void setAutoConnectRegistry(boolean v) {
+        autoConnectRegistry = v;
+        putBoolean("autoConnectRegistry", v);
     }
 
 }

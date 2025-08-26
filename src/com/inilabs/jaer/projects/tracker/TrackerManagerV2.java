@@ -9,6 +9,8 @@ import com.jogamp.opengl.GLAutoDrawable;
 import java.awt.Graphics2D;
 //import java.awt.geom.Point2D;
 
+import javax.swing.SwingUtilities;
+
 import com.jogamp.opengl.GL;
 import net.sf.jaer.Description;
 import net.sf.jaer.chip.AEChip;
@@ -40,6 +42,14 @@ import java.util.LinkedList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
+import org.slf4j.Logger;
+import com.inilabs.jaer.projects.space3d.AbstractAgent3D;
+import com.inilabs.jaer.projects.space3d.Agent3D;
+import com.inilabs.jaer.projects.space3d.Space3D;
+import com.inilabs.jaer.projects.space3d.Space3DGUI;
+import com.inilabs.jaer.projects.space3d.Space3DRegistry;
+import com.inilabs.jaer.projects.space3d.TargetAgent;
 
 
 
@@ -91,7 +101,22 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
       
      EngineeringFormat fmt = new EngineeringFormat();
      
-   
+    // [3D-WORLD] begin
+    /** The shared Space3D world visible to other filters (e.g., FlyingBlobGenerator). */
+    private Space3D world3D;
+
+    /** The synthetic moving target that flies reciprocally. */
+    private TargetAgent syntheticTarget;
+
+    /** Optional viewer; null if you don’t want a window. */
+    private Space3DGUI worldGUI;
+
+    /** Toggle this to open/close the 3D viewer window when TrackerManager starts. */
+    private boolean showWorldGUI = true;
+
+    /** Key under which the target is registered in Space3D (FBG will look for this). */
+    private static final String TARGET_KEY = "tgt-FBG";
+    // [3D-WORLD] end
     
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
     
@@ -140,6 +165,9 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
          
          // (3) Start some stuff
          startTasks();
+         
+          // [3D-WORLD] bring up the Space3D world inside this JVM
+        startSpace3DWorld();
     }
     
     
@@ -158,6 +186,70 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
        AgentLogger.shutdown();
        log.info("Shutting down TargetManager...");
 } 
+   
+    // [3D-WORLD] Build & register the world, start target, optionally show GUI
+    private void startSpace3DWorld() {
+        try {
+            // Create the world with your default origin (Zurich defaults already in Space3D)
+            world3D = new Space3D();
+            world3D.setHalfExtentM(300);                 // slider range in GUI
+            Space3DRegistry.set(world3D);               // <-- make discoverable for FBG
+
+            // Marker for the DVX at the origin (blue square in GUI)
+            AbstractAgent3D cam = new AbstractAgent3D("dvx-0", Agent3D.ObjectType.DVXPLORER) {};
+            cam.setPositionDVX(new Space3D.Vec3(0, 0, 0));
+            world3D.addAgent(cam);
+
+            // Reciprocal target: (-10,0,100) <-> (+10,0,20) at 10 m/s, key TARGET_KEY
+            syntheticTarget = new TargetAgent(
+                    TARGET_KEY,
+                    new Space3D.Vec3(-10, 0, 100),
+                    new Space3D.Vec3(+10, 0, 20),
+                    10.0
+            );
+            world3D.addAgent(syntheticTarget);
+            syntheticTarget.start();
+
+            if (showWorldGUI) {
+                SwingUtilities.invokeLater(() -> {
+                    worldGUI = new Space3DGUI(world3D);
+                    worldGUI.setVisible(true);
+                });
+            }
+
+            log.info("TrackerManagerV2: Space3D started, target '{}' running. "
+                    + "FBG can auto-connect (autoConnectRegistry=true, targetAgentKey='{}').",
+                    TARGET_KEY, TARGET_KEY);
+
+        } catch (Exception ex) {
+            log.error("TrackerManagerV2: failed to start Space3D world", ex);
+        }
+    }
+
+     // [3D-WORLD] Clean shutdown (call from your existing lifecycle hook)
+    private void stopSpace3DWorld() {
+        try {
+            if (syntheticTarget != null) {
+                syntheticTarget.stop();
+                syntheticTarget = null;
+            }
+            worldGUI = null;     // let the window be GC’d; or call dispose() if you hold JFrame
+            world3D = null;
+        } catch (Exception ex) {
+            log.warn("TrackerManagerV2: error stopping Space3D world", ex);
+        }
+    }
+
+   
+   // If your class has lifecycle hooks, wire stopSpace3DWorld() there:
+    // e.g., if there is a cleanup/dispose/reset method:
+  @Override
+    public void cleanup() {
+        // your existing cleanup...
+        stopSpace3DWorld();
+    }
+   
+   
    
    private DirectGimbalController getGimbal() {
     return gimbal;
