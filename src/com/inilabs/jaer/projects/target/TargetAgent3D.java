@@ -33,7 +33,7 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
-public class TargetAgentDrawable extends AgentDrawable implements Runnable {
+public class TargetAgent3D extends AgentDrawable implements Runnable {
     private AgentCallback callback;
     private boolean isLogging = false;
     private static final float DEFAULT_LIFETIME = 100.0f;
@@ -45,11 +45,11 @@ public class TargetAgentDrawable extends AgentDrawable implements Runnable {
     private float velocityAzimuth;
     private float velocityElevation;
     private PolarSpaceDisplay display;
-    private static final Logger logger = LoggerFactory.getLogger(TargetAgentDrawable.class);
+    private static final Logger logger = LoggerFactory.getLogger(TargetAgent3D.class);
     
     private CopyOnWriteArrayList<EventCluster> clusters = new CopyOnWriteArrayList<>();
 
-    public TargetAgentDrawable() {
+    public TargetAgent3D() {
         super();
         this.startTime = getSystemTimestamp();
         this.lastTime = startTime;

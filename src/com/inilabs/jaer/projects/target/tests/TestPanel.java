@@ -19,7 +19,7 @@
 
 package com.inilabs.jaer.projects.target.tests;
 
-import com.inilabs.jaer.projects.target.TargetAgentDrawable;
+import com.inilabs.jaer.projects.target.TargetAgent3D;
 import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
 
 import javax.swing.*;
@@ -34,7 +34,7 @@ import com.inilabs.jaer.projects.target.ActionType;
 
 public class TestPanel extends JPanel implements AgentCallback {
     private final PolarSpaceDisplay display;
-    private final List<TargetAgentDrawable> agents = new ArrayList<>();
+    private final List<TargetAgent3D> agents = new ArrayList<>();
     private float meanSpeed = 1.0f; // Default mean speed in degrees/second
     private float meanMaxLifeTime = 10.0f; // Default mean max lifetime in seconds
 
@@ -47,7 +47,7 @@ public class TestPanel extends JPanel implements AgentCallback {
         addAgentButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                TargetAgentDrawable agent = createAgentNearStart();
+                TargetAgent3D agent = createAgentNearStart();
                 agents.add(agent);
                 agent.setCallback(TestPanel.this);  // Set the callback to this TestPanel instance
                 display.addDrawable(agent);
@@ -76,8 +76,8 @@ public class TestPanel extends JPanel implements AgentCallback {
         updateTimer.start();
     }
 
-    private TargetAgentDrawable createAgentNearStart() {
-        TargetAgentDrawable agent = new TargetAgentDrawable();
+    private TargetAgent3D createAgentNearStart() {
+        TargetAgent3D agent = new TargetAgent3D();
         Random random = new Random();
 
         float azimuth = -20 + random.nextFloat() * 10 - 5;
@@ -98,7 +98,7 @@ public class TestPanel extends JPanel implements AgentCallback {
     }
 
     private void updateAgents() {
-        for (TargetAgentDrawable agent : new ArrayList<>(agents)) {
+        for (TargetAgent3D agent : new ArrayList<>(agents)) {
             agent.run();
         }
         display.repaint();
