@@ -20,10 +20,10 @@
 
 package com.inilabs.jaer.projects.review.tests;
 
-import com.inilabs.jaer.projects.gui.BasicTestPanel;
-import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
-import com.inilabs.jaer.projects.gui.PolarSpaceGUI;
-import com.inilabs.jaer.projects.gui.TestPanel;
+import com.inilabs.jaer.projects.polarspace.BasicTestPanel;
+import com.inilabs.jaer.projects.polarspace.PolarSpaceDisplay;
+import com.inilabs.jaer.projects.polarspace.PolarSpaceGUI;
+import com.inilabs.jaer.projects.polarspace.TestPanel;
 import javax.swing.*;
 import java.awt.*;
 import java.util.Map;

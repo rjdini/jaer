@@ -104,9 +104,9 @@ public class FlyingBlobGeneratorUnitTest {
         fbg.autoConnectRegistry = false;
         fbg.eventDensityPerPx2 = 0.3f;
         fbg.injectedPolarity = +1;
-        fbg.localTestEnabled = true;
-        fbg.localTestRadiusPx = 8;
-        fbg.localTestEventsPerPacket = 300;
+        fbg.setLocalTestEnabled(true);
+        fbg.setLocalTestRadiusPx(8);
+        fbg.setLocalTestEventsPerPacket(300);
 
         DummyAgent agent = new DummyAgent("dummy");
         agent.setPosition(new Space3D.Vec3(0, 0, 10)); // straight ahead
@@ -168,9 +168,9 @@ public class FlyingBlobGeneratorUnitTest {
         fbg.autoConnectRegistry = false;
         fbg.eventDensityPerPx2 = 0.3f;
         fbg.injectedPolarity = +1;
-        fbg.localTestEnabled = true;
-        fbg.localTestRadiusPx = 8;
-        fbg.localTestEventsPerPacket = 300;
+        fbg.setLocalTestEnabled(true);
+        fbg.setLocalTestRadiusPx(8);
+        fbg.setLocalTestEventsPerPacket(300);
 
         fbg.initFilter();
 

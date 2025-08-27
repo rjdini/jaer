@@ -17,7 +17,7 @@
  * MA 02110-1301  USA
  */
 
-package com.inilabs.jaer.projects.gui;
+package com.inilabs.jaer.projects.polarspace;
 
 public interface TestPanel {
     /**

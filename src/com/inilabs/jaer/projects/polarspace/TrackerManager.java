@@ -2,7 +2,7 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.inilabs.jaer.projects.gui;
+package com.inilabs.jaer.projects.polarspace;
 
 import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GLAutoDrawable;
@@ -39,7 +39,7 @@ import java.util.Iterator;
 import java.util.List;
 import net.sf.jaer.eventprocessing.tracking.RectangularClusterTracker.Cluster;
 import org.slf4j.LoggerFactory;
-import com.inilabs.jaer.projects.gui.PolarSpaceGUI;
+import com.inilabs.jaer.projects.polarspace.PolarSpaceGUI;
 import com.inilabs.jaer.projects.logging.AgentLogger;
 import com.inilabs.jaer.projects.logging.LoggingStatePropertyChangeFilter;
 import com.inilabs.jaer.projects.tracker.FieldOfView;

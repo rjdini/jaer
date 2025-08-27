@@ -18,9 +18,9 @@
  */
 package com.inilabs.jaer.projects.tracker;
 
-import com.inilabs.jaer.projects.gui.AgentDrawable;
-import com.inilabs.jaer.projects.gui.BasicDrawable;
-import com.inilabs.jaer.projects.gui.Drawable;
+import com.inilabs.jaer.projects.polarspace.AgentDrawable;
+import com.inilabs.jaer.projects.polarspace.BasicDrawable;
+import com.inilabs.jaer.projects.polarspace.Drawable;
 import com.inilabs.jaer.projects.logging.AgentLogger;
 import com.inilabs.jaer.projects.logging.EventType;
 import java.awt.Color;

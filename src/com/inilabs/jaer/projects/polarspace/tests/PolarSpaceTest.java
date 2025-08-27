@@ -16,10 +16,10 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
-package com.inilabs.jaer.projects.gui.tests;
+package com.inilabs.jaer.projects.polarspace.tests;
 
-import com.inilabs.jaer.projects.gui.PolarSpaceControlPanel;
-import com.inilabs.jaer.projects.gui.PolarSpaceGUI;
+import com.inilabs.jaer.projects.polarspace.PolarSpaceControlPanel;
+import com.inilabs.jaer.projects.polarspace.PolarSpaceGUI;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JSlider;

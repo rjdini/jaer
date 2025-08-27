@@ -17,7 +17,7 @@
  * MA 02110-1301  USA
  */
 
-package com.inilabs.jaer.projects.gui;
+package com.inilabs.jaer.projects.polarspace;
 
 import com.inilabs.jaer.projects.logging.AgentLogger;
 import com.inilabs.jaer.projects.logging.EventType;

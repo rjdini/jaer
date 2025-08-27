@@ -17,7 +17,7 @@
  * MA 02110-1301  USA
  PolarSpaceDisplay settings.
  */
-package com.inilabs.jaer.projects.gui;
+package com.inilabs.jaer.projects.polarspace;
 
 import com.inilabs.jaer.projects.environ.WaypointDrawable;
 import com.inilabs.jaer.projects.environ.WaypointManager;

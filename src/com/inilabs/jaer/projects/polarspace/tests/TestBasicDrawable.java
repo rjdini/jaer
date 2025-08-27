@@ -22,10 +22,10 @@
  * @author rjd
  */
 
-package com.inilabs.jaer.projects.gui.tests;
+package com.inilabs.jaer.projects.polarspace.tests;
 
-import com.inilabs.jaer.projects.gui.BasicDrawable;
-import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
+import com.inilabs.jaer.projects.polarspace.BasicDrawable;
+import com.inilabs.jaer.projects.polarspace.PolarSpaceDisplay;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;

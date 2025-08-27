@@ -19,8 +19,8 @@
 
 package com.inilabs.jaer.projects.target;
 
-import com.inilabs.jaer.projects.gui.AgentDrawable;
-import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
+import com.inilabs.jaer.projects.polarspace.AgentDrawable;
+import com.inilabs.jaer.projects.polarspace.PolarSpaceDisplay;
 import com.inilabs.jaer.projects.logging.AgentLogger;
 import com.inilabs.jaer.projects.logging.EventType;
 import com.inilabs.jaer.projects.tracker.EventCluster;

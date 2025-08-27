@@ -18,8 +18,8 @@
  */
 package com.inilabs.jaer.projects.environ;
 
-import com.inilabs.jaer.projects.gui.BasicTestPanel;
-import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
+import com.inilabs.jaer.projects.polarspace.BasicTestPanel;
+import com.inilabs.jaer.projects.polarspace.PolarSpaceDisplay;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;

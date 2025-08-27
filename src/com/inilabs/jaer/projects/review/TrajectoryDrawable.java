@@ -18,9 +18,9 @@
  */
 package com.inilabs.jaer.projects.review;
 
-import com.inilabs.jaer.projects.gui.BasicDrawable;
-import com.inilabs.jaer.projects.gui.Drawable;
-import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
+import com.inilabs.jaer.projects.polarspace.BasicDrawable;
+import com.inilabs.jaer.projects.polarspace.Drawable;
+import com.inilabs.jaer.projects.polarspace.PolarSpaceDisplay;
 
 import java.awt.Graphics;
 import java.awt.Graphics2D;

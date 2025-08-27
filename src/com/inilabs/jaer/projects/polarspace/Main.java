@@ -22,7 +22,7 @@
  * @author rjd
  */
 
-package com.inilabs.jaer.projects.gui;
+package com.inilabs.jaer.projects.polarspace;
 
 import javax.swing.*;
 import java.awt.*;

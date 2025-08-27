@@ -118,7 +118,7 @@ public class FBGIntegrationTest {
         fbg.autoConnectRegistry = false; // we'll wire the provider explicitly
         fbg.eventDensityPerPx2 = 0.30f;
         fbg.injectedPolarity = +1;
-        fbg.localTestEnabled = false;
+        fbg.setLocalTestEnabled(false);
 
         // Provide all targets via provider
         fbg.setTargetProvider(new Space3DTargetProvider(space));

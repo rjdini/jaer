@@ -17,9 +17,9 @@
  * MA 02110-1301  USA
  */
 
-package com.inilabs.jaer.projects.gui.tests;
+package com.inilabs.jaer.projects.polarspace.tests;
 
-import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
+import com.inilabs.jaer.projects.polarspace.PolarSpaceDisplay;
 import com.inilabs.jaer.projects.tracker.FieldOfView;
 
 import javax.swing.*;

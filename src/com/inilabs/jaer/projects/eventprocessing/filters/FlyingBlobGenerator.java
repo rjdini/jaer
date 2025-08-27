@@ -8,6 +8,7 @@
 package com.inilabs.jaer.projects.eventprocessing.filters;
 
 import com.inilabs.jaer.projects.space3d.*;
+import com.inilabs.jaer.projects.tracker.FieldOfView;
 
 import java.awt.geom.Point2D;
 
@@ -30,6 +31,8 @@ public class FlyingBlobGenerator extends EventFilter2DMouseAdaptor {
 
     private static final ch.qos.logback.classic.Logger log
             = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(FlyingBlobGenerator.class);
+
+   private static FieldOfView fov;
 
     /* ===================== Core parameters ===================== */
 
@@ -77,7 +80,10 @@ public class FlyingBlobGenerator extends EventFilter2DMouseAdaptor {
     private final java.util.Random rng = new java.util.Random();
     private long lastLogMs = 0;
 
-    public FlyingBlobGenerator(AEChip chip) { super(chip); }
+    public FlyingBlobGenerator(AEChip chip) { 
+        super(chip);
+        fov = FieldOfView.getInstance();
+    }
 
     /* ===================== Lifecycle ===================== */
 
@@ -115,7 +121,7 @@ public class FlyingBlobGenerator extends EventFilter2DMouseAdaptor {
             oe.copyFrom(ie);
         }
 
-        if (!injectEnabled) return getOutPacket();
+        if (!isInjectEnabled()) return getOutPacket();
         final int ts = in.getSize() > 0 ? in.getLastTimestamp() : (int) (System.nanoTime() / 1000);
 
         // Multi-target path
@@ -128,15 +134,15 @@ public class FlyingBlobGenerator extends EventFilter2DMouseAdaptor {
         }
 
         // Local fixed test blob
-        if (localTestEnabled) {
+        if (isLocalTestEnabled()) {
             final int w = chip.getSizeX();
             final int h = chip.getSizeY();
-            int cx = Math.round(Math.max(0f, Math.min(1f, localTestXFrac)) * (w - 1));
-            int cy = Math.round(Math.max(0f, Math.min(1f, localTestYFrac)) * (h - 1));
-            int r  = Math.max(1, localTestRadiusPx);
+            int cx = Math.round(Math.max(0f, Math.min(1f, getLocalTestXFrac())) * (w - 1));
+            int cy = Math.round(Math.max(0f, Math.min(1f, getLocalTestYFrac())) * (h - 1));
+            int r  = Math.max(1, getLocalTestRadiusPx());
             int n;
-            if (localTestEventsPerPacket > 0) {
-                n = localTestEventsPerPacket;
+            if (getLocalTestEventsPerPacket() > 0) {
+                n = getLocalTestEventsPerPacket();
             } else {
                 int area = (int)Math.round(Math.PI * r * r);
                 n = Math.min(2000, Math.max(50, (int)Math.round(eventDensityPerPx2 * area)));
@@ -365,5 +371,89 @@ public class FlyingBlobGenerator extends EventFilter2DMouseAdaptor {
      */
     public void setLensFocalLengthMm(float lensFocalLengthMm) {
         this.lensFocalLengthMm = lensFocalLengthMm;
+    }
+
+    /**
+     * @return the injectEnabled
+     */
+    public boolean isInjectEnabled() {
+        return injectEnabled;
+    }
+
+    /**
+     * @param injectEnabled the injectEnabled to set
+     */
+    public void setInjectEnabled(boolean injectEnabled) {
+        this.injectEnabled = injectEnabled;
+    }
+
+    /**
+     * @return the localTestEnabled
+     */
+    public boolean isLocalTestEnabled() {
+        return localTestEnabled;
+    }
+
+    /**
+     * @param localTestEnabled the localTestEnabled to set
+     */
+    public void setLocalTestEnabled(boolean localTestEnabled) {
+        this.localTestEnabled = localTestEnabled;
+    }
+
+    /**
+     * @return the localTestXFrac
+     */
+    public float getLocalTestXFrac() {
+        return localTestXFrac;
+    }
+
+    /**
+     * @param localTestXFrac the localTestXFrac to set
+     */
+    public void setLocalTestXFrac(float localTestXFrac) {
+        this.localTestXFrac = localTestXFrac;
+    }
+
+    /**
+     * @return the localTestYFrac
+     */
+    public float getLocalTestYFrac() {
+        return localTestYFrac;
+    }
+
+    /**
+     * @param localTestYFrac the localTestYFrac to set
+     */
+    public void setLocalTestYFrac(float localTestYFrac) {
+        this.localTestYFrac = localTestYFrac;
+    }
+
+    /**
+     * @return the localTestRadiusPx
+     */
+    public int getLocalTestRadiusPx() {
+        return localTestRadiusPx;
+    }
+
+    /**
+     * @param localTestRadiusPx the localTestRadiusPx to set
+     */
+    public void setLocalTestRadiusPx(int localTestRadiusPx) {
+        this.localTestRadiusPx = localTestRadiusPx;
+    }
+
+    /**
+     * @return the localTestEventsPerPacket
+     */
+    public int getLocalTestEventsPerPacket() {
+        return localTestEventsPerPacket;
+    }
+
+    /**
+     * @param localTestEventsPerPacket the localTestEventsPerPacket to set
+     */
+    public void setLocalTestEventsPerPacket(int localTestEventsPerPacket) {
+        this.localTestEventsPerPacket = localTestEventsPerPacket;
     }
 }

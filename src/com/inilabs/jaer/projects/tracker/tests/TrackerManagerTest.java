@@ -17,8 +17,8 @@
  * MA 02110-1301  USA
  */
 
-import com.inilabs.jaer.projects.gui.BasicTestPanel;
-import com.inilabs.jaer.projects.gui.PolarSpaceGUI;
+import com.inilabs.jaer.projects.polarspace.BasicTestPanel;
+import com.inilabs.jaer.projects.polarspace.PolarSpaceGUI;
 import java.awt.BorderLayout;
 import java.awt.LayoutManager;
 

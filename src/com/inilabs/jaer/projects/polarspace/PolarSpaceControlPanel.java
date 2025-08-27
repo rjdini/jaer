@@ -20,7 +20,7 @@
  *
  * @author rjd
  */
-package com.inilabs.jaer.projects.gui;
+package com.inilabs.jaer.projects.polarspace;
 
 import com.inilabs.jaer.projects.cog.SpatialAttention;
 import com.inilabs.jaer.projects.environ.WaypointManager;

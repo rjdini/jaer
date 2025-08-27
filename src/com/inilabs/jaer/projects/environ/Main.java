@@ -18,7 +18,7 @@
  */
 package com.inilabs.jaer.projects.environ;
 
-import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
+import com.inilabs.jaer.projects.polarspace.PolarSpaceDisplay;
 import java.awt.BorderLayout;
 import javax.swing.JFrame;
 

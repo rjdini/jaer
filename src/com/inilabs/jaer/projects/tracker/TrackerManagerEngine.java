@@ -1,8 +1,8 @@
 package com.inilabs.jaer.projects.tracker;
 
 import com.inilabs.jaer.projects.cog.SpatialAttention;
-import com.inilabs.jaer.projects.gui.Drawable;
-import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
+import com.inilabs.jaer.projects.polarspace.Drawable;
+import com.inilabs.jaer.projects.polarspace.PolarSpaceDisplay;
 import java.awt.Color;
 import java.awt.geom.Point2D;
 import java.util.*;

@@ -20,7 +20,7 @@
 package com.inilabs.jaer.projects.target.tests;
 
 import com.inilabs.jaer.projects.target.TargetAgent3D;
-import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
+import com.inilabs.jaer.projects.polarspace.PolarSpaceDisplay;
 
 import javax.swing.*;
 import java.awt.*;

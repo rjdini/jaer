@@ -30,7 +30,7 @@ import java.awt.event.MouseEvent;
 import java.beans.PropertyChangeSupport;
 import java.util.List;
 import org.slf4j.LoggerFactory;
-import com.inilabs.jaer.projects.gui.PolarSpaceGUI;
+import com.inilabs.jaer.projects.polarspace.PolarSpaceGUI;
 import com.inilabs.jaer.projects.logging.AgentLogger;
 import com.inilabs.jaer.projects.logging.LoggingStatePropertyChangeFilter;
 import com.inilabs.jaer.projects.motor.DirectGimbalController;

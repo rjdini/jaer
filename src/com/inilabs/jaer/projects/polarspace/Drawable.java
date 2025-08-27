@@ -22,14 +22,14 @@
  * @author rjd
  */
 
-package com.inilabs.jaer.projects.gui;
+package com.inilabs.jaer.projects.polarspace;
 
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import com.inilabs.jaer.projects.gui.ActionType;
+import com.inilabs.jaer.projects.polarspace.ActionType;
 
 public interface Drawable  {
 

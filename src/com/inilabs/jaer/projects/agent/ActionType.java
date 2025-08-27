@@ -19,8 +19,6 @@
 
 package com.inilabs.jaer.projects.agent;
 
-import com.inilabs.jaer.projects.gui.*;
-
 public enum ActionType {
     REMOVE,
     REPAINT

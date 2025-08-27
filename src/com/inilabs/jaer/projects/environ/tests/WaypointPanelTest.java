@@ -19,7 +19,7 @@
 package com.inilabs.jaer.projects.environ.tests;
 import com.inilabs.jaer.projects.environ.WaypointManager;
 import com.inilabs.jaer.projects.environ.WaypointPanel;
-import com.inilabs.jaer.projects.gui.PolarSpaceDisplay;
+import com.inilabs.jaer.projects.polarspace.PolarSpaceDisplay;
 import org.junit.jupiter.api.*;
 import javax.swing.*;
 import java.awt.*;

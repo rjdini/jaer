@@ -18,7 +18,7 @@
  */
 package com.inilabs.jaer.projects.tracker;
 
-import com.inilabs.jaer.projects.gui.ActionType;
+import com.inilabs.jaer.projects.polarspace.ActionType;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -27,7 +27,7 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 
-import com.inilabs.jaer.projects.gui.Drawable;
+import com.inilabs.jaer.projects.polarspace.Drawable;
 import com.inilabs.jaer.projects.logging.AgentLogger;
 import com.inilabs.jaer.projects.logging.EventType;
 import com.inilabs.jaer.projects.motor.Pose;
