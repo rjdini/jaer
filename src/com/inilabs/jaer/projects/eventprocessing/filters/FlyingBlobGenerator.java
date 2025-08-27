@@ -39,10 +39,13 @@ public class FlyingBlobGenerator extends EventFilter2DMouseAdaptor {
 
     // === External world/agent integration (provided by the app) ===
     private Space3D space3D;                  // world (optional but useful for GUI)
-    private Agent3DInterface targetAgent;     // moving target (must be set)
+    public Agent3DInterface targetAgent;     // moving target (must be set)
 
     // cache FOV in degrees (computed in initFilter)
-    private double fovXDeg = Double.NaN, fovYDeg = Double.NaN;
+    public double fovXDeg = Double.NaN;
+
+    // cache FOV in degrees (computed in initFilter)
+    public double fovYDeg = Double.NaN;
 
     private final EngineeringFormat eng = new EngineeringFormat();
     private long lastLogMs = 0;
@@ -100,7 +103,23 @@ public class FlyingBlobGenerator extends EventFilter2DMouseAdaptor {
     @Description("Synthetic event density (events per pixel^2 of blob area)")
     public float eventDensityPerPx2 = getFloat("eventDensityPerPx2", 0.30f);
 
-    private final java.util.Random rng = new java.util.Random();
+    // === Local fixed test target (no 3D) ===
+    @net.sf.jaer.Description("Enable a local fixed test target at (xFrac,yFrac) on the image")
+    public boolean localTestEnabled = getBoolean("localTestEnabled", false);
+
+    @net.sf.jaer.Description("Local test target center X fraction [0..1]")
+    public float localTestXFrac = getFloat("localTestXFrac", 0.60f);
+
+    @net.sf.jaer.Description("Local test target center Y fraction [0..1]")
+    public float localTestYFrac = getFloat("localTestYFrac", 0.60f);
+
+    @net.sf.jaer.Description("Local test target radius in pixels")
+    public int localTestRadiusPx = getInt("localTestRadiusPx", 6);
+
+    @net.sf.jaer.Description("Local test events per packet (if <=0, uses area-density)")
+    public int localTestEventsPerPacket = getInt("localTestEventsPerPacket", 300);
+
+    public java.util.Random rng = new java.util.Random();
 
     public FlyingBlobGenerator(AEChip chip) { super(chip); }
 
@@ -109,26 +128,26 @@ public class FlyingBlobGenerator extends EventFilter2DMouseAdaptor {
     public void initFilter() {
         computeStartingDistance();
         Point2D.Double fovDeg = computeFoVDeg();  // HFOV/VFOV from chip + focal
-        fovXDeg = fovDeg.x;
-        fovYDeg = fovDeg.y;
+        setFovXDeg(fovDeg.x);
+        setFovYDeg(fovDeg.y);
 
         if (getOutPacket() == null) setOutPacket(new EventPacket(PolarityEvent.class));
         getOutPacket().clear();
 
-        log.info("FBG initialized. HFOV={} deg, VFOV={} deg", eng.format(fovXDeg), eng.format(fovYDeg));
+        log.info("FBG initialized. HFOV={} deg, VFOV={} deg", eng.format(getFovXDeg()), eng.format(getFovYDeg()));
 
         // Try auto-connect if nothing has been injected yet
-        if (autoConnectRegistry && (space3D == null || targetAgent == null)) {
+        if (isAutoConnectRegistry() && (space3D == null || getTargetAgent() == null)) {
             Space3D s = com.inilabs.jaer.projects.space3d.Space3DRegistry.get();
             if (s != null) {
                 this.space3D = s;
-                if (this.targetAgent == null && targetAgentKey != null) {
-                    Agent3DInterface a = s.getAgent(targetAgentKey);
+                if (this.getTargetAgent() == null && getTargetAgentKey() != null) {
+                    Agent3DInterface a = s.getAgent(getTargetAgentKey());
                     if (a != null) {
-                        this.targetAgent = a;
-                        log.info("FBG: auto-connected to Space3D and target agent '{}'", targetAgentKey);
+                        this.setTargetAgent(a);
+                        log.info("FBG: auto-connected to Space3D and target agent '{}'", getTargetAgentKey());
                     } else {
-                        log.warn("FBG: Space3D present, but no agent with key '{}'", targetAgentKey);
+                        log.warn("FBG: Space3D present, but no agent with key '{}'", getTargetAgentKey());
                     }
                 } else {
                     log.info("FBG: auto-connected to Space3D (target already set)");
@@ -146,9 +165,9 @@ public class FlyingBlobGenerator extends EventFilter2DMouseAdaptor {
     /* ================= Core processing ================= */
     @Override
     public EventPacket<? extends BasicEvent> filterPacket(EventPacket<? extends BasicEvent> in) {
-        if (outPacket == null) outPacket = new EventPacket(in.getEventClass());
-        outPacket.clear();
-        final OutputEventIterator outItr = outPacket.outputIterator();
+        if (getOutPacket() == null) setOutPacket(new EventPacket(in.getEventClass()));
+        getOutPacket().clear();
+        final OutputEventIterator outItr = getOutPacket().outputIterator();
 
         // Pass-through inputs
         for (BasicEvent ie : in) {
@@ -160,11 +179,11 @@ public class FlyingBlobGenerator extends EventFilter2DMouseAdaptor {
         final int ts = in.getSize() > 0 ? in.getLastTimestamp() : (int) (System.nanoTime() / 1000);
 
         // === External target → compute az/el/dist, FOV gate, project, inject ===
-        if (injectEnabled) {
-            if (targetAgent == null) {
+        if (isInjectEnabled()) {
+            if (getTargetAgent() == null) {
                 throttleLog("FBG: targetAgent is null; no injection.");
             } else {
-                Space3D.Vec3 p = targetAgent.getPositionDVX(); // ENU w.r.t. DVX at origin
+                Space3D.Vec3 p = getTargetAgent().getPositionDVX(); // ENU w.r.t. DVX at origin
                 AzElDist aed = azElDistFromCamera(p.x, p.y, p.z);
                 boolean inFov = insideFOV(aed);
                 throttleLog(String.format("FBG: tgt=(%.1f,%.1f,%.1f)m az=%.2f° el=%.2f° d=%.1fm FOV=%s",
@@ -175,7 +194,7 @@ public class FlyingBlobGenerator extends EventFilter2DMouseAdaptor {
                         int rpx = pixelRadiusFromDistance(aed.distM); // uses targetDiameterM
                         // area-scaled event count with clamps
                         int area = (int)Math.round(Math.PI * rpx * rpx);
-                        int n = Math.min(2000, Math.max(50, (int)Math.round(eventDensityPerPx2 * area)));
+                        int n = Math.min(2000, Math.max(50, (int)Math.round(getEventDensityPerPx2() * area)));
                         injectBlobAt(outItr, ts, Math.round(px.x), Math.round(px.y), rpx, n);
                     } else {
                         throttleLog("FBG: projection returned null (clipped).");
@@ -184,7 +203,24 @@ public class FlyingBlobGenerator extends EventFilter2DMouseAdaptor {
             }
         }
 
-        return outPacket;
+        // === Local fixed test target (pure injector self-check) ===
+        if (isLocalTestEnabled()) {
+            final int w = chip.getSizeX();
+            final int h = chip.getSizeY();
+            int cx = Math.round(Math.max(0f, Math.min(1f, getLocalTestXFrac())) * (w - 1));
+            int cy = Math.round(Math.max(0f, Math.min(1f, getLocalTestYFrac())) * (h - 1));
+            int r  = Math.max(1, getLocalTestRadiusPx());
+            int n;
+            if (getLocalTestEventsPerPacket() > 0) {
+                n = getLocalTestEventsPerPacket();
+            } else {
+                int area = (int)Math.round(Math.PI * r * r);
+                n = Math.min(2000, Math.max(50, (int)Math.round(getEventDensityPerPx2() * area)));
+            }
+            injectBlobAt(outItr, ts, cx, cy, r, n);
+        }
+
+        return getOutPacket();
     }
 
     private void throttleLog(String msg){
@@ -235,8 +271,8 @@ public class FlyingBlobGenerator extends EventFilter2DMouseAdaptor {
         final int w = chip.getSizeX(), h = chip.getSizeY();
         final int r = radiusPx;
         for (int i = 0; i < nEvents; i++) {
-            double theta = 2.0 * Math.PI * rng.nextDouble();
-            double rr = r * Math.sqrt(rng.nextDouble());
+            double theta = 2.0 * Math.PI * getRng().nextDouble();
+            double rr = r * Math.sqrt(getRng().nextDouble());
             int x = cx + (int) Math.round(rr * Math.cos(theta));
             int y = cy + (int) Math.round(rr * Math.sin(theta));
             if (x < 0 || x >= w || y < 0 || y >= h) continue;
@@ -295,7 +331,7 @@ public class FlyingBlobGenerator extends EventFilter2DMouseAdaptor {
     private boolean insideFOV(AzElDist aed) {
         if (Double.isNaN(aed.azDeg) || Double.isNaN(aed.elDeg)) return false;
         double eps = 0.2; // deg; reduces edge flicker
-        double hx = fovXDeg * 0.5, hy = fovYDeg * 0.5;
+        double hx = getFovXDeg() * 0.5, hy = getFovYDeg() * 0.5;
         return Math.abs(aed.azDeg) <= (hx - eps) && Math.abs(aed.elDeg) <= (hy - eps);
     }
 
@@ -349,4 +385,172 @@ public class FlyingBlobGenerator extends EventFilter2DMouseAdaptor {
 
     public boolean isAutoConnectRegistry() { return autoConnectRegistry; }
     public void setAutoConnectRegistry(boolean v) { autoConnectRegistry = v; putBoolean("autoConnectRegistry", v); }
+
+    /**
+     * @return the fovXDeg
+     */
+    public double getFovXDeg() {
+        return fovXDeg;
+    }
+
+    /**
+     * @param fovXDeg the fovXDeg to set
+     */
+    public void setFovXDeg(double fovXDeg) {
+        this.fovXDeg = fovXDeg;
+    }
+
+    /**
+     * @return the fovYDeg
+     */
+    public double getFovYDeg() {
+        return fovYDeg;
+    }
+
+    /**
+     * @param fovYDeg the fovYDeg to set
+     */
+    public void setFovYDeg(double fovYDeg) {
+        this.fovYDeg = fovYDeg;
+    }
+
+    /**
+     * @return the centerXFrac
+     */
+    public float getCenterXFrac() {
+        return centerXFrac;
+    }
+
+    /**
+     * @param centerXFrac the centerXFrac to set
+     */
+    public void setCenterXFrac(float centerXFrac) {
+        this.centerXFrac = centerXFrac;
+    }
+
+    /**
+     * @return the centerYFrac
+     */
+    public float getCenterYFrac() {
+        return centerYFrac;
+    }
+
+    /**
+     * @param centerYFrac the centerYFrac to set
+     */
+    public void setCenterYFrac(float centerYFrac) {
+        this.centerYFrac = centerYFrac;
+    }
+
+    /**
+     * @return the blobRadiusPx
+     */
+    public int getBlobRadiusPx() {
+        return blobRadiusPx;
+    }
+
+    /**
+     * @param blobRadiusPx the blobRadiusPx to set
+     */
+    public void setBlobRadiusPx(int blobRadiusPx) {
+        this.blobRadiusPx = blobRadiusPx;
+    }
+
+    /**
+     * @return the eventDensityPerPx2
+     */
+    public float getEventDensityPerPx2() {
+        return eventDensityPerPx2;
+    }
+
+    /**
+     * @param eventDensityPerPx2 the eventDensityPerPx2 to set
+     */
+    public void setEventDensityPerPx2(float eventDensityPerPx2) {
+        this.eventDensityPerPx2 = eventDensityPerPx2;
+    }
+
+    /**
+     * @return the localTestEnabled
+     */
+    public boolean isLocalTestEnabled() {
+        return localTestEnabled;
+    }
+
+    /**
+     * @param localTestEnabled the localTestEnabled to set
+     */
+    public void setLocalTestEnabled(boolean localTestEnabled) {
+        this.localTestEnabled = localTestEnabled;
+    }
+
+    /**
+     * @return the localTestXFrac
+     */
+    public float getLocalTestXFrac() {
+        return localTestXFrac;
+    }
+
+    /**
+     * @param localTestXFrac the localTestXFrac to set
+     */
+    public void setLocalTestXFrac(float localTestXFrac) {
+        this.localTestXFrac = localTestXFrac;
+    }
+
+    /**
+     * @return the localTestYFrac
+     */
+    public float getLocalTestYFrac() {
+        return localTestYFrac;
+    }
+
+    /**
+     * @param localTestYFrac the localTestYFrac to set
+     */
+    public void setLocalTestYFrac(float localTestYFrac) {
+        this.localTestYFrac = localTestYFrac;
+    }
+
+    /**
+     * @return the localTestRadiusPx
+     */
+    public int getLocalTestRadiusPx() {
+        return localTestRadiusPx;
+    }
+
+    /**
+     * @param localTestRadiusPx the localTestRadiusPx to set
+     */
+    public void setLocalTestRadiusPx(int localTestRadiusPx) {
+        this.localTestRadiusPx = localTestRadiusPx;
+    }
+
+    /**
+     * @return the localTestEventsPerPacket
+     */
+    public int getLocalTestEventsPerPacket() {
+        return localTestEventsPerPacket;
+    }
+
+    /**
+     * @param localTestEventsPerPacket the localTestEventsPerPacket to set
+     */
+    public void setLocalTestEventsPerPacket(int localTestEventsPerPacket) {
+        this.localTestEventsPerPacket = localTestEventsPerPacket;
+    }
+
+    /**
+     * @return the rng
+     */
+    public java.util.Random getRng() {
+        return rng;
+    }
+
+    /**
+     * @param rng the rng to set
+     */
+    public void setRng(java.util.Random rng) {
+        this.rng = rng;
+    }
 }
