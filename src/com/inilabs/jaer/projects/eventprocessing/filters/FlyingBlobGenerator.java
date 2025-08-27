@@ -456,4 +456,15 @@ public class FlyingBlobGenerator extends EventFilter2DMouseAdaptor {
     public void setLocalTestEventsPerPacket(int localTestEventsPerPacket) {
         this.localTestEventsPerPacket = localTestEventsPerPacket;
     }
+
+    /** Optional: bind to a specific FieldOfView (per-tracker). */
+    public void setFieldOfView(FieldOfView fov){
+        FlyingBlobGenerator.fov = fov;
+    }
+    /** Optional ctor: build with explicit FieldOfView (per-tracker). */
+    public FlyingBlobGenerator(AEChip chip, FieldOfView fov){
+        super(chip);
+        FlyingBlobGenerator.fov = (fov!=null? fov : FieldOfView.getInstance());
+    }
+
 }

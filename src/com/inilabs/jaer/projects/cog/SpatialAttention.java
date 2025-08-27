@@ -50,6 +50,7 @@ public class SpatialAttention {
     private static final long BREAK_CONTACT_DURATION = 4000; // Threshold in milliseconds
     private long lastSuccessfulUpdate = System.currentTimeMillis();
     private boolean isSaccade = false; // State to ignore incoming data during waypoint movement
+    private com.inilabs.jaer.projects.tracker.TrackerManagerEngine engine;
     int cnt;
     private String defaultWaypointName = "street";
 
@@ -78,7 +79,13 @@ public class SpatialAttention {
         return instance;
     }
 
-    public void startTasks() {
+    
+    /** Inject TrackerManagerEngine so we can signal saccade state without static cross-talk. */
+    public void setEngine(com.inilabs.jaer.projects.tracker.TrackerManagerEngine engine){
+        this.engine = engine;
+    }
+
+public void startTasks() {
         try {
             // Schedule a task to periodically update the gimbal
             executor.scheduleAtFixedRate(this::updateGimbalPose, 50, 50, TimeUnit.MILLISECONDS);
@@ -193,7 +200,7 @@ public class SpatialAttention {
 
         // Enter saccade state
         isSaccade = true;
-        TrackerManagerEngine.setIsSaccade(isSaccade);
+        if (engine != null) engine.setIsSaccade(isSaccade);
         log.info("Entering saccade state: Moving to waypoint azimuth: {}, elevation: {}", azimuth, elevation);
 
         gimbal.setGimbalPose(azimuth, 0f, elevation);
@@ -201,7 +208,7 @@ public class SpatialAttention {
         // Schedule exiting the saccade state
         scheduler.schedule(() -> {
             isSaccade = false;
-            TrackerManagerEngine.setIsSaccade(isSaccade);
+            if (engine != null) engine.setIsSaccade(isSaccade);
             log.info("Saccade completed. Exiting saccade state.");
         }, 2000, TimeUnit.MILLISECONDS); // Delay after reaching waypoint
     }

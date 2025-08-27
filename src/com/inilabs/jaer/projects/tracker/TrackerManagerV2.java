@@ -153,7 +153,8 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
          spatialAttention = SpatialAttention.getInstance(gimbal, waypointManager); // spatial attention drives gimbal pose  (with parallel input from Joystick)   
          joystickController = JoystickController.getInstance(gimbal);
          polarSpaceGUI = new PolarSpaceGUI();
-         engine = new TrackerManagerEngine(fov, spatialAttention,  polarSpaceGUI.getPolarSpaceDisplay()); 
+         engine = new TrackerManagerEngine(fov, spatialAttention,  polarSpaceGUI.getPolarSpaceDisplay());
+         spatialAttention.setEngine(engine); 
          exerciser = new TrackerManagerExerciser2();  // temporary - neds to be refactored as part of general target system.
          testClusterList = exerciser.createGaussianCluster(4, 4.0f);
          

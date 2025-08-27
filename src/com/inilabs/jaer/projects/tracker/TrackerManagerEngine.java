@@ -38,9 +38,12 @@ public class TrackerManagerEngine {
     private Color bestAgentColor = Color.RED; // Define the color for the best agents
     private volatile boolean freshDataAvailable = false;
     private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(TrackerManagerEngine.class);
-    private static boolean isSaccade = false;
+    private volatile boolean isSaccade = false;
+    // Backward-compat: keep a weak static reference to the last created engine
+    private static volatile TrackerManagerEngine LAST_INSTANCE = null;
 
     public TrackerManagerEngine(FieldOfView fov, SpatialAttention spatialAttention, PolarSpaceDisplay polarDisplay) {
+        LAST_INSTANCE = this;
         this.fov = fov;
         this.spatialAttention = spatialAttention;
         this.polarSpaceDisplay = polarDisplay;
@@ -463,15 +466,19 @@ private double magnitude(Point2D p) {
     /**
      * @return the isSaccade
      */
-    public static boolean isIsSaccade() {
+    public  boolean isIsSaccade() {
         return isSaccade;
     }
 
-    /**
-     * @param aIsSaccade the isSaccade to set
-     */
-    public static void setIsSaccade(boolean aIsSaccade) {
-        isSaccade = aIsSaccade;
+   
+
+    /** Instance saccade setter (preferred). */
+    public void setIsSaccade(boolean aIsSaccade){
+        this.isSaccade = aIsSaccade;
+    }
+    
+    public boolean isSaccade(){
+        return this.isSaccade;
     }
 
 }

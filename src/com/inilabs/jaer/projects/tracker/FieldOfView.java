@@ -34,23 +34,31 @@ import com.inilabs.jaer.projects.motor.Pose;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import org.slf4j.LoggerFactory;
 
+/**
+ * FieldOfView represents the DVX camera FOV (pose + chip/lens params) drawn in Polar space.
+ * 
+ * This class keeps backward compatibility with the existing singleton via getInstance(),
+ * while also allowing a scoped-per-tracker singleton via get(trackerId).
+ */
 public class FieldOfView implements Drawable, PropertyChangeListener {
 
     private final PropertyChangeSupport pcs = new PropertyChangeSupport(this);
-    private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(FieldOfView.class);
-    
-    // Default FOV dimensions and chip parameters
+    private static final ch.qos.logback.classic.Logger log =
+            (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(FieldOfView.class);
+
+    // ====== FOV & chip parameters ======
     private float focalLength = 100f;
     private float chipWidthPixels = 640f;
     private float chipHeightPixels = 480f;
     private float lensOffsetWidthPixels = 0f;
     private float lensOffsetHeightPixels = 0f;
-    private float centerChipX = chipWidthPixels/2f - lensOffsetWidthPixels;
-     private float centerChipY = (chipHeightPixels/2f) - lensOffsetHeightPixels;
+    private float centerChipX = chipWidthPixels / 2f - lensOffsetWidthPixels;
+    private float centerChipY = (chipHeightPixels / 2f) - lensOffsetHeightPixels;
     private float FOVX = 30.0f;      // small lens ~ 30deg
     private float FOVY = FOVX * (getChipHeightPixels() / getChipWidthPixels());
 
@@ -58,8 +66,11 @@ public class FieldOfView implements Drawable, PropertyChangeListener {
     private float axialYaw = 0f;
     private float axialPitch = 0f;
     private float axialRoll = 0f;
+
+    // For logging / debugging
     private final List<EventCluster> clusters = new ArrayList<>();
-    
+
+    // Drawable identity & style
     private String key;
     private int id;
     private boolean showPath = false;
@@ -68,79 +79,91 @@ public class FieldOfView implements Drawable, PropertyChangeListener {
     private float size = 1.0f;
     private Color color = Color.BLACK;
     private BiConsumer<ActionType, String> parentCallback;
-    
+
+    // Path trace in polar view
     protected final LinkedList<float[]> pathBuffer = new LinkedList<>();
     protected final int maxPathLength = 40;
-   
+
+    // PolarSpace transform (injected by parent display)
     private int centerX = 0;
     private int centerY = 0;
     private float azimuthScale = 1.0f;
     private float elevationScale = 1.0f;
     private float azimuthHeading = 0f;
     private float elevationHeading = 0f;
+
+    // Lifecycle timestamps
     private long startTime; // agent created
-    private long lastTime; // agent closed
-    protected long lifetime0; // temp value used for extending lifetime.
-    protected long maxLifeTime = 100 ; //millisec
+    private long lastTime;  // agent closed
+    protected long lifetime0;        // temp value used for extending lifetime.
+    protected long maxLifeTime = 100; // millisec
     protected boolean isOrphaned = false;
     protected boolean isExpired = false;
+
+    // ====== Singleton support ======
+    // Legacy global singleton
     private static FieldOfView instance;
-    
-    // Singleton pattern for FieldOfView instance
+
+    // Scoped instances per tracker (allows one FOV per DVX without global collisions)
+    private static final ConcurrentHashMap<String, FieldOfView> INSTANCES = new ConcurrentHashMap<>();
+
+    /** Returns the FieldOfView instance associated with the given trackerId. */
+    public static FieldOfView get(String trackerId) {
+        if (trackerId == null || trackerId.isEmpty()) {
+            trackerId = "DEFAULT";
+        }
+        final String tid = trackerId;
+        return INSTANCES.computeIfAbsent(tid, id -> {
+            FieldOfView f = new FieldOfView();
+            f.key = "fov_" + id;
+            return f;
+        });
+    }
+
+    /** Legacy global singleton accessor; also seeds the DEFAULT scoped instance. */
+    public static FieldOfView getInstance() {
+        if (instance == null) {
+            instance = new FieldOfView();
+            instance.key = "fov_instance";
+            // Seed DEFAULT scoped instance for backward compatibility
+            INSTANCES.putIfAbsent("DEFAULT", instance);
+        }
+        return instance;
+    }
+
+    // ====== Construction ======
     private FieldOfView() {
-      //  super();
         this.setColor(Color.RED);
         this.setSize(FOVX);
         init();
     }
-    
-        public static FieldOfView getInstance() {
-        if (instance == null) {
-            instance = new FieldOfView();
-            instance.key="fov_instance";
-        }
-        return instance;
-    }
-    
-    public void init(){
-           AgentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), getColor(), getClusterKeys());
-           
-    }
 
-//    public static FieldOfView getInstance() {
-//        if (instance == null) {
-//            instance = new FieldOfView();
-//        }
-//        return instance;
-//    }
+    private void init() {
+        AgentLogger.logAgentEvent(EventType.CREATE, getKey(), getAzimuth(), getElevation(), getColor(), getClusterKeys());
+        startTime = System.currentTimeMillis();
+    }
 
     public void close() {
-        AgentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(),  getColor(), getClusterKeys());
+        lastTime = System.currentTimeMillis();
+        AgentLogger.logAgentEvent(EventType.CLOSE, getKey(), getAzimuth(), getElevation(), getColor(), getClusterKeys());
     }
-    
-    // dummy to conform to Drawable - not relevant to FOV
-   public long getLifetime() {
-       return 10000;  
-   }
-    
-    // Property Change Listener Implementation
+
+    // ====== PropertyChangeListener ======
     @Override
     public void propertyChange(PropertyChangeEvent evt) {
         if ("FetchedGimbalPose".equals(evt.getPropertyName())) {
             Pose newFOVPose = (Pose) evt.getNewValue();
-            setPose(newFOVPose.yaw, newFOVPose.getRoll(), newFOVPose.getPitch() );
-            log.debug("Received evt FetchedGimbalPose  azi {}, ele {}", newFOVPose.getYaw(), newFOVPose.getPitch());    
+            setPose(newFOVPose.getYaw(), newFOVPose.getRoll(), newFOVPose.getPitch());
+            log.debug("Received evt FetchedGimbalPose  azi {}, ele {}", newFOVPose.getYaw(), newFOVPose.getPitch());
         }
     }
-    
-    // ******* TO remove  - this is a temp hack to test logging of  FOV to json output
-    // Helper method to get cluster keys as a list of strings
+
+    // Helper method to get cluster keys as a list of strings (for logging)
     public List<String> getClusterKeys() {
         return clusters.stream().map(EventCluster::getKey).collect(Collectors.toList());
     }
-    
-    
-    
+
+    // ====== DrawableListener (transform updates from display) ======
     @Override
     public void onTransformChanged(float azimuthScale, float elevationScale, float azimuthHeading, float elevationHeading, int centerX, int centerY) {
         this.azimuthScale = azimuthScale;
@@ -151,60 +174,53 @@ public class FieldOfView implements Drawable, PropertyChangeListener {
         this.centerY = centerY;
     }
 
-
-    
-    public void setPose( float yaw, float roll, float pitch) {
+    // ====== Pose management ======
+    public void setPose(float yaw, float roll, float pitch) {
         setAxialYaw(yaw);
         setAxialRoll(roll);
         setAxialPitch(pitch);
-         AgentLogger.logAgentEvent(EventType.MOVE, getKey(), getAzimuth(), getElevation(),  getColor(), getClusterKeys());
-    } 
-    
-     public float[] getPose( ) {
-        return  new float[] { axialYaw, axialRoll, axialPitch };   
-     } 
-    
-    
-    // Methods for adjusting and retrieving orientation
-    // These methods get and set the FOV's  pose - 
-   //   here called axis, since it is the reference for all otherframes of measurement of activity in the feild of view. 
-   //
-    // yaw, roll, pitch refer to the gimbals behavioral frame of reference.
-    // azimuth amd elevation refer to the axis of the field of view in polar space
-    
+        AgentLogger.logAgentEvent(EventType.MOVE, getKey(), getAzimuth(), getElevation(), getColor(), getClusterKeys());
+    }
+
+    public float[] getPose() {
+        return new float[]{axialYaw, axialRoll, axialPitch};
+    }
+
+    // yaw, roll, pitch refer to the gimbal's behavioral frame.
+    // azimuth and elevation refer to the FOV axis in polar space.
     public void setAxialYaw(float axialYaw) {
         this.axialYaw = axialYaw;
         setAzimuth(axialYaw);
     }
-    
-     public float getAxialYaw() {
+
+    public float getAxialYaw() {
         return axialYaw;
     }
-    
-     public void setAxialPitch(float axialPitch) {
+
+    public void setAxialPitch(float axialPitch) {
         this.axialPitch = axialPitch;
         setElevation(axialPitch);
     }
 
-       public float getAxialPitch() {
+    public float getAxialPitch() {
         return axialPitch;
     }
-     
-      public void setAxialRoll(float axialRoll) {
+
+    public void setAxialRoll(float axialRoll) {
         this.axialRoll = axialRoll;
     }
-      
+
     public float getAxialRoll() {
         return axialRoll;
-    }  
-    
+    }
+
     @Override
     public void setAzimuth(float azimuth) {
         this.azimuth = azimuth;
         this.axialYaw = azimuth;
         addCurrentPositionToPath();
     }
-    
+
     @Override
     public void setElevation(float elevation) {
         this.elevation = elevation;
@@ -212,15 +228,21 @@ public class FieldOfView implements Drawable, PropertyChangeListener {
         addCurrentPositionToPath();
     }
 
+    @Override
+    public float getAzimuth() {
+        return azimuth;
+    }
 
-  
-      // Method to draw the Field of View in PolarSpace (azimuth and elevation)
-    
+    @Override
+    public float getElevation() {
+        return elevation;
+    }
+
+    // ====== Rendering ======
     @Override
     public void draw(Graphics g) {
         Graphics2D g2d = (Graphics2D) g;
 
-   
         // Calculate screen coordinates based on polar coordinates and the transform broadcast
         int x = getCenterX() + (int) ((getAzimuth() - getAzimuthHeading()) * getAzimuthScale());
         int y = getCenterY() - (int) ((getElevation() - getElevationHeading()) * getElevationScale());
@@ -236,17 +258,14 @@ public class FieldOfView implements Drawable, PropertyChangeListener {
         g2d.setColor(getColor());
         g2d.drawRect(-boxWidth / 2, -boxHeight / 2, boxWidth, boxHeight);
         g2d.setTransform(originalTransform);
-    
 
-             // Draw the path if enabled
+        // Draw the path if enabled
         if (showPath) {
             drawPath(g2d);
         }
-       
     }
-    
-    
-      protected void drawPath(Graphics2D g2d) {
+
+    protected void drawPath(Graphics2D g2d) {
         g2d.setColor(color);
         float[] previousPosition = null;
 
@@ -262,28 +281,8 @@ public class FieldOfView implements Drawable, PropertyChangeListener {
             previousPosition = position;
         }
     }
-    
-//    protected synchronized void drawPath(Graphics2D g2d, int centerX, int centerY) {
-//        g2d.setColor(Color.GRAY);
-//        float[] previousPosition = null;
-//
-//        for (float[] position : pathBuffer) {
-//            if (previousPosition != null) {
-//                int previousX = centerX + (int) (previousPosition[0] * getAzimuthScale());
-//                int previousY = centerY - (int) (previousPosition[1] * getElevationScale());
-//                int currentX = centerX + (int) (position[0] * getAzimuthScale());
-//                int currentY = centerY - (int) (position[1] * getElevationScale());
-//                g2d.drawLine(previousX, previousY, currentX, currentY);
-//            }
-//            previousPosition = position;
-//        }
-//    }
-    
-     // pan and tilt are legacy dimensions from Tobi's pan tilt system. 
-    // Both range 0-1, with 0,0 at bottom left. 0-1 normalizes the chip dimentsion (chip_width, chip height) 
-    // Field of View-specific calculations
-    
-    // get yaw and pitch in degrees, given the pan and tilt.
+
+    // ====== Legacy pan/tilt helpers (normalized 0..1) ======
     public float getYawAtPan(float pan) {
         return axialYaw + (pan - 0.5f) * getFOVX();
     }
@@ -292,22 +291,17 @@ public class FieldOfView implements Drawable, PropertyChangeListener {
         return axialPitch + (tilt - 0.5f) * getFOVY();
     }
 
-    // TODO decide how to manage out of rnage for chip pixels.
-    // get the chip pixel at the requested absolute yaw/pitch
+    // Chip-pixel helpers at absolute yaw/pitch
     public float getPixelsAtYaw(float yaw) {
         float deltaYaw = yaw - getPose()[0];
-        float pixelXAtDeltaYaw = getCenterChipX()  + (deltaYaw / getFOVX()) * getChipWidthPixels();    
-        return pixelXAtDeltaYaw ;   // why the negative??
+        return getCenterChipX() + (deltaYaw / getFOVX()) * getChipWidthPixels();
     }
 
-    
-// get the chip pixel at the requested absolute yaw/pitch
     public float getPixelsAtPitch(float pitch) {
         float deltaPitch = pitch - getPose()[2];
-        float pixelYAtDeltaPitch = getCenterChipY()  + (deltaPitch / getFOVY()) * getChipHeightPixels();    
-        return pixelYAtDeltaPitch ;   
+        return getCenterChipY() + (deltaPitch / getFOVY()) * getChipHeightPixels();
     }
-    
+
     public float getPixelsAtPan(float pan) {
         return getPixelsAtYaw(getYawAtPan(pan));
     }
@@ -323,191 +317,70 @@ public class FieldOfView implements Drawable, PropertyChangeListener {
     public float getTiltAtPitch(float pitch) {
         return 0.5f + (pitch - axialPitch) / getFOVY();
     }
-    
-    /**
-     * Converts a given x-coordinate (pixel) into the corresponding yaw (azimuth) angle
-     * relative to azimuth = 0
-     * @param pixelX The x-coordinate on the display.
-     * @return The yaw (azimuth) in degrees at the specified pixel.
-     */
+
+    /** Converts pixel X to yaw (degrees), relative to current pose center. */
     public float getYawAtPixel(float pixelX) {
-        // Calculate pixel offset from the center of the display
-        float deltaYaw = - (getFOVX() / 2) + ( ( pixelX / getChipWidthPixels() ) * getFOVX() );
-        // Convert pixel offset to yaw angle using the azimuth scale
-        // add the offset of the FOV axis
-        return  getPose()[0] + deltaYaw;
+        float deltaYaw = -(getFOVX() / 2f) + ((pixelX / getChipWidthPixels()) * getFOVX());
+        return getPose()[0] + deltaYaw;
     }
 
-    /**
-     * Converts a given y-coordinate (pixel) into the corresponding pitch (elevation) angle
-     * relative to the center point (heading) of the display.
-     * @param pixelY The y-coordinate on the display.
-     * @return The pitch (elevation) in degrees at the specified pixel.
-     */
+    /** Converts pixel Y to pitch (degrees), relative to current pose center. */
     public float getPitchAtPixel(float pixelY) {
-        // Calculate pixel offset from the center of the display
-          float deltaPitch = - (getFOVY() / 2) + ( ( pixelY / getChipHeightPixels() ) * getFOVY() );
-        
-        // Convert pixel offset to pitch angle using the elevation scale
+        float deltaPitch = -(getFOVY() / 2f) + ((pixelY / getChipHeightPixels()) * getFOVY());
         return getPose()[2] + deltaPitch;
     }
-    
-  
-    // Set chip dimensions and update dependent parameters
+
+    // ====== Chip/lens setters & getters ======
     public void setChipDimensions(float width, float height) {
         this.setChipWidthPixels(width);
         this.setChipHeightPixels(height);
     }
 
-    // Set focal length
     public void setFocalLength(float focalLength) {
         this.focalLength = focalLength;
     }
 
-    /**
-     * @return the FOVX
-     */
-    public float getFOVX() {
-        return FOVX;
-    }
+    public float getFOVX() { return FOVX; }
+    public void setFOVX(float FOVX) { this.FOVX = FOVX; }
 
-    /**
-     * @param FOVX the FOVX to set
-     */
-    public void setFOVX(float FOVX) {
-        this.FOVX = FOVX;
-    }
+    public float getFOVY() { return FOVY; }
+    public void setFOVY(float FOVY) { this.FOVY = FOVY; }
 
-    /**
-     * @return the FOVY
-     */
-    public float getFOVY() {
-        return FOVY;
-    }
+    public float getFocalLength() { return focalLength; }
 
-    /**
-     * @param FOVY the FOVY to set
-     */
-    public void setFOVY(float FOVY) {
-        this.FOVY = FOVY;
-    }
+    public float getChipWidthPixels() { return chipWidthPixels; }
+    public void setChipWidthPixels(float chipWidthPixels) { this.chipWidthPixels = chipWidthPixels; }
 
-    /**
-     * @return the focalLength
-     */
-    public float getFocalLength() {
-        return focalLength;
-    }
+    public float getChipHeightPixels() { return chipHeightPixels; }
+    public void setChipHeightPixels(float chipHeightPixels) { this.chipHeightPixels = chipHeightPixels; }
 
-    /**
-     * @return the chipWidthPixels
-     */
-    public float getChipWidthPixels() {
-        return chipWidthPixels;
-    }
+    public float getCenterChipX() { return centerChipX; }
+    public void setCenterChipX(float centerChipX) { this.centerChipX = centerChipX; }
 
-    /**
-     * @param chipWidthPixels the chipWidthPixels to set
-     */
-    public void setChipWidthPixels(float chipWidthPixels) {
-        this.chipWidthPixels = chipWidthPixels;
-    }
+    public float getCenterChipY() { return centerChipY; }
+    public void setCenterChipY(float centerChipY) { this.centerChipY = centerChipY; }
 
-    /**
-     * @return the chipHeightPixels
-     */
-    public float getChipHeightPixels() {
-        return chipHeightPixels;
-    }
-
-    /**
-     * @param chipHeightPixels the chipHeightPixels to set
-     */
-    public void setChipHeightPixels(float chipHeightPixels) {
-        this.chipHeightPixels = chipHeightPixels;
-    }
-
-    /**
-     * @return the centerChipX
-     */
-    public float getCenterChipX() {
-        return centerChipX;
-    }
-
-    /**
-     * @param centerChipX the centerChipX to set
-     */
-    public void setCenterChipX(float centerChipX) {
-        this.centerChipX = centerChipX;
-    }
-
-    /**
-     * @return the centerChipY
-     */
-    public float getCenterChipY() {
-        return centerChipY;
-    }
-
-    /**
-     * @param centerChipY the centerChipY to set
-     */
-    public void setCenterChipY(float centerChipY) {
-        this.centerChipY = centerChipY;
-    }
-    
-    
-    
-    
+    // ====== Drawable API ======
     @Override
-    public String getKey() {
-        return this.key;
-    }
+    public String getKey() { return this.key; }
 
     @Override
-    public int getId() {
-        return this.id;
-    }
-
-   
-    @Override
-    public void showPath(boolean yes) {
-        this.setShowPath(yes);
-    }
-    
-    public boolean isPathVisible() {
-        return showPath;
-    }
+    public int getId() { return this.id; }
 
     @Override
-    public float getAzimuth() {
-        return azimuth;
-    }
-
-    
-    @Override
-    public float getElevation() {
-        return elevation;
-    }
+    public void showPath(boolean yes) { this.setShowPath(yes); }
 
     @Override
-    public void setSize(float sizeDegrees) {
-        this.size = sizeDegrees;
-    }
+    public void setSize(float sizeDegrees) { this.size = sizeDegrees; }
 
     @Override
-    public float getSize() {
-        return size;
-    }
+    public float getSize() { return size; }
 
     @Override
-    public void setColor(Color color) {
-        this.color = color;
-    }
+    public void setColor(Color color) { this.color = color; }
 
     @Override
-    public Color getColor() {
-        return color;
-    }
+    public Color getColor() { return color; }
 
     @Override
     public void setParentCallback(BiConsumer<ActionType, String> parentCallback) {
@@ -515,93 +388,39 @@ public class FieldOfView implements Drawable, PropertyChangeListener {
     }
 
     @Override
-    public boolean isExpired() {
-        return false; // Dummy implementation
+    public boolean isExpired() { return false; } // Dummy implementation
+    
+    public boolean isPathVisible() {
+        return showPath;
     }
 
     @Override
-    public boolean isOrphaned() {
-        return false; // Dummy implementation
-    }
+    public boolean isOrphaned() { return false; } // Dummy implementation
 
+    public long getLifetime() { return 10000L; } // dummy to conform to Drawable
 
-    
-    
-     protected void addCurrentPositionToPath() {
+    protected void addCurrentPositionToPath() {
         if (pathBuffer.size() >= maxPathLength) {
             pathBuffer.removeFirst();
         }
         pathBuffer.addLast(new float[]{getAzimuth(), getElevation()});
     }
-    
 
-    /**
-     * @return the showPath
-     */
-    public boolean isShowPath() {
-        return showPath;
-    }
+    public boolean isShowPath() { return showPath; }
+    public void setShowPath(boolean showPath) { this.showPath = showPath; }
 
-    /**
-     * @param showPath the showPath to set
-     */
-    public void setShowPath(boolean showPath) {
-        this.showPath = showPath;
-    }
+    public int getCenterX() { return centerX; }
+    public int getCenterY() { return centerY; }
+    public float getAzimuthScale() { return azimuthScale; }
+    public float getElevationScale() { return elevationScale; }
+    public float getAzimuthHeading() { return azimuthHeading; }
+    public float getElevationHeading() { return elevationHeading; }
+    public long getStartTime() { return startTime; }
+    public long getLastTime() { return lastTime; }
 
-    /**
-     * @return the centerX
-     */
-    public int getCenterX() {
-        return centerX;
-    }
-
-    /**
-     * @return the centerY
-     */
-    public int getCenterY() {
-        return centerY;
-    }
-
-    /**
-     * @return the azimuthScale
-     */
-    public float getAzimuthScale() {
-        return azimuthScale;
-    }
-
-    /**
-     * @return the elevationScale
-     */
-    public float getElevationScale() {
-        return elevationScale;
-    }
-
-    /**
-     * @return the azimuthHeading
-     */
-    public float getAzimuthHeading() {
-        return azimuthHeading;
-    }
-
-    /**
-     * @return the elevationHeading
-     */
-    public float getElevationHeading() {
-        return elevationHeading;
-    }
-
-    /**
-     * @return the startTime
-     */
-    public long getStartTime() {
-        return startTime;
-    }
-
-    /**
-     * @return the lastTime
-     */
-    public long getLastTime() {
-        return lastTime;
+    // ====== Placeholder class for cluster logging ======
+    // (Assumes EventCluster exists elsewhere in your project; if not, replace with your real type.)
+    public static class EventCluster {
+        public String getKey() { return "cluster"; }
     }
 }
