@@ -50,6 +50,7 @@ import com.inilabs.jaer.projects.space3d.Space3D;
 import com.inilabs.jaer.projects.space3d.Space3DGUI;
 import com.inilabs.jaer.projects.space3d.Space3DRegistry;
 import com.inilabs.jaer.projects.space3d.TargetAgent;
+import com.inilabs.jaer.projects.space3d.TargetShape;
 
 
 
@@ -211,15 +212,59 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
             world3D.addAgent(cam);
 
             // Reciprocal target: (-10,0,100) <-> (+10,0,20) at 10 m/s, key TARGET_KEY
-            syntheticTarget = new TargetAgent(
-                    TARGET_KEY,
-                    new Space3D.Vec3(-10, 0, 100),
-                    new Space3D.Vec3(+10, 0, 20),
-                    10.0
-            );
-            world3D.addAgent(syntheticTarget);
-            syntheticTarget.start();
+//            syntheticTarget = new TargetAgent(
+//                    TARGET_KEY,
+//                    new Space3D.Vec3(-10, 0, 100),
+//                    new Space3D.Vec3(+10, 0, 20),
+//                    10.0
+//            );
+//            world3D.addAgent(syntheticTarget);
+//            syntheticTarget.start();
 
+              // --- Multiple targets with shapes & sizes ---
+        TargetAgent t1 = new TargetAgent("tgt-circle",
+                new Space3D.Vec3(-15, 0, 120),
+                new Space3D.Vec3(+15, 0, 40),
+                10.0);
+        t1.setPhysicalDiameterM(1.0f);
+        t1.setShape(TargetShape.CIRCLE);
+        t1.setDensityScale(1.0f);
+        world3D.addAgent(t1);
+
+        TargetAgent t2 = new TargetAgent("tgt-square",
+                new Space3D.Vec3(+20, 0, 150),
+                new Space3D.Vec3(-20, 0, 60),
+                8.0);
+        t2.setPhysicalDiameterM(1.5f);
+        t2.setShape(TargetShape.SQUARE);
+        t2.setDensityScale(1.2f);
+        world3D.addAgent(t2);
+
+        TargetAgent t3 = new TargetAgent("tgt-triangle",
+                new Space3D.Vec3(-10, 5, 130),
+                new Space3D.Vec3(+10, -5, 50),
+                12.0);
+        t3.setPhysicalDiameterM(0.8f);
+        t3.setShape(TargetShape.TRIANGLE);
+        t3.setDensityScale(0.9f);
+        world3D.addAgent(t3);
+
+        TargetAgent t4 = new TargetAgent("tgt-cross",
+                new Space3D.Vec3(+5, 0, 110),
+                new Space3D.Vec3(-5, 0, 30),
+                9.0);
+        t4.setPhysicalDiameterM(1.2f);
+        t4.setShape(TargetShape.CROSS);
+        t4.setDensityScale(1.0f);
+        world3D.addAgent(t4);
+
+        // Start motion
+        t1.start();
+        t2.start();
+        t3.start();
+        t4.start();
+
+            
             if (showWorldGUI) {
                 SwingUtilities.invokeLater(() -> {
                     worldGUI = new Space3DGUI(world3D);

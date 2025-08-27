@@ -56,16 +56,16 @@ public final class Space3D {
     public void setHalfExtentM(double halfExtentM) { this.halfExtentM = halfExtentM; }
 
     /* ===== Agent registry ===== */
-    private final Map<String,Agent3DInterface> agents = new ConcurrentHashMap<>();
-    public void addAgent(Agent3DInterface a){ agents.put(a.getKey(),a); }
-    public Agent3DInterface getAgent(String key){ return agents.get(key); }
-    public Agent3DInterface removeAgent(String key){ return agents.remove(key); }
-    public void clearAgents(){ agents.clear(); }
-    public Map<String,Agent3DInterface> viewAgents(){ return Map.copyOf(agents); }
+    public Map<String,Agent3DInterface> agents = new ConcurrentHashMap<>();
+    public void addAgent(Agent3DInterface a){ getAgents().put(a.getKey(),a); }
+    public Agent3DInterface getAgent(String key){ return getAgents().get(key); }
+    public Agent3DInterface removeAgent(String key){ return getAgents().remove(key); }
+    public void clearAgents(){ getAgents().clear(); }
+    public Map<String,Agent3DInterface> viewAgents(){ return Map.copyOf(getAgents()); }
 
     /* ===== Utilities ===== */
     public Agent3D.AzElDist azElDistBetween(String keyA, String keyB){
-        Agent3DInterface A = agents.get(keyA), B = agents.get(keyB);
+        Agent3DInterface A = getAgents().get(keyA), B = getAgents().get(keyB);
         if (A==null||B==null) throw new IllegalArgumentException("Missing agent(s)");
         return A.azElDistFromDVX(B.getPositionDVX());
     }
@@ -74,5 +74,19 @@ public final class Space3D {
     public String toString() {
         return String.format("Space3D origin lat=%.6f, lon=%.6f, alt=%.2f m, halfExtent=%.1f m",
                 originLatDeg, originLonDeg, originAltM, halfExtentM);
+    }
+
+    /**
+     * @return the agents
+     */
+    public Map<String,Agent3DInterface> getAgents() {
+        return agents;
+    }
+
+    /**
+     * @param agents the agents to set
+     */
+    public void setAgents(Map<String,Agent3DInterface> agents) {
+        this.agents = agents;
     }
 }

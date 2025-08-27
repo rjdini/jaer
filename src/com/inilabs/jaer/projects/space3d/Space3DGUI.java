@@ -4,7 +4,9 @@ import javax.swing.*;
 import javax.swing.event.ChangeListener;
 import java.awt.*;
 
-/** GUI shell for Space3DPanel with coherent map + overlay scaling/panning. */
+/**
+ * GUI shell for Space3DPanel with coherent map + overlay scaling/panning.
+ */
 public class Space3DGUI extends JFrame {
 
     private final Space3D space;
@@ -17,7 +19,15 @@ public class Space3DGUI extends JFrame {
     private JCheckBox mapToggle;
     private JSlider mapZoomSlider;
 
-    public Space3DGUI(Space3D space){
+    // in Space3DGUI.java
+    public static Space3DGUI showIfPossible(Space3D space) {
+        if (java.awt.GraphicsEnvironment.isHeadless()) {
+            return null;
+        }
+        return new Space3DGUI(space);
+    }
+
+    public Space3DGUI(Space3D space) {
         super("Space3D XZ Viewer (North up) + Map");
         this.space = space;
         this.panel = new Space3DPanel(space);
@@ -33,12 +43,12 @@ public class Space3DGUI extends JFrame {
         setLocationRelativeTo(null);
         setVisible(true);
 
-        new Timer(1000/30, e -> panel.repaint()).start();
+        new Timer(1000 / 30, e -> panel.repaint()).start();
     }
 
-    private JPanel buildControls(){
+    private JPanel buildControls() {
         JPanel p = new JPanel();
-        p.setBorder(BorderFactory.createEmptyBorder(8,8,8,8));
+        p.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
         p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
         p.setPreferredSize(new Dimension(260, 0));
 
@@ -59,7 +69,7 @@ public class Space3DGUI extends JFrame {
         p.add(Box.createVerticalStrut(12));
 
         // Offsets (pan)
-        int half = (int)Math.max(500, Math.round(space.getHalfExtentM()));
+        int half = (int) Math.max(500, Math.round(space.getHalfExtentM()));
         offsetXSlider = new JSlider(JSlider.HORIZONTAL, -half, +half, 0);
         JLabel offXVal = new JLabel();
         ChangeListener ox = e -> {
@@ -122,12 +132,13 @@ public class Space3DGUI extends JFrame {
         return p;
     }
 
-    public static void main(String[] args){
+    public static void main(String[] args) {
         Space3D space = new Space3D(); // default origin
         space.setHalfExtentM(1000);
 
-        AbstractAgent3D cam = new AbstractAgent3D("dvx-0", Agent3D.ObjectType.DVXPLORER){};
-        cam.setPositionDVX(new Space3D.Vec3(0,0,0));
+        AbstractAgent3D cam = new AbstractAgent3D("dvx-0", Agent3D.ObjectType.DVXPLORER) {
+        };
+        cam.setPositionDVX(new Space3D.Vec3(0, 0, 0));
         space.addAgent(cam);
 
         SwingUtilities.invokeLater(() -> new Space3DGUI(space));

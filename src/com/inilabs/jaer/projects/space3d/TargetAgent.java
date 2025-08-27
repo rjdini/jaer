@@ -1,13 +1,9 @@
 package com.inilabs.jaer.projects.space3d;
 
 /**
- * TargetAgent: moves reciprocally between two ENU waypoints at constant speed.
- * - Owns its update thread (start/stop).
- * - Adds tick(dt) for deterministic tests (no thread).
- * - Strong, idempotent stop() to avoid runaway threads.
- * - XZ motion; Y as provided by p1/p2.
+ * TargetAgent: reciprocal motion (as before) + FBGTarget properties (size & shape).
  */
-public class TargetAgent implements Agent3DInterface, Runnable {
+public class TargetAgent implements Agent3DInterface, Runnable, FBGTarget {
 
     private final String key;
     private final Agent3D.ObjectType type = Agent3D.ObjectType.TARGET;
@@ -24,7 +20,11 @@ public class TargetAgent implements Agent3DInterface, Runnable {
     // Threading
     private volatile boolean running = false;
     private Thread worker;
-    private long lastNanos;
+
+    // FBGTarget properties
+    private float physicalDiameterM = 1.0f;
+    private TargetShape shape = TargetShape.CIRCLE;
+    private float densityScale = 1.0f;
 
     public TargetAgent(String key, Space3D.Vec3 p1, Space3D.Vec3 p2, double speedMps) {
         if (speedMps <= 0) throw new IllegalArgumentException("speedMps must be > 0");
@@ -32,7 +32,6 @@ public class TargetAgent implements Agent3DInterface, Runnable {
         this.p1 = p1;
         this.p2 = p2;
         this.speedMps = speedMps;
-        this.lastNanos = System.nanoTime();
     }
 
     /* ================= Agent3DInterface ================= */
@@ -43,14 +42,12 @@ public class TargetAgent implements Agent3DInterface, Runnable {
 
     @Override
     public Space3D.Vec3 getPositionDVX() {
-        // Compute current point from s
         Space3D.Vec3 d = p2.sub(p1);
         return new Space3D.Vec3(p1.x + s * d.x, p1.y + s * d.y, p1.z + s * d.z);
     }
 
     @Override
     public void setPositionDVX(Space3D.Vec3 p) {
-        // Reproject onto segment to set s (optional; not typically used)
         Space3D.Vec3 d = p2.sub(p1);
         double len2 = d.x*d.x + d.y*d.y + d.z*d.z;
         if (len2 == 0) { s = 0; return; }
@@ -60,34 +57,26 @@ public class TargetAgent implements Agent3DInterface, Runnable {
     }
 
     @Override public double[] getYawPitchRollDeg() { return new double[]{0,0,0}; }
-    @Override public void setYawPitchRollDeg(double yawDeg, double pitchDeg, double rollDeg) { /* no-op */ }
-
+    @Override public void setYawPitchRollDeg(double yawDeg, double pitchDeg, double rollDeg) { }
     @Override public double[] getLLA() { return new double[]{Double.NaN, Double.NaN, Double.NaN}; }
-    @Override public void setLLA(double latDeg, double lonDeg, double altM) { /* no-op */ }
+    @Override public void setLLA(double latDeg, double lonDeg, double altM) { }
 
-    /* ================= Deterministic update (no thread) ================= */
+    /* ================= FBGTarget ================= */
 
-    /** Advance motion by dt seconds; reflects at endpoints; safe for tests. */
-    public void tick(double dt){
-        if (dt <= 0) return;
-        final Space3D.Vec3 d = p2.sub(p1);
-        final double L = d.norm();
-        if (L == 0) return;
-        final double vOverL = speedMps / L;
-        double ds = dir * vOverL * dt;
-        s += ds;
-        while (s > 1.0 || s < 0.0) {
-            if (s > 1.0) { s = 2.0 - s; dir = -dir; }
-            else         { s = -s;      dir = -dir; }
-        }
-    }
+    @Override public float getPhysicalDiameterM() { return physicalDiameterM; }
+    public void setPhysicalDiameterM(float d) { this.physicalDiameterM = d; }
 
-    /* ================= Thread control ================= */
+    @Override public TargetShape getShape() { return shape; }
+    public void setShape(TargetShape s) { this.shape = s; }
+
+    @Override public float getDensityScale() { return densityScale; }
+    public void setDensityScale(float ds) { this.densityScale = ds; }
+
+    /* ================= Motion (threaded) ================= */
 
     public synchronized void start() {
         if (running) return;
         running = true;
-        lastNanos = System.nanoTime();
         worker = new Thread(this, "TargetAgent-" + key);
         worker.setDaemon(true);
         worker.start();
@@ -103,6 +92,21 @@ public class TargetAgent implements Agent3DInterface, Runnable {
     }
 
     public boolean isRunning() { return running; }
+
+    /** Advance motion by dt seconds; reflects at endpoints; safe for tests. */
+    public void tick(double dt){
+        if (dt <= 0) return;
+        final Space3D.Vec3 d = p2.sub(p1);
+        final double L = d.norm();
+        if (L == 0) return;
+        final double vOverL = speedMps / L;
+        double ds = dir * vOverL * dt;
+        s += ds;
+        while (s > 1.0 || s < 0.0) {
+            if (s > 1.0) { s = 2.0 - s; dir = -dir; }
+            else         { s = -s;      dir = -dir; }
+        }
+    }
 
     @Override
     public void run() {
