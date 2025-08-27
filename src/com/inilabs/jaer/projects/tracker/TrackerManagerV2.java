@@ -181,9 +181,19 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
         }
     }
   
-    
+ 
+     // If class has lifecycle hooks, wire stopSpace3DWorld() there:
+    // e.g., if there is a cleanup/dispose/reset method:
+  @Override
+    public void cleanup() {
+        // your existing cleanup...
+        stopSpace3DWorld();
+    }
+   
+     
    private void shutdown() {
        AgentLogger.shutdown();
+       cleanup();  
        log.info("Shutting down TargetManager...");
 } 
    
@@ -226,30 +236,26 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
         }
     }
 
-     // [3D-WORLD] Clean shutdown (call from your existing lifecycle hook)
-    private void stopSpace3DWorld() {
-        try {
-            if (syntheticTarget != null) {
-                syntheticTarget.stop();
-                syntheticTarget = null;
-            }
-            worldGUI = null;     // let the window be GC’d; or call dispose() if you hold JFrame
-            world3D = null;
-        } catch (Exception ex) {
-            log.warn("TrackerManagerV2: error stopping Space3D world", ex);
+    /** Stop and clean up the Space3D world. */
+private void stopSpace3DWorld() {
+    try {
+        if (syntheticTarget != null) {
+            syntheticTarget.stop();   // idempotent, halts thread
+            syntheticTarget = null;
         }
+        if (worldGUI != null) {
+            worldGUI.dispose();       // close the window if showing
+            worldGUI = null;
+        }
+        world3D = null;
+        com.inilabs.jaer.projects.space3d.Space3DRegistry.clear();  // reset process-local handle
+        log.info("TrackerManagerV2: Space3D world stopped and registry cleared.");
+    } catch (Exception ex) {
+        log.warn("TrackerManagerV2: error stopping Space3D world", ex);
     }
+}
 
-   
-   // If your class has lifecycle hooks, wire stopSpace3DWorld() there:
-    // e.g., if there is a cleanup/dispose/reset method:
-  @Override
-    public void cleanup() {
-        // your existing cleanup...
-        stopSpace3DWorld();
-    }
-   
-   
+ 
    
    private DirectGimbalController getGimbal() {
     return gimbal;

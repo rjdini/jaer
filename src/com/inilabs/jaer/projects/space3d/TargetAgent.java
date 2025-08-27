@@ -1,33 +1,11 @@
-/*
- * Copyright (C) 2025 rjd.
- *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
- * MA 02110-1301  USA
- */
 package com.inilabs.jaer.projects.space3d;
-
-/**
- *
- * @author rjd
- */
 
 /**
  * TargetAgent: moves reciprocally between two ENU waypoints at constant speed.
  * - Owns its update thread (start/stop).
- * - Motion is along the straight segment p1 <-> p2 with "bounce" at the ends.
- * - XZ plane motion (Y stays as provided in p1/p2; use 0 if you want strictly flat).
+ * - Adds tick(dt) for deterministic tests (no thread).
+ * - Strong, idempotent stop() to avoid runaway threads.
+ * - XZ motion; Y as provided by p1/p2.
  */
 public class TargetAgent implements Agent3DInterface, Runnable {
 
@@ -87,6 +65,23 @@ public class TargetAgent implements Agent3DInterface, Runnable {
     @Override public double[] getLLA() { return new double[]{Double.NaN, Double.NaN, Double.NaN}; }
     @Override public void setLLA(double latDeg, double lonDeg, double altM) { /* no-op */ }
 
+    /* ================= Deterministic update (no thread) ================= */
+
+    /** Advance motion by dt seconds; reflects at endpoints; safe for tests. */
+    public void tick(double dt){
+        if (dt <= 0) return;
+        final Space3D.Vec3 d = p2.sub(p1);
+        final double L = d.norm();
+        if (L == 0) return;
+        final double vOverL = speedMps / L;
+        double ds = dir * vOverL * dt;
+        s += ds;
+        while (s > 1.0 || s < 0.0) {
+            if (s > 1.0) { s = 2.0 - s; dir = -dir; }
+            else         { s = -s;      dir = -dir; }
+        }
+    }
+
     /* ================= Thread control ================= */
 
     public synchronized void start() {
@@ -100,51 +95,29 @@ public class TargetAgent implements Agent3DInterface, Runnable {
 
     public synchronized void stop() {
         running = false;
-        if (worker != null) {
-            try { worker.join(300); } catch (InterruptedException ignored) {}
-            worker = null;
+        Thread t = worker;
+        worker = null;
+        if (t != null && t.isAlive()) {
+            try { t.join(500); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
         }
     }
 
     public boolean isRunning() { return running; }
 
-    /* ================= Motion loop ================= */
-
     @Override
     public void run() {
-        // Precompute segment length
-        final Space3D.Vec3 d = p2.sub(p1);
-        final double L = d.norm();
-        if (L == 0) return; // degenerate case
-
-        final double vOverL = speedMps / L; // rate of change of s per second
-
+        final long nanosPerStep = 16_000_000L; // ~60 Hz
+        long last = System.nanoTime();
         while (running) {
             long now = System.nanoTime();
-            double dt = (now - lastNanos) * 1e-9;
-            lastNanos = now;
-
-            // Advance param s
-            double ds = dir * vOverL * dt;
-            s += ds;
-
-            // Reflect at boundaries; handle big dt (multiple bounces)
-            while (s > 1.0 || s < 0.0) {
-                if (s > 1.0) {
-                    s = 2.0 - s;   // reflect around 1
-                    dir = -dir;
-                } else if (s < 0.0) {
-                    s = -s;        // reflect around 0
-                    dir = -dir;
-                }
-            }
-
-            // Sleep a bit to cap CPU usage; ~60 Hz update is plenty for GUI
-            try {
-                Thread.sleep(16);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                break;
+            double dt = (now - last) * 1e-9;
+            last = now;
+            tick(dt);
+            long spent = System.nanoTime() - now;
+            long sleep = nanosPerStep - spent;
+            if (sleep > 0) {
+                try { Thread.sleep(sleep / 1_000_000, (int)(sleep % 1_000_000)); }
+                catch (InterruptedException e) { Thread.currentThread().interrupt(); break; }
             }
         }
     }

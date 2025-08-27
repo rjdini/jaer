@@ -1,26 +1,15 @@
 /*
- * Copyright (C) 2025 tobid.
- *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
- * MA 02110-1301  USA
+ * Patched FlyingBlobGenerator.java
+ * - Auto-connects to Space3D via Space3DRegistry (same JVM) if enabled
+ * - Uses epsilon-gated FOV check to avoid border flicker
+ * - Scales event count with blob area (density * πr²) with min/max clamps
+ * - Removes duplicate injection path
+ * - Adds throttled logging for visibility
  */
 package com.inilabs.jaer.projects.eventprocessing.filters;
 
 import com.inilabs.jaer.projects.space3d.Space3D;
 import com.inilabs.jaer.projects.space3d.Agent3DInterface;
-import com.inilabs.jaer.projects.space3d.TargetAgent;
 
 import java.awt.geom.Point2D;
 
@@ -41,16 +30,6 @@ import org.apache.commons.math3.geometry.euclidean.twod.Vector2D;
 import net.sf.jaer.util.EngineeringFormat;
 import org.slf4j.LoggerFactory;
 
-/**
- * Generates and injects synthetic blobs of events from an external moving
- * object into the event stream. The object (e.g., TargetAgent) is provided by
- * the app.
- *
- * Refactor notes: - NO internal target creation. Use setSpace3D() and
- * setTargetAgent(). - Each filterPacket(): 1) read target ENU (x,y,z) w.r.t.
- * DVX at origin, 2) compute az/el/dist, check FOV, 3) project to pixel, compute
- * pixel radius from distance, 4) inject blob events.
- */
 @Description("Generates and injects synthetic blobs of events from external moving object into the event stream")
 @DevelopmentStatus(DevelopmentStatus.Status.InDevelopment)
 public class FlyingBlobGenerator extends EventFilter2DMouseAdaptor {
@@ -66,12 +45,10 @@ public class FlyingBlobGenerator extends EventFilter2DMouseAdaptor {
     private double fovXDeg = Double.NaN, fovYDeg = Double.NaN;
 
     private final EngineeringFormat eng = new EngineeringFormat();
-    
     private long lastLogMs = 0;
 
     // --- Legacy params kept for UI compatibility (some may be unused now) ---
-    @Preferred
-    @Description("Mean velocity for flying blobs")
+    @Preferred @Description("Mean velocity for flying blobs")
     public float velocityMps = getFloat("velocityMps", 5);
 
     @Description("Lens focal length (mm)")
@@ -80,8 +57,7 @@ public class FlyingBlobGenerator extends EventFilter2DMouseAdaptor {
     @Description("Blob size in meters (legacy)")
     public float blobSizeM = getFloat("blobSizeM", .25f);
 
-    @Preferred
-    @Description("CoV of speeds of flying blobs")
+    @Preferred @Description("CoV of speeds of flying blobs")
     public float covSpeed = getFloat("covSpeed", 1);
 
     @Description("Enable/disable synthetic blob injection")
@@ -93,10 +69,10 @@ public class FlyingBlobGenerator extends EventFilter2DMouseAdaptor {
     @Description("Blob center as fraction of chip height (legacy - not used)")
     public float centerYFrac = getFloat("centerYFrac", 0.60f);
 
-    @Description("Blob radius in pixels (legacy fallback)")
+    @Description("Fallback blob radius (px) if distance sizing is disabled")
     public int blobRadiusPx = getInt("blobRadiusPx", 5);
 
-    @Description("Number of synthetic events to inject per packet")
+    @Description("Base number of synthetic events (used only if area scaling disabled)")
     public int eventsPerPacket = getInt("eventsPerPacket", 200);
 
     @Description(value = "Polarity for injected events: +1=ON, 0=alternate, -1=OFF")
@@ -121,14 +97,12 @@ public class FlyingBlobGenerator extends EventFilter2DMouseAdaptor {
     @Description("Target diameter in meters")
     public float targetDiameterM = 1.0f; // default 1 m
 
-    @Description("Synthetic event density (events per pixel^2 of blob area) [unused if eventsPerPacket fixed]")
-    public float eventDensityPerPx2 = getFloat("eventDensityPerPx2", 0.3f);
+    @Description("Synthetic event density (events per pixel^2 of blob area)")
+    public float eventDensityPerPx2 = getFloat("eventDensityPerPx2", 0.30f);
 
     private final java.util.Random rng = new java.util.Random();
 
-    public FlyingBlobGenerator(AEChip chip) {
-        super(chip);
-    }
+    public FlyingBlobGenerator(AEChip chip) { super(chip); }
 
     /* ================= Lifecycle ================= */
     @Override
@@ -138,9 +112,7 @@ public class FlyingBlobGenerator extends EventFilter2DMouseAdaptor {
         fovXDeg = fovDeg.x;
         fovYDeg = fovDeg.y;
 
-        if (getOutPacket() == null) {
-            setOutPacket(new EventPacket(PolarityEvent.class));
-        }
+        if (getOutPacket() == null) setOutPacket(new EventPacket(PolarityEvent.class));
         getOutPacket().clear();
 
         log.info("FBG initialized. HFOV={} deg, VFOV={} deg", eng.format(fovXDeg), eng.format(fovYDeg));
@@ -162,29 +134,20 @@ public class FlyingBlobGenerator extends EventFilter2DMouseAdaptor {
                     log.info("FBG: auto-connected to Space3D (target already set)");
                 }
             } else {
-                log.warn("FBG: no Space3D in Space3DRegistry; setSpace3D()/setTargetAgent() or run launcher in SAME JVM.");
+                log.warn("FBG: no Space3D in Space3DRegistry; setSpace3D()/setTargetAgent() or run world in SAME JVM.");
             }
         }
     }
 
-    @Override
-    public void resetFilter() {
-        initFilter();
-    }
+    @Override public void resetFilter() { initFilter(); }
 
-    @Override
-    public void cleanup() {
-        // nothing to stop here (target thread owned outside)
-    }
+    @Override public void cleanup() { /* nothing to stop here (target thread owned outside) */ }
 
     /* ================= Core processing ================= */
     @Override
     public EventPacket<? extends BasicEvent> filterPacket(EventPacket<? extends BasicEvent> in) {
-        if (outPacket == null) {
-            outPacket = new EventPacket(in.getEventClass());
-        }
+        if (outPacket == null) outPacket = new EventPacket(in.getEventClass());
         outPacket.clear();
-
         final OutputEventIterator outItr = outPacket.outputIterator();
 
         // Pass-through inputs
@@ -197,74 +160,51 @@ public class FlyingBlobGenerator extends EventFilter2DMouseAdaptor {
         final int ts = in.getSize() > 0 ? in.getLastTimestamp() : (int) (System.nanoTime() / 1000);
 
         // === External target → compute az/el/dist, FOV gate, project, inject ===
-        if (injectEnabled && targetAgent != null) {
-            Space3D.Vec3 p = targetAgent.getPositionDVX(); // ENU w.r.t. DVX at origin
-            AzElDist aed = azElDistFromCamera(p.x, p.y, p.z);
-
-            if (insideFOV(aed)) {
-                Point2D.Float px = projectToPixel(p.x, p.y, p.z);
-                if (px != null) {
-                    int rpx = pixelRadiusFromDistance(aed.distM); // uses targetDiameterM
-                    injectBlobAt(outItr, ts, Math.round(px.x), Math.round(px.y), rpx);
-                }
-            }
-        }
-        
         if (injectEnabled) {
-        if (targetAgent == null) {
-            throttleLog("FBG: targetAgent is null; no injection.");
-        } else {
-            Space3D.Vec3 p = targetAgent.getPositionDVX();
-            AzElDist aed = azElDistFromCamera(p.x, p.y, p.z);
-            boolean inFov = insideFOV(aed);
-            throttleLog(String.format("FBG: tgt=(%.1f,%.1f,%.1f)m az=%.2f° el=%.2f° d=%.1fm FOV=%s",
-                    p.x, p.y, p.z, aed.azDeg, aed.elDeg, aed.distM, inFov ? "IN" : "OUT"));
-            if (inFov) {
-                Point2D.Float px = projectToPixel(p.x, p.y, p.z);
-                if (px != null) {
-                    int rpx = pixelRadiusFromDistance(aed.distM);
-                    injectBlobAt(outItr, ts, Math.round(px.x), Math.round(px.y), rpx);
-                } else {
-                    throttleLog("FBG: projection returned null (clipped).");
+            if (targetAgent == null) {
+                throttleLog("FBG: targetAgent is null; no injection.");
+            } else {
+                Space3D.Vec3 p = targetAgent.getPositionDVX(); // ENU w.r.t. DVX at origin
+                AzElDist aed = azElDistFromCamera(p.x, p.y, p.z);
+                boolean inFov = insideFOV(aed);
+                throttleLog(String.format("FBG: tgt=(%.1f,%.1f,%.1f)m az=%.2f° el=%.2f° d=%.1fm FOV=%s",
+                        p.x, p.y, p.z, aed.azDeg, aed.elDeg, aed.distM, inFov ? "IN" : "OUT"));
+                if (inFov) {
+                    Point2D.Float px = projectToPixel(p.x, p.y, p.z);
+                    if (px != null) {
+                        int rpx = pixelRadiusFromDistance(aed.distM); // uses targetDiameterM
+                        // area-scaled event count with clamps
+                        int area = (int)Math.round(Math.PI * rpx * rpx);
+                        int n = Math.min(2000, Math.max(50, (int)Math.round(eventDensityPerPx2 * area)));
+                        injectBlobAt(outItr, ts, Math.round(px.x), Math.round(px.y), rpx, n);
+                    } else {
+                        throttleLog("FBG: projection returned null (clipped).");
+                    }
                 }
             }
         }
-    }
 
         return outPacket;
     }
 
     private void throttleLog(String msg){
-    long now = System.currentTimeMillis();
-    if (now - lastLogMs >= 500) { // log at most twice a second
-        log.info(msg);
-        lastLogMs = now;
+        long now = System.currentTimeMillis();
+        if (now - lastLogMs >= 500) { // log at most twice a second
+            log.info(msg);
+            lastLogMs = now;
+        }
     }
-}
-    
-    
+
     /* ================= Geometry & helpers ================= */
-    private float getPixelPitchM() {
-        return chip.getPixelWidthUm() * 1e-6f;
-    }
+    private float getPixelPitchM() { return chip.getPixelWidthUm() * 1e-6f; }
+    private float getFocalLenM()   { return getLensFocalLengthMm() * 1e-3f; }
 
-    private float getFocalLenM() {
-        return getLensFocalLengthMm() * 1e-3f;
-    }
+    private Point2D.Float projectToPixel(double x, double y, double z) { return projectToPixel(new Vector3D(x, y, z)); }
 
-    private Point2D.Float projectToPixel(double x, double y, double z) {
-        return projectToPixel(new Vector3D(x, y, z));
-    }
-
-    /**
-     * Project a 3D point (meters; camera at origin, Z forward) to pixel coords.
-     * Returns null if behind camera or outside chip.
-     */
+    /** Project a 3D point (meters; camera at origin, Z forward) to pixel coords. Returns null if behind camera or outside chip. */
     private Point2D.Float projectToPixel(Vector3D P) {
         final float f = getFocalLenM();
-        if (P.getZ() <= 0) {
-            return null; // behind camera
-        }
+        if (P.getZ() <= 0) return null; // behind camera
         final double u_m = f * (P.getX() / P.getZ());
         final double v_m = f * (P.getY() / P.getZ());
         final double pitch = getPixelPitchM();
@@ -276,47 +216,32 @@ public class FlyingBlobGenerator extends EventFilter2DMouseAdaptor {
         final float x = (float) (cx + u_px);
         final float y = (float) (cy - v_px); // image y down
 
-        if (x < 0 || x >= w || y < 0 || y >= h) {
-            return null;
-        }
+        if (x < 0 || x >= w || y < 0 || y >= h) return null;
         return new Point2D.Float(x, y);
     }
 
-    /**
-     * Pixel radius from distance using small-angle pinhole geometry and
-     * targetDiameterM.
-     */
+    /** Pixel radius from distance using small-angle pinhole geometry and targetDiameterM. */
     private int pixelRadiusFromDistance(double distM) {
-        if (distM <= 0) {
-            return 1;
-        }
+        if (distM <= 0) return 1;
         final double f = getFocalLenM();
         final double pitch = getPixelPitchM();
         final double r_px = (f * (getTargetDiameterM() / 2.0)) / (distM * pitch);
         return Math.max(1, (int) Math.round(r_px));
     }
 
-    private void injectBlobAt(OutputEventIterator outItr, int ts, int cx, int cy, int radiusPx) {
-        if (!isInjectEnabled() || getEventsPerPacket() <= 0 || radiusPx <= 0) {
-            return;
-        }
-
+    // Overload with explicit nEvents
+    private void injectBlobAt(OutputEventIterator outItr, int ts, int cx, int cy, int radiusPx, int nEvents) {
+        if (!isInjectEnabled() || nEvents <= 0 || radiusPx <= 0) return;
         final int w = chip.getSizeX(), h = chip.getSizeY();
         final int r = radiusPx;
-
-        for (int i = 0; i < getEventsPerPacket(); i++) {
+        for (int i = 0; i < nEvents; i++) {
             double theta = 2.0 * Math.PI * rng.nextDouble();
             double rr = r * Math.sqrt(rng.nextDouble());
             int x = cx + (int) Math.round(rr * Math.cos(theta));
             int y = cy + (int) Math.round(rr * Math.sin(theta));
-            if (x < 0 || x >= w || y < 0 || y >= h) {
-                continue;
-            }
-
+            if (x < 0 || x >= w || y < 0 || y >= h) continue;
             BasicEvent e = outItr.nextOutput();
-            e.x = (short) x;
-            e.y = (short) y;
-            e.timestamp = ts;
+            e.x = (short) x; e.y = (short) y; e.timestamp = ts;
             if (e instanceof PolarityEvent) {
                 PolarityEvent pe = (PolarityEvent) e;
                 if (getInjectedPolarity() == 0) {
@@ -333,8 +258,8 @@ public class FlyingBlobGenerator extends EventFilter2DMouseAdaptor {
         final double f_m = getLensFocalLengthMm() * 1e-3;
         final double w_px = chip.getPixelWidthUm() * 1e-6;
         final double h_px = chip.getPixelHeightUm() * 1e-6;
-        final double W_m = chip.getSizeX() * w_px;
-        final double H_m = chip.getSizeY() * h_px;
+        final double W_m  = chip.getSizeX() * w_px;
+        final double H_m  = chip.getSizeY() * h_px;
         final double fovX = Math.toDegrees(2.0 * Math.atan(W_m / (2.0 * f_m)));
         final double fovY = Math.toDegrees(2.0 * Math.atan(H_m / (2.0 * f_m)));
         log.debug("lensFL(m): {} pxPitch(m): {} pixels: x={}, y={} FOV: {}° {}°",
@@ -351,194 +276,77 @@ public class FlyingBlobGenerator extends EventFilter2DMouseAdaptor {
     }
 
     /* ============== Az/El gate ============== */
-    private static double toDeg(double rad) {
-        return Math.toDegrees(rad);
-    }
+    private static double toDeg(double rad) { return Math.toDegrees(rad); }
 
     private static final class AzElDist {
-
         final double azDeg, elDeg, distM;
-
-        AzElDist(double azDeg, double elDeg, double distM) {
-            this.azDeg = azDeg;
-            this.elDeg = elDeg;
-            this.distM = distM;
-        }
+        AzElDist(double azDeg, double elDeg, double distM) { this.azDeg=azDeg; this.elDeg=elDeg; this.distM=distM; }
     }
 
-    /**
-     * Camera at origin; +Z forward (optical axis), +X right/East, +Y up.
-     */
+    /** Camera at origin; +Z forward (optical axis), +X right/East, +Y up. */
     private AzElDist azElDistFromCamera(double x, double y, double z) {
         double dist = Math.sqrt(x * x + y * y + z * z);
-        if (z <= 0) {
-            return new AzElDist(Double.NaN, Double.NaN, dist); // behind
-        }
+        if (z <= 0) return new AzElDist(Double.NaN, Double.NaN, dist); // behind
         double az = toDeg(Math.atan2(x, z)); // horiz angle vs optical axis
         double el = toDeg(Math.atan2(y, z)); // vert angle vs optical axis
         return new AzElDist(az, el, dist);
     }
 
     private boolean insideFOV(AzElDist aed) {
-        if (Double.isNaN(aed.azDeg) || Double.isNaN(aed.elDeg)) {
-            return false;
-        }
+        if (Double.isNaN(aed.azDeg) || Double.isNaN(aed.elDeg)) return false;
+        double eps = 0.2; // deg; reduces edge flicker
         double hx = fovXDeg * 0.5, hy = fovYDeg * 0.5;
-        return Math.abs(aed.azDeg) <= hx && Math.abs(aed.elDeg) <= hy;
+        return Math.abs(aed.azDeg) <= (hx - eps) && Math.abs(aed.elDeg) <= (hy - eps);
     }
 
     /* ================= Setters/Getters for integration ================= */
-    public void setSpace3D(Space3D s) {
-        this.space3D = s;
-    }
+    public void setSpace3D(Space3D s) { this.space3D = s; }
+    public Space3D getSpace3D() { return space3D; }
+    public void setTargetAgent(Agent3DInterface a) { this.targetAgent = a; }
+    public Agent3DInterface getTargetAgent() { return targetAgent; }
 
-    public Space3D getSpace3D() {
-        return space3D;
-    }
+    public float getVelocityMps() { return velocityMps; }
+    public void setVelocityMps(float v) { velocityMps = v; putFloat("velocityMps", v); }
 
-    public void setTargetAgent(Agent3DInterface a) {
-        this.targetAgent = a;
-    }
+    public float getLensFocalLengthMm() { return lensFocalLengthMm; }
+    public void setLensFocalLengthMm(float mm) { lensFocalLengthMm = mm; putFloat("lensFocalLengthMm", mm); computeStartingDistance(); computeFoVDeg(); }
 
-    public Agent3DInterface getTargetAgent() {
-        return targetAgent;
-    }
+    public float getBlobSizeM() { return blobSizeM; }
+    public void setBlobSizeM(float m) { blobSizeM = m; putFloat("blobSizeM", m); computeStartingDistance(); }
 
-    public float getVelocityMps() {
-        return velocityMps;
-    }
+    public float getCovSpeed() { return covSpeed; }
+    public void setCovSpeed(float v) { covSpeed = v; putFloat("covSpeed", v); }
 
-    public void setVelocityMps(float v) {
-        velocityMps = v;
-        putFloat("velocityMps", v);
-    }
+    public boolean isInjectEnabled() { return injectEnabled; }
+    public void setInjectEnabled(boolean v) { injectEnabled = v; }
 
-    public float getLensFocalLengthMm() {
-        return lensFocalLengthMm;
-    }
+    public int getEventsPerPacket() { return eventsPerPacket; }
+    public void setEventsPerPacket(int n) { eventsPerPacket = n; }
 
-    public void setLensFocalLengthMm(float mm) {
-        lensFocalLengthMm = mm;
-        putFloat("lensFocalLengthMm", mm);
-        computeStartingDistance();
-        computeFoVDeg();
-    }
+    public int getInjectedPolarity() { return injectedPolarity; }
+    public void setInjectedPolarity(int p) { injectedPolarity = p; }
 
-    public float getBlobSizeM() {
-        return blobSizeM;
-    }
+    public float getTargetDiameterM() { return targetDiameterM; }
+    public void setTargetDiameterM(float m) { targetDiameterM = m; }
 
-    public void setBlobSizeM(float m) {
-        blobSizeM = m;
-        putFloat("blobSizeM", m);
-        computeStartingDistance();
-    }
+    public EventPacket getOutPacket() { return outPacket; }
+    public void setOutPacket(EventPacket out) { outPacket = out; }
 
-    public float getCovSpeed() {
-        return covSpeed;
-    }
+    public Vector3D getBlobPosition() { return blobPosition; }
+    public void setBlobPosition(Vector3D p) { blobPosition = p; }
+    public Vector3D getBlobVelocity() { return blobVelocity; }
+    public void setBlobVelocity(Vector3D v) { blobVelocity = v; }
+    public Vector2D getBlob2dPosition() { return blob2dPosition; }
+    public void setBlob2dPosition(Vector2D p) { blob2dPosition = p; }
+    public Vector2D getBlob2dVelocity() { return blob2dVelocity; }
+    public void setBlob2dVelocity(Vector2D v) { blob2dVelocity = v; }
 
-    public void setCovSpeed(float v) {
-        covSpeed = v;
-        putFloat("covSpeed", v);
-    }
+    public float getStartingDistanceM() { return startingDistanceM; }
+    public void setStartingDistanceM(float d) { startingDistanceM = d; }
 
-    public boolean isInjectEnabled() {
-        return injectEnabled;
-    }
+    public String getTargetAgentKey() { return targetAgentKey; }
+    public void setTargetAgentKey(String key) { targetAgentKey = key; putString("targetAgentKey", key); }
 
-    public void setInjectEnabled(boolean v) {
-        injectEnabled = v;
-    }
-
-    public int getEventsPerPacket() {
-        return eventsPerPacket;
-    }
-
-    public void setEventsPerPacket(int n) {
-        eventsPerPacket = n;
-    }
-
-    public int getInjectedPolarity() {
-        return injectedPolarity;
-    }
-
-    public void setInjectedPolarity(int p) {
-        injectedPolarity = p;
-    }
-
-    public float getTargetDiameterM() {
-        return targetDiameterM;
-    }
-
-    public void setTargetDiameterM(float m) {
-        targetDiameterM = m;
-    }
-
-    public EventPacket getOutPacket() {
-        return outPacket;
-    }
-
-    public void setOutPacket(EventPacket out) {
-        outPacket = out;
-    }
-
-    public Vector3D getBlobPosition() {
-        return blobPosition;
-    }
-
-    public void setBlobPosition(Vector3D p) {
-        blobPosition = p;
-    }
-
-    public Vector3D getBlobVelocity() {
-        return blobVelocity;
-    }
-
-    public void setBlobVelocity(Vector3D v) {
-        blobVelocity = v;
-    }
-
-    public Vector2D getBlob2dPosition() {
-        return blob2dPosition;
-    }
-
-    public void setBlob2dPosition(Vector2D p) {
-        blob2dPosition = p;
-    }
-
-    public Vector2D getBlob2dVelocity() {
-        return blob2dVelocity;
-    }
-
-    public void setBlob2dVelocity(Vector2D v) {
-        blob2dVelocity = v;
-    }
-
-    public float getStartingDistanceM() {
-        return startingDistanceM;
-    }
-
-    public void setStartingDistanceM(float d) {
-        startingDistanceM = d;
-    }
-
-    public String getTargetAgentKey() {
-        return targetAgentKey;
-    }
-
-    public void setTargetAgentKey(String key) {
-        targetAgentKey = key;
-        putString("targetAgentKey", key);
-    }
-
-    public boolean isAutoConnectRegistry() {
-        return autoConnectRegistry;
-    }
-
-    public void setAutoConnectRegistry(boolean v) {
-        autoConnectRegistry = v;
-        putBoolean("autoConnectRegistry", v);
-    }
-
+    public boolean isAutoConnectRegistry() { return autoConnectRegistry; }
+    public void setAutoConnectRegistry(boolean v) { autoConnectRegistry = v; putBoolean("autoConnectRegistry", v); }
 }
