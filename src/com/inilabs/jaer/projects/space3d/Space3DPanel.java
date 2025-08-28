@@ -10,6 +10,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import com.inilabs.jaer.projects.util.AgentColors;
 
 /**
  * XZ viewer (North up) with optional OSM map background that stays coherent
@@ -350,14 +351,14 @@ public class Space3DPanel extends JPanel {
                 wr.drawWorld(g, tx);    // <-- agent draws its own cone, perfectly anchored
             }
         }
-
+     
         // Draw agents
         for (Map.Entry<String, Agent3DInterface> e : space.viewAgents().entrySet()) {
             Agent3DInterface a = e.getValue();
             Space3D.Vec3 p = a.getPositionDVX(); // (x,y,z), we use x and z
             int sx = worldToScreenX(p.x);
             int sy = worldToScreenY(p.z);
-
+            
             drawAgent(g2, a, sx, sy);
             if (a instanceof WorldRenderable wr) {
                 wr.drawWorld(g, tx);    // <-- agent draws its own cone, perfectly anchored
@@ -447,7 +448,7 @@ public class Space3DPanel extends JPanel {
                 g2.drawRect(sx - r, sy - r, 2 * r, 2 * r);
                 break;
             case TARGET:
-                g2.setColor(new Color(220, 20, 60));
+                g2.setColor(AgentColors.colorForKey(a.getKey()));
                 g2.fillOval(sx - r, sy - r, 2 * r, 2 * r);
                 g2.setColor(Color.black);
                 g2.drawOval(sx - r, sy - r, 2 * r, 2 * r);

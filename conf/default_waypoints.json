@@ -1,8 +1,20 @@
 [
   {
-    "name": "street",
-    "azimuth": -5.0,
-    "elevation": -10.0,
+    "name": "true_north",
+    "azimuth": 0.0,
+    "elevation": 0.0,
+    "color": -65281
+  },
+  {
+    "name": "true_-20_30",
+    "azimuth": -20.0,
+    "elevation": 30.0,
+    "color": -65281
+  },
+   {
+    "name": "true_east",
+    "azimuth": 90.0,
+    "elevation": 0.0,
     "color": -65281
   }
 ]

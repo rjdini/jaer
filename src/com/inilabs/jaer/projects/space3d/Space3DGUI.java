@@ -28,7 +28,7 @@ public class Space3DGUI extends JFrame {
         private final Color CONE_EDGE  = new Color(255, 0, 255, 160);
         private final Color ARROW      = new Color(255, 0, 255);
         private final float FOVX_DEG   = 30f;   // placeholder; will wire to FieldOfView later
-        private final float RANGE_M    = 80f;
+        private final float RANGE_M    = 200f;
 
         @Override protected void paintComponent(Graphics g) {
             super.paintComponent(g);

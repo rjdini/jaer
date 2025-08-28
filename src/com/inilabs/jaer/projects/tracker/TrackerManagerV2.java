@@ -37,6 +37,7 @@ import com.inilabs.jaer.projects.motor.DirectGimbalController;
 import java.util.Timer;
 import java.util.stream.Collectors;
 import com.inilabs.jaer.projects.motor.JoystickController;
+import com.inilabs.jaer.projects.polarspace.PolarDrawableAdapter;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.concurrent.Executors;
@@ -46,6 +47,7 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import com.inilabs.jaer.projects.space3d.AbstractAgent3D;
 import com.inilabs.jaer.projects.space3d.Agent3D;
+import com.inilabs.jaer.projects.space3d.Agent3DInterface;
 import com.inilabs.jaer.projects.space3d.Space3D;
 import com.inilabs.jaer.projects.space3d.Space3DGUI;
 import com.inilabs.jaer.projects.space3d.Space3DRegistry;
@@ -73,6 +75,8 @@ import com.inilabs.jaer.projects.space3d.TargetShape;
 public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements FrameAnnotater {
 
     private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(TrackerManagerV2.class);
+
+    private volatile boolean polarTargetsHooked = false;
 
     RectangularClusterTracker tracker;
   //  GimbalAimer panTilt = null;
@@ -153,8 +157,7 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
          spatialAttention = SpatialAttention.getInstance(gimbal, waypointManager); // spatial attention drives gimbal pose  (with parallel input from Joystick)   
          joystickController = JoystickController.getInstance(gimbal);
          polarSpaceGUI = new PolarSpaceGUI();
-         engine = new TrackerManagerEngine(fov, spatialAttention,  polarSpaceGUI.getPolarSpaceDisplay());
-         spatialAttention.setEngine(engine); 
+         engine = new TrackerManagerEngine(fov, spatialAttention,  polarSpaceGUI.getPolarSpaceDisplay()); 
          exerciser = new TrackerManagerExerciser2();  // temporary - neds to be refactored as part of general target system.
          testClusterList = exerciser.createGaussianCluster(4, 4.0f);
          
@@ -170,7 +173,10 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
          
           // [3D-WORLD] bring up the Space3D world inside this JVM
         startSpace3DWorld();
-    }
+    
+        // hook polar adapters after world & polar GUI are up
+        try { javax.swing.SwingUtilities.invokeLater(this::deferHookPolarTargets); } catch (Throwable ignore) {}
+}
     
     
      private void startTasks() {
@@ -575,4 +581,60 @@ private GL2 drawTargetLocation(GL2 gl) {
 
     
     
+
+
+    /** Schedules hookPolarTargets() to run once the GUI and world are ready. */
+    private void deferHookPolarTargets(){
+        if (polarTargetsHooked) return;
+        final javax.swing.Timer[] tRef = new javax.swing.Timer[1];
+        tRef[0] = new javax.swing.Timer(200, ev -> {
+            try{
+                if (world3D != null && polarSpaceGUI != null && polarSpaceGUI.getPolarSpaceDisplay() != null){
+                    tRef[0].stop();
+                    hookPolarTargets();
+                    polarTargetsHooked = true;
+                }
+            } catch(Throwable ex){
+                ex.printStackTrace();
+            }
+        });
+        tRef[0].setRepeats(true);
+        tRef[0].start();
+    }
+    
+    
+    private void hookPolarTargets(){
+        log.info("hookPolarTargets: ###########################");
+    if (world3D == null || polarSpaceGUI == null) return;
+    var display = polarSpaceGUI.getPolarSpaceDisplay();
+    if (display == null) return;
+    if (world3D.getAgents() == null || world3D.getAgents().isEmpty()) return;
+
+    // find tracker in world (DVXPLORER)
+    Agent3DInterface trackerAgent = null;
+    for (Agent3DInterface a : world3D.getAgents().values()){
+        if (a.getType() == Agent3D.ObjectType.DVXPLORER){ trackerAgent = a; break; }
+    }
+    final Agent3DInterface trackerRef = trackerAgent;
+
+    int added = 0;
+    for (Agent3DInterface a : world3D.getAgents().values()){
+        if (a.getType() != Agent3D.ObjectType.TARGET) continue;
+
+        PolarDrawableAdapter adapter = new PolarDrawableAdapter(
+            a,
+            () -> (trackerRef != null ? trackerRef.getPositionDVX() : new Space3D.Vec3(0,0,0)),
+            () -> new double[]{ fov.getAxialYaw(), fov.getAxialPitch(), fov.getAxialRoll() }
+        ).color(java.awt.Color.GREEN).sizeDeg(2.0f);
+
+        display.addDrawable(adapter);
+        added++;
+    }
+    log.info("hookPolarTargets: added {} target adapters to polar display", added);
+    display.repaint();
+}
+
+    
+    
+
 }

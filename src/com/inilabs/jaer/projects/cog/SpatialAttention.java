@@ -52,7 +52,7 @@ public class SpatialAttention {
     private boolean isSaccade = false; // State to ignore incoming data during waypoint movement
     private com.inilabs.jaer.projects.tracker.TrackerManagerEngine engine;
     int cnt;
-    private String defaultWaypointName = "street";
+    private String defaultWaypointName = "true_north";
 
     private TrackerAgentDrawable bestTrackerAgent = null; // Reference to the best tracker agent
 
