@@ -107,7 +107,7 @@ public final class PolarDrawableAdapter implements Drawable {
         Graphics2D g2 = (Graphics2D) g;
 
         // marker in per-agent color
-        g2.setColor(AgentColors.colorForKey(agent.getKey()));
+     //   g2.setColor(AgentColors.colorForKey(agent.getKey()));
         int rpx = Math.max(2, (int)(Math.max(azimuthScale, elevationScale) * sizeDeg * 0.1f));
         g2.drawOval(x - rpx, y - rpx, 2*rpx, 2*rpx);
         g2.drawLine(x - rpx, y, x + rpx, y);
