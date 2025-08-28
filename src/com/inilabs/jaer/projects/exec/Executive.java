@@ -8,6 +8,9 @@ import com.inilabs.jaer.projects.polarspace.PolarSpaceGUI;
 import com.inilabs.jaer.projects.eventprocessing.filters.FlyingBlobGenerator;
 import net.sf.jaer.chip.AEChip;
 
+import com.inilabs.jaer.projects.utils.geo.GeoMath;
+import com.inilabs.jaer.projects.utils.geo.FrameTransforms;
+
 import java.util.Objects;
 
 /**
@@ -74,7 +77,7 @@ public final class Executive {
                     target,
                     () -> (trackerAgent != null ? trackerAgent.getPositionDVX() : new Space3D.Vec3(0,0,0)),
                     () -> new double[]{ fov.getAxialYaw(), fov.getAxialPitch(), fov.getAxialRoll() }
-            ).color(java.awt.Color.GREEN).sizeDeg(2.0f);
+            ).sizeDeg(2.0f);
             pgui.getPolarSpaceDisplay().addDrawable(adapter);
             pgui.getPolarSpaceDisplay().repaint();
         }
@@ -96,4 +99,72 @@ public final class Executive {
     public Space3D getWorld()          { return world; }
     public TrackerManagerV2 getManager(){ return manager; }
     public FieldOfView getFov()        { return fov; }
+
+    // === Geo helpers (non-breaking) ===
+
+    /** Convert WGS-84 LLH (deg,deg,m) to Space3D ENU (x=E, y=U, z=N) using the world's origin. */
+    public double[] llhToEnu(double latDeg, double lonDeg, double altM){
+        ensureStarted();
+        return GeoMath.llhDegToEnu(latDeg, lonDeg, altM,
+                world.getOriginLatDeg(), world.getOriginLonDeg(), world.getOriginAltM());
+    }
+
+    /** Convert Space3D ENU (x=E, y=U, z=N) to WGS-84 LLH (deg,deg,m) using the world's origin. */
+    public double[] enuToLlh(double ex, double uy, double nz){
+        ensureStarted();
+        return GeoMath.enuToLlhDeg(ex, uy, nz,
+                world.getOriginLatDeg(), world.getOriginLonDeg(), world.getOriginAltM());
+    }
+
+    /** Set FOV pose with degrees (kept GPS-agnostic). */
+    public Executive setFovPoseDegrees(float yawDeg, float pitchDeg, float rollDeg){
+        ensureStarted();
+        fov.setPose(yawDeg, rollDeg, pitchDeg); // existing FOV order (yaw, roll, pitch)
+        return this;
+    }
+
+
+    /** Convenience: add a target by GPS start/end (deg,deg,m), converting to Space3D ENU via world origin. */
+    public Executive addTargetLLH(String key,
+                                  double startLatDeg, double startLonDeg, double startAltM,
+                                  double endLatDeg,   double endLonDeg,   double endAltM,
+                                  float speedMps){
+        ensureStarted();
+        double[] s = GeoMath.llhDegToEnu(startLatDeg, startLonDeg, startAltM,
+                world.getOriginLatDeg(), world.getOriginLonDeg(), world.getOriginAltM());
+        double[] e = GeoMath.llhDegToEnu(endLatDeg, endLonDeg, endAltM,
+                world.getOriginLatDeg(), world.getOriginLonDeg(), world.getOriginAltM());
+        TargetSpec spec = new TargetSpec(key,
+                new Space3D.Vec3(s[0], s[1], s[2]),
+                new Space3D.Vec3(e[0], e[1], e[2]),
+                speedMps);
+        return addTarget(spec);
+    }
+
+    /** Convenience: add a target by ENU start/end (meters) explicitly. */
+    public Executive addTargetENU(String key,
+                                  double startE, double startU, double startN,
+                                  double endE,   double endU,   double endN,
+                                  float speedMps){
+        ensureStarted();
+        TargetSpec spec = new TargetSpec(key,
+                new Space3D.Vec3(startE, startU, startN),
+                new Space3D.Vec3(endE,   endU,   endN),
+                speedMps);
+        return addTarget(spec);
+    }
+
+    /** Set tracker pose from GPS + orientation (degrees). FOV remains GPS-agnostic. */
+    public Executive setTrackerPoseLLH(double latDeg, double lonDeg, double altM,
+                                       float yawDeg, float pitchDeg, float rollDeg){
+        ensureStarted();
+        double[] enu = GeoMath.llhDegToEnu(latDeg, lonDeg, altM,
+                world.getOriginLatDeg(), world.getOriginLonDeg(), world.getOriginAltM());
+        if (trackerAgent != null) {
+            trackerAgent.setPositionDVX(new Space3D.Vec3(enu[0], enu[1], enu[2]));
+        }
+        fov.setPose(yawDeg, rollDeg, pitchDeg); // preserve established call order
+        return this;
+    }
+
 }
