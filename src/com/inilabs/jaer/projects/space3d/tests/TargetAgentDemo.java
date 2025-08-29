@@ -53,7 +53,7 @@ public class TargetAgentDemo {
         // (Optional) add a DVX agent at origin if you have one.
         // If AbstractAgent3D exists in your codebase, uncomment:
         // AbstractAgent3D cam = new AbstractAgent3D("dvx-0", Agent3D.ObjectType.DVXPLORER) {};
-        // cam.setPositionDVX(new Space3D.Vec3(0,0,0));
+        // cam.setPosition3D(new Space3D.Vec3(0,0,0));
         // space.addAgent(cam);
 
         // Show GUI

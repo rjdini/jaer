@@ -2,7 +2,9 @@ package com.inilabs.jaer.projects.polarspace;
 
 import com.inilabs.jaer.projects.space3d.Agent3DInterface;
 import com.inilabs.jaer.projects.space3d.Space3D;
+import com.inilabs.jaer.projects.space3d.api.AgentPolarDrawable;
 import com.inilabs.jaer.projects.util.AgentColors;
+
 
 import java.awt.Color;
 import java.awt.Font;
@@ -81,7 +83,7 @@ public final class PolarDrawableAdapter implements Drawable {
     @Override
     public void draw(Graphics g) {
         Space3D.Vec3 tp = trackerPos.get();
-        Space3D.Vec3 ap = agent.getPositionDVX();
+        Space3D.Vec3 ap = agent.getPosition3D();
         if (tp == null || ap == null) return;
 
         double rx = ap.x - tp.x, ry = ap.y - tp.y, rz = ap.z - tp.z;
@@ -106,14 +108,19 @@ public final class PolarDrawableAdapter implements Drawable {
 
         Graphics2D g2 = (Graphics2D) g;
 
-        // marker in per-agent color
-     //   g2.setColor(AgentColors.colorForKey(agent.getKey()));
+        // If the agent knows how to draw itself in polar space, delegate to it.
+        if (agent instanceof AgentPolarDrawable) {
+            ((AgentPolarDrawable)agent).drawInPolar(g2, azDeg, elDeg, x, y);
+            return;
+        }
+
+        // Fallback: simple crosshair + label
+        g2.setColor(AgentColors.colorForKey(agent.getKey()));
         int rpx = Math.max(2, (int)(Math.max(azimuthScale, elevationScale) * sizeDeg * 0.1f));
         g2.drawOval(x - rpx, y - rpx, 2*rpx, 2*rpx);
         g2.drawLine(x - rpx, y, x + rpx, y);
         g2.drawLine(x, y - rpx, x, y + rpx);
 
-        // label: black, no halo
         if (drawLabel) {
             String label = agent.getKey();
             if (label != null && !label.isEmpty()) {

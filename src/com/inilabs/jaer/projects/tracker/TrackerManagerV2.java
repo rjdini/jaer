@@ -215,7 +215,7 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
 
             // Marker for the DVX at the origin (blue square in GUI)
             AbstractAgent3D cam = new AbstractAgent3D("dvx-0", Agent3D.ObjectType.DVXPLORER) {};
-            cam.setPositionDVX(new Space3D.Vec3(0, 0, 0));
+            cam.setPosition3D(new Space3D.Vec3(0, 0, 0));
             world3D.addAgent(cam);
 
             // Reciprocal target: (-10,0,100) <-> (+10,0,20) at 10 m/s, key TARGET_KEY
@@ -623,7 +623,7 @@ private GL2 drawTargetLocation(GL2 gl) {
 
         PolarDrawableAdapter adapter = new PolarDrawableAdapter(
             a,
-            () -> (trackerRef != null ? trackerRef.getPositionDVX() : new Space3D.Vec3(0,0,0)),
+            () -> (trackerRef != null ? trackerRef.getPosition3D() : new Space3D.Vec3(0,0,0)),
             () -> new double[]{ fov.getAxialYaw(), fov.getAxialPitch(), fov.getAxialRoll() }
         ).color(java.awt.Color.GREEN).sizeDeg(2.0f);
 

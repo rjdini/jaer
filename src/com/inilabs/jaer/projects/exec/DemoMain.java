@@ -36,7 +36,8 @@ public final class DemoMain {
         // Keep JVM alive; your GUIs are Swing-based
         try { Thread.sleep(5_000_000); } catch (InterruptedException ignored) {}
     }
-
+    
+    
     private static AEChip findChipOrExit(){
         AEChip chip = null;
         // Try AEViewer singleton via reflection (no hard dependency)

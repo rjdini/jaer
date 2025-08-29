@@ -59,12 +59,12 @@ public class FlyingBlobGeneratorUnitTest {
         }
 
         @Override
-        public Space3D.Vec3 getPositionDVX() {
+        public Space3D.Vec3 getPosition3D() {
             return p;
         }
 
         @Override
-        public void setPositionDVX(Space3D.Vec3 pos) {
+        public void setPosition3D(Space3D.Vec3 pos) {
             this.p = pos;
         }
 

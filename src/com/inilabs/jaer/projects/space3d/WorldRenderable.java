@@ -7,3 +7,4 @@ public interface WorldRenderable {
     /** Draw using the provided world→screen transform. */
     void drawWorld(Graphics g, WorldTransform tx);
 }
+

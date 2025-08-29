@@ -344,25 +344,17 @@ public class Space3DPanel extends JPanel {
 
         WorldTransform tx = new WorldTransform(centerX, centerY, ppm);
 
-// Existing agent loop:
-        for (Agent3DInterface a : space.getAgents().values()) {
-            // ... your existing drawing for dots/labels ...
-            if (a instanceof WorldRenderable wr) {
-                wr.drawWorld(g, tx);    // <-- agent draws its own cone, perfectly anchored
-            }
-        }
-     
         // Draw agents
         for (Map.Entry<String, Agent3DInterface> e : space.viewAgents().entrySet()) {
             Agent3DInterface a = e.getValue();
-            Space3D.Vec3 p = a.getPositionDVX(); // (x,y,z), we use x and z
+            Space3D.Vec3 p = a.getPosition3D();
             int sx = worldToScreenX(p.x);
             int sy = worldToScreenY(p.z);
-            
+
             drawAgent(g2, a, sx, sy);
             if (a instanceof WorldRenderable wr) {
-                wr.drawWorld(g, tx);    // <-- agent draws its own cone, perfectly anchored
-            }
+                wr.drawWorld(g2, tx);
+            } 
             if (showLabels) {
                 g2.setColor(Color.black);
                 g2.setFont(getFont().deriveFont(Font.PLAIN, 12f));

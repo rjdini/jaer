@@ -42,12 +42,12 @@ public class Space3DTest {
 
         // Add one DVXplorer agent at the origin
         AbstractAgent3D cam = new AbstractAgent3D("dvx-test", Agent3D.ObjectType.DVXPLORER) {};
-        cam.setPositionDVX(new Space3D.Vec3(0, 0, 0));
+        cam.setPosition3D(new Space3D.Vec3(0, 0, 0));
         space.addAgent(cam);
 
         // Add a test target 300 m north, 50 m east, 20 m up
         AbstractAgent3D tgt = new AbstractAgent3D("tgt-test", Agent3D.ObjectType.TARGET) {};
-        tgt.setPositionDVX(new Space3D.Vec3(50, 20, 300));
+        tgt.setPosition3D(new Space3D.Vec3(50, 20, 300));
         space.addAgent(tgt);
 
         // Show the GUI

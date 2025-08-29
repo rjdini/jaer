@@ -20,8 +20,8 @@ public abstract class AbstractAgent3D implements Agent3DInterface {
 
     @Override public String getKey(){ return key; }
     @Override public Agent3D.ObjectType getType(){ return type; }
-    @Override public Vec3 getPositionDVX(){ return posDVX; }
-    @Override public void setPositionDVX(Vec3 p){ posDVX = Objects.requireNonNull(p); }
+    @Override public Vec3 getPosition3D(){ return posDVX; }
+    @Override public void setPosition3D(Vec3 p){ posDVX = Objects.requireNonNull(p); }
     @Override public double[] getYawPitchRollDeg(){ return new double[]{yawDeg,pitchDeg,rollDeg}; }
     @Override public void setYawPitchRollDeg(double yawDeg,double pitchDeg,double rollDeg){
         this.yawDeg=yawDeg; this.pitchDeg=pitchDeg; this.rollDeg=rollDeg;

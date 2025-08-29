@@ -67,7 +67,7 @@ public final class Space3D {
     public Agent3D.AzElDist azElDistBetween(String keyA, String keyB){
         Agent3DInterface A = getAgents().get(keyA), B = getAgents().get(keyB);
         if (A==null||B==null) throw new IllegalArgumentException("Missing agent(s)");
-        return A.azElDistFromDVX(B.getPositionDVX());
+        return A.azElDistFromDVX(B.getPosition3D());
     }
 
     @Override

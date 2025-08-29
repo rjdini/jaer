@@ -59,7 +59,7 @@ public class FBGIntegrationTest {
         // Optional camera agent at origin
         AbstractAgent3D cam = new AbstractAgent3D("dvx-0", Agent3D.ObjectType.DVXPLORER) {
         };
-        cam.setPositionDVX(new Space3D.Vec3(0, 0, 0));
+        cam.setPosition3D(new Space3D.Vec3(0, 0, 0));
         space.addAgent(cam);
 
         // --- Multiple targets with shapes & sizes ---

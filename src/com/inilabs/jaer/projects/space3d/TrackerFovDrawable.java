@@ -9,13 +9,8 @@ import java.awt.Polygon;
  * Top-down (XZ) world-view drawable that renders a tracker's
  * Field-Of-View cone footprint and a boresight arrow in Space3DGUI.
  *
- * This class is intentionally self-contained:
- * - No dependency on Space3DGUI internals.
- * - The host view calls {@link #setTransform(int,int,float)} with its current
- *   screen center and pixels-per-meter scale.
- *
- * Alignment with FieldOfView (chip/lens) will be added later. For now, we use
- * the TrackerAgent's yaw/pitch and a configurable horizontal FOV and range.
+ * This version uses WorldTransform for all world→screen mapping
+ * so panning/zooming never detaches the cone from the agent base.
  */
 public class TrackerFovDrawable {
 
@@ -27,13 +22,12 @@ public class TrackerFovDrawable {
     /** Draw cone length (meters) for visualization. */
     private float rangeMeters = 50f;
 
-    /** Screen transform: center (px) and pixels-per-meter scale. */
-    private int centerX = 0, centerY = 0;
-    private float pixelsPerMeter = 1f;
+    /** World→screen transform (may be injected each frame). */
+    private WorldTransform tx;
 
     /** Styling. */
-    private Color coneColor = new Color(255, 0, 255, 120); // magenta, semi-transparent
-    private Color edgeColor = new Color(255, 0, 255, 200);
+    private Color coneColor  = new Color(255, 0, 255, 120); // magenta, semi-transparent
+    private Color edgeColor  = new Color(255, 0, 255, 200);
     private Color arrowColor = new Color(255, 0, 255);
 
     public TrackerFovDrawable(TrackerAgent tracker){
@@ -41,10 +35,20 @@ public class TrackerFovDrawable {
         this.tracker = tracker;
     }
 
-    public void setTransform(int centerX, int centerY, float pixelsPerMeter){
-        this.centerX = centerX;
-        this.centerY = centerY;
-        this.pixelsPerMeter = Math.max(0.0001f, pixelsPerMeter);
+    /** Preferred: set once per frame from the host panel before draw(Graphics). */
+    public void setTransform(WorldTransform tx){
+        this.tx = tx;
+    }
+
+    /** Optional stateless entry point if you prefer to pass the transform per call. */
+    public void draw(Graphics g, WorldTransform tx){
+        WorldTransform old = this.tx;
+        try {
+            this.tx = tx;
+            draw(g);
+        } finally {
+            this.tx = old;
+        }
     }
 
     /** Placeholder FOV until we bind to FieldOfView. */
@@ -61,17 +65,20 @@ public class TrackerFovDrawable {
 
     /** Draws the cone footprint and a boresight arrow onto a top-down XZ map. */
     public void draw(Graphics g){
+        if (tx == null) throw new IllegalStateException("WorldTransform not set");
         Graphics2D g2 = (Graphics2D) g;
 
         // World pose
-        Space3D.Vec3 p = tracker.getPositionDVX();
+        Space3D.Vec3 p = tracker.getPosition3D();
+        if (p == null) return;
+
         double[] ypr = tracker.getYawPitchRollDeg();
-        double yawDeg = ypr[0];
+        double yawDeg = (ypr != null && ypr.length > 0) ? ypr[0] : 0.0;
 
         // Direction unit vector in XZ plane (east=x, north=z)
         double yawRad = Math.toRadians(yawDeg);
-        double dx = Math.sin(yawRad); // x-right
-        double dz = Math.cos(yawRad); // z-forward (north)
+        double dx = Math.sin(yawRad); // +x right (east)
+        double dz = Math.cos(yawRad); // +z up/north (screen -y)
 
         // Cone geometry in meters
         double L = Math.max(0.1, rangeMeters);
@@ -82,8 +89,7 @@ public class TrackerFovDrawable {
         double tipZ = p.z + dz * L;
 
         // Perpendicular to (dx,dz) in XZ
-        double px = -dz;
-        double pz =  dx;
+        double px = -dz, pz = dx;
 
         double baseLx = p.x + px * halfWidth;
         double baseLz = p.z + pz * halfWidth;
@@ -91,19 +97,20 @@ public class TrackerFovDrawable {
         double baseRx = p.x - px * halfWidth;
         double baseRz = p.z - pz * halfWidth;
 
-        // Convert world meters to screen pixels (north-up: +Z = -y on screen)
-        int sx = toScreenX(p.x);
-        int sy = toScreenY(p.z);
-        int sxTip  = toScreenX(tipX);
-        int syTip  = toScreenY(tipZ);
-        int sxBL   = toScreenX(baseLx);
-        int syBL   = toScreenY(baseLz);
-        int sxBR   = toScreenX(baseRx);
-        int syBR   = toScreenY(baseRz);
+        // Convert world meters to screen pixels via WorldTransform
+        int sx    = tx.toScreenX(p.x);
+        int sy    = tx.toScreenY(p.z);
+        int sxTip = tx.toScreenX(tipX);
+        int syTip = tx.toScreenY(tipZ);
+        int sxBL  = tx.toScreenX(baseLx);
+        int syBL  = tx.toScreenY(baseLz);
+        int sxBR  = tx.toScreenX(baseRx);
+        int syBR  = tx.toScreenY(baseRz);
 
         // Filled cone
         Polygon poly = new Polygon(new int[]{sxBL, sxBR, sxTip},
                                    new int[]{syBL, syBR, syTip}, 3);
+        Color old = g2.getColor();
         g2.setColor(coneColor);
         g2.fillPolygon(poly);
         g2.setColor(edgeColor);
@@ -111,12 +118,11 @@ public class TrackerFovDrawable {
 
         // Boresight arrow (shorter than L to avoid clutter)
         double arrowLen = Math.min(L, 20.0);
-        int sxArrow = toScreenX(p.x + dx * arrowLen);
-        int syArrow = toScreenY(p.z + dz * arrowLen);
+        int sxArrow = tx.toScreenX(p.x + dx * arrowLen);
+        int syArrow = tx.toScreenY(p.z + dz * arrowLen);
         g2.setColor(arrowColor);
         g2.drawLine(sx, sy, sxArrow, syArrow);
-    }
 
-    private int toScreenX(double worldX){ return centerX + (int)Math.round(worldX * pixelsPerMeter); }
-    private int toScreenY(double worldZ){ return centerY - (int)Math.round(worldZ * pixelsPerMeter); }
+        g2.setColor(old);
+    }
 }

@@ -41,13 +41,13 @@ public class TargetAgent implements Agent3DInterface, Runnable, FBGTarget {
     @Override public Agent3D.ObjectType getType() { return type; }
 
     @Override
-    public Space3D.Vec3 getPositionDVX() {
+    public Space3D.Vec3 getPosition3D() {
         Space3D.Vec3 d = p2.sub(p1);
         return new Space3D.Vec3(p1.x + s * d.x, p1.y + s * d.y, p1.z + s * d.z);
     }
 
     @Override
-    public void setPositionDVX(Space3D.Vec3 p) {
+    public void setPosition3D(Space3D.Vec3 p) {
         Space3D.Vec3 d = p2.sub(p1);
         double len2 = d.x*d.x + d.y*d.y + d.z*d.z;
         if (len2 == 0) { s = 0; return; }

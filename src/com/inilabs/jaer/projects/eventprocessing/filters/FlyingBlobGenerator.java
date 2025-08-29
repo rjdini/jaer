@@ -154,7 +154,7 @@ public class FlyingBlobGenerator extends EventFilter2DMouseAdaptor {
     }
 
     private void renderTarget(FBGTarget tgt, OutputEventIterator outItr, int ts){
-        Space3D.Vec3 p = tgt.getPositionDVX();
+        Space3D.Vec3 p = tgt.getPosition3D();
         AzElDist aed = azElDistFromCamera(p.x, p.y, p.z);
         boolean inFov = insideFOV(aed);
         throttleLog(String.format("FBG: %s az=%.2f el=%.2f d=%.1f FOV=%s", tgt.getKey(), aed.azDeg, aed.elDeg, aed.distM, inFov ? "IN" : "OUT"));

@@ -10,8 +10,8 @@ public interface Agent3DInterface {
     Agent3D.ObjectType getType();
 
     // Pose in DVXSpace (ENU)
-    Vec3 getPositionDVX();
-    void setPositionDVX(Vec3 p);
+    Vec3 getPosition3D();
+    void setPosition3D(Vec3 p);
 
     /** Yaw/Pitch/Roll in degrees */
     double[] getYawPitchRollDeg();          // {yaw, pitch, roll}
@@ -23,7 +23,7 @@ public interface Agent3DInterface {
 
     // Query relative to a reference position in DVXSpace (ENU)
     default Agent3D.AzElDist azElDistFromDVX(Vec3 refDVX) {
-        Vec3 d = getPositionDVX().sub(refDVX);
+        Vec3 d = getPosition3D().sub(refDVX);
         double az = Math.toDegrees(Math.atan2(d.x, d.z));
         double el = Math.toDegrees(Math.atan2(d.y, Math.hypot(d.x, d.z)));
         return new Agent3D.AzElDist(az, el, d.norm());

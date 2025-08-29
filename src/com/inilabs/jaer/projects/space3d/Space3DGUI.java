@@ -43,7 +43,7 @@ public class Space3DGUI extends JFrame {
                 Agent3D.ObjectType t = a.getType();
                 if (t != Agent3D.ObjectType.DVXPLORER) continue;
 
-                Space3D.Vec3 p = a.getPositionDVX();
+                Space3D.Vec3 p = a.getPosition3D();
                 double[] ypr = a.getYawPitchRollDeg();
                 double yawDeg = (ypr != null && ypr.length > 0) ? ypr[0] : 0.0;
 
@@ -218,7 +218,7 @@ public class Space3DGUI extends JFrame {
 
         AbstractAgent3D cam = new AbstractAgent3D("dvx-0", Agent3D.ObjectType.DVXPLORER) {
         };
-        cam.setPositionDVX(new Space3D.Vec3(0, 0, 0));
+        cam.setPosition3D(new Space3D.Vec3(0, 0, 0));
         space.addAgent(cam);
 
         SwingUtilities.invokeLater(() -> new Space3DGUI(space));
