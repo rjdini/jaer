@@ -101,7 +101,7 @@ public class FlyingBlobGeneratorUnitTest {
     public static void testProjectionCenter() {
         AEChip chip = new DummyChip();
         FlyingBlobGenerator fbg = new FlyingBlobGenerator(chip);
-        fbg.autoConnectRegistry = false;
+        fbg.setAutoConnectRegistry(false);
         fbg.eventDensityPerPx2 = 0.3f;
         fbg.injectedPolarity = +1;
         fbg.setLocalTestEnabled(true);
@@ -136,7 +136,7 @@ public class FlyingBlobGeneratorUnitTest {
         AEChip chip = new DummyChip();
         FlyingBlobGenerator fbg = new FlyingBlobGenerator(chip);
 
-        fbg.autoConnectRegistry = false;
+        fbg.setAutoConnectRegistry(false);
 
         DummyAgent agent = new DummyAgent("dummy");
         agent.setPosition(new Space3D.Vec3(0, 0, -10)); // behind camera
@@ -165,7 +165,7 @@ public class FlyingBlobGeneratorUnitTest {
     public static void testLocalTestBlob() {
         AEChip chip = new DummyChip();
         FlyingBlobGenerator fbg = new FlyingBlobGenerator(chip);
-        fbg.autoConnectRegistry = false;
+        fbg.setAutoConnectRegistry(false);
         fbg.eventDensityPerPx2 = 0.3f;
         fbg.injectedPolarity = +1;
         fbg.setLocalTestEnabled(true);

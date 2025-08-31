@@ -1,7 +1,6 @@
 package com.inilabs.jaer.projects.tracker;
 
 import com.inilabs.jaer.projects.cog.SpatialAttention;
-import com.inilabs.jaer.projects.polarspace.Drawable;
 import com.inilabs.jaer.projects.polarspace.PolarSpaceDisplay;
 import java.awt.Color;
 import java.awt.geom.Point2D;
@@ -14,6 +13,7 @@ import java.util.stream.Collectors;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.slf4j.LoggerFactory;
+import com.inilabs.jaer.projects.polarspace.PolarDrawable;
 
 public class TrackerManagerEngine {
 
@@ -360,13 +360,13 @@ private double magnitude(Point2D p) {
         }
     }
 
-    private void addDrawableToDisplay(Drawable drawable) {
+    private void addDrawableToDisplay(PolarDrawable drawable) {
         if (polarSpaceDisplay != null) {
             polarSpaceDisplay.addDrawable(drawable);
         }
     }
 
-    private void removeDrawableFromDisplay(Drawable drawable) {
+    private void removeDrawableFromDisplay(PolarDrawable drawable) {
         if (polarSpaceDisplay != null) {
             polarSpaceDisplay.removeDrawable(drawable.getKey());
         }

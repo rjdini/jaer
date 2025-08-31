@@ -1,119 +1,138 @@
 package com.inilabs.jaer.projects.exec;
 
-import com.inilabs.jaer.projects.space3d.Space3D;
 import com.inilabs.jaer.projects.eventprocessing.filters.FlyingBlobGenerator;
 import net.sf.jaer.chip.AEChip;
-import net.sf.jaer.JAERViewer;
 
-/**
- * DemoMain:
- * - Bootstraps the Executive with a jAER AEChip
- * - Adds one TargetAgent
- * - Starts the FlyingBlobGenerator (FBG) injection filter automatically
- * It will attempt to attach FBG to the AEViewer pipeline via reflection if AEViewer is running.
- */
-public final class DemoMain {
+import javax.swing.SwingUtilities;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+public class DemoMain {
+
+    private static Object viewer; // AEViewer or JAERViewer
 
     public static void main(String[] args) {
-//        AEChip chip = findChipOrExit();
-         AEChip chip = new AEChip();
-      // JAERViewer = new net.sf.jaer.JAERViewer();
-         
-        var exec = new Executive(chip, new DefaultAgentFactory()).start();
+        AEChip chip = new AEChip();
 
-        // Add one example target flying roughly towards the tracker
-        exec.addTarget(new TargetSpec(
-                "demo-bird-1",
-                new Space3D.Vec3(-20,  5, 120),
-                new Space3D.Vec3( 15,  3,  30),
-                12.0
-        ));
+        Executive exec = new Executive(chip)
+                .showWorldGUI(true)
+                .start();
 
-        // Start FBG injection and attempt to wire it into the AEViewer filter pipeline
+        SwingUtilities.invokeLater(() -> {
+            if (!tryLaunchAEViewer(chip)) {
+                tryLaunchJAERViewer(chip);
+            }
+        });
+
         FlyingBlobGenerator fbg = exec.createFBG();
-        tryAttachFilterToAEViewer(fbg);
+        tryAttachFilterToViewer(fbg);
 
-        // Keep JVM alive; your GUIs are Swing-based
-        try { Thread.sleep(5_000_000); } catch (InterruptedException ignored) {}
+        try { Thread.sleep(10_000_000); } catch (InterruptedException ignored) {}
     }
-    
-    
-    private static AEChip findChipOrExit(){
-        AEChip chip = null;
-        // Try AEViewer singleton via reflection (no hard dependency)
+
+    private static boolean tryLaunchAEViewer(AEChip chip) {
         try {
-            Class<?> viewerClz = Class.forName("net.sf.jaer.viewer.AEViewer");
-            Object viewer = viewerClz.getMethod("getInstance").invoke(null);
-            if (viewer != null) {
-                Object chipObj = viewerClz.getMethod("getChip").invoke(viewer);
-                if (chipObj instanceof AEChip) chip = (AEChip) chipObj;
+            Class<?> aClass = Class.forName("net.sf.jaer.AEViewer");
+            Constructor<?> ctor = aClass.getConstructor(String.class, AEChip.class);
+            viewer = ctor.newInstance("Birdland + jAER (AEViewer)", chip);
+            Method setVisible = aClass.getMethod("setVisible", boolean.class);
+            setVisible.invoke(viewer, true);
+            System.out.println("Launched AEViewer.");
+            return true;
+        } catch (Throwable t) {
+            System.err.println("AEViewer not available: " + t.getClass().getSimpleName());
+            return false;
+        }
+    }
+
+    private static boolean tryLaunchJAERViewer(AEChip chip) {
+        try {
+            Class<?> jClass = Class.forName("net.sf.jaer.JAERViewer");
+
+            // Initialize static Logger if null to avoid NPEs
+            try {
+                Field logField = jClass.getDeclaredField("log");
+                logField.setAccessible(true);
+                Object current = logField.get(null);
+                if (current == null) {
+                    Logger L = Logger.getLogger("net.sf.jaer.JAERViewer");
+                    L.setUseParentHandlers(false);
+                    ConsoleHandler h = new ConsoleHandler();
+                    h.setLevel(Level.INFO);
+                    L.addHandler(h);
+                    L.setLevel(Level.INFO);
+                    try { logField.set(null, L); } catch (Throwable ignored) {}
+                }
+            } catch (NoSuchFieldException ignored) {}
+
+            try {
+                Constructor<?> ctor = jClass.getConstructor(String.class, AEChip.class);
+                viewer = ctor.newInstance("Birdland + jAER (JAERViewer)", chip);
+            } catch (NoSuchMethodException e) {
+                Constructor<?> ctor = jClass.getConstructor();
+                viewer = ctor.newInstance();
+                try {
+                    Method setChip = jClass.getMethod("setChip", AEChip.class);
+                    setChip.invoke(viewer, chip);
+                } catch (Throwable ignore) {}
+            }
+            try {
+                Method setVisible = jClass.getMethod("setVisible", boolean.class);
+                setVisible.invoke(viewer, true);
+            } catch (Throwable ignore) {}
+            System.out.println("Launched JAERViewer.");
+            return true;
+        } catch (Throwable t) {
+            t.printStackTrace(System.err);
+            return false;
+        }
+    }
+
+    private static void tryAttachFilterToViewer(Object filter) {
+        for (int i = 0; i < 50 && viewer == null; i++) {
+            try { Thread.sleep(50); } catch (InterruptedException ignored) {}
+        }
+        if (viewer == null || filter == null) return;
+        Class<?> vc = viewer.getClass();
+
+        try {
+            Class<?> ef2d = Class.forName("net.sf.jaer.eventprocessing.EventFilter2D");
+            Method m = vc.getMethod("addFilter", ef2d);
+            m.invoke(viewer, filter);
+            System.out.println("Attached filter via addFilter(EventFilter2D).");
+            return;
+        } catch (Throwable ignore) {}
+
+        try {
+            Method m = vc.getMethod("addFilter", Object.class);
+            m.invoke(viewer, filter);
+            System.out.println("Attached filter via addFilter(Object).");
+            return;
+        } catch (Throwable ignore) {}
+
+        try {
+            Method getFilterFrame = vc.getMethod("getFilterFrame");
+            Object frame = getFilterFrame.invoke(viewer);
+            if (frame != null) {
+                try {
+                    Method addF = frame.getClass().getMethod("addFilter", filter.getClass());
+                    addF.invoke(frame, filter);
+                    System.out.println("Attached filter via FilterFrame.addFilter(filterClass).");
+                    return;
+                } catch (Throwable ignored) {}
+                try {
+                    Method addF2 = frame.getClass().getMethod("addFilter", Object.class);
+                    addF2.invoke(frame, filter);
+                    System.out.println("Attached filter via FilterFrame.addFilter(Object).");
+                    return;
+                } catch (Throwable ignored) {}
             }
         } catch (Throwable ignore) {}
 
-        // Try system property: -Djaer.chip.class=fully.qualified.ClassName
-        if (chip == null) {
-            String chipClz = System.getProperty("jaer.chip.class", "").trim();
-            if (!chipClz.isEmpty()) {
-                try {
-                    Class<?> c = Class.forName(chipClz);
-                    Object o = c.getDeclaredConstructor().newInstance();
-                    if (o instanceof AEChip) chip = (AEChip) o;
-                } catch (Throwable e) {
-                    System.err.println("Failed to instantiate chip from jaer.chip.class=" + chipClz + " : " + e);
-                }
-            }
-        }
-
-        if (chip == null) {
-            System.err.println("No AEChip found. Start from jAER (so AEViewer has a chip), or pass -Djaer.chip.class=... to instantiate one.");
-            System.exit(2);
-        }
-        return chip;
-    }
-
-    /** Best-effort attachment of an EventFilter2D to the AEViewer pipeline using reflection. */
-    private static void tryAttachFilterToAEViewer(Object filter){
-        if (filter == null) return;
-        try {
-            Class<?> viewerClz = Class.forName("net.sf.jaer.viewer.AEViewer");
-            Object viewer = viewerClz.getMethod("getInstance").invoke(null);
-            if (viewer == null) { System.out.println("AEViewer not running; FBG created but not attached."); return; }
-
-            // Path A: AEViewer has getFilterFrame() with addFilter(EventFilter2D)
-            try {
-                Object ff = viewerClz.getMethod("getFilterFrame").invoke(viewer);
-                if (ff != null) {
-                    for (var m : ff.getClass().getMethods()) {
-                        if (m.getName().equals("addFilter") && m.getParameterCount() == 1) {
-                            try {
-                                m.invoke(ff, filter);
-                                System.out.println("FBG attached via FilterFrame.addFilter(...)");
-                                return;
-                            } catch (Throwable ignore) {}
-                        }
-                    }
-                }
-            } catch (Throwable ignore) {}
-
-            // Path B: AEViewer exposes a filter chain directly
-            try {
-                Object chain = viewerClz.getMethod("getFilterChain").invoke(viewer);
-                if (chain != null) {
-                    for (var m : chain.getClass().getMethods()) {
-                        if ((m.getName().equals("add") || m.getName().equals("addFilter")) && m.getParameterCount() == 1) {
-                            try {
-                                m.invoke(chain, filter);
-                                System.out.println("FBG attached via FilterChain.add(...)");
-                                return;
-                            } catch (Throwable ignore) {}
-                        }
-                    }
-                }
-            } catch (Throwable ignore) {}
-
-            System.out.println("FBG created; could not attach to AEViewer via reflection. Add it manually if needed.");
-        } catch (Throwable t) {
-            System.out.println("FBG created; AEViewer not present or attachment failed: " + t);
-        }
+        System.err.println("Could not auto-attach FBG to viewer; add it manually in the UI.");
     }
 }

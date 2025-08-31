@@ -1,6 +1,6 @@
 package com.inilabs.jaer.projects.space3d;
 
-import com.inilabs.jaer.projects.space3d.api.AgentRunnable;
+import com.inilabs.jaer.projects.agent.api.AgentRunnable;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;

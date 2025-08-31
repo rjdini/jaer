@@ -21,12 +21,12 @@
 package com.inilabs.jaer.projects.environ;
 
 import com.inilabs.jaer.projects.polarspace.BasicDrawable;
-import com.inilabs.jaer.projects.polarspace.Drawable;
 import com.google.gson.annotations.Expose;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import com.inilabs.jaer.projects.polarspace.PolarDrawable;
 
     
 
@@ -34,7 +34,7 @@ import java.awt.Graphics2D;
  * Represents a drawable waypoint in polar space (azimuth and elevation).
  */
     @JsonIgnoreProperties(ignoreUnknown = true)
-public class WaypointDrawable extends BasicDrawable implements Drawable {
+public class WaypointDrawable extends BasicDrawable implements PolarDrawable {
     @Expose private String name;
     @Expose private float azimuth;
     @Expose private float elevation;

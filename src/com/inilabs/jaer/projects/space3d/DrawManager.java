@@ -28,10 +28,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class DrawManager {
-    private final Map<String, Drawable> drawables = new HashMap<>();
+    private final Map<String, Drawable3D> drawables = new HashMap<>();
 
     // Add a drawable to the manager
-    public void add(String key, Drawable drawable) {
+    public void add(String key, Drawable3D drawable) {
         drawables.put(key, drawable);
     }
 
@@ -42,13 +42,13 @@ public class DrawManager {
 
     // Draw all managed drawable objects
     public void drawAll(Graphics g) {
-        for (Drawable drawable : drawables.values()) {
+        for (Drawable3D drawable : drawables.values()) {
             drawable.draw(g);
         }
     }
 
     // Retrieve all drawables (for scale notifications)
-    public Iterable<Drawable> getDrawables() {
+    public Iterable<Drawable3D> getDrawables() {
         return drawables.values();
     }
 }

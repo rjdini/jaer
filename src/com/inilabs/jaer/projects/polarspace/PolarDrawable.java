@@ -31,7 +31,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import com.inilabs.jaer.projects.polarspace.ActionType;
 
-public interface Drawable  {
+public interface PolarDrawable  {
 
     // Unique key for the drawable
     String getKey();

@@ -19,7 +19,6 @@
 package com.inilabs.jaer.projects.review;
 
 import com.inilabs.jaer.projects.polarspace.BasicDrawable;
-import com.inilabs.jaer.projects.polarspace.Drawable;
 import com.inilabs.jaer.projects.polarspace.PolarSpaceDisplay;
 
 import java.awt.Graphics;
@@ -27,8 +26,9 @@ import java.awt.Graphics2D;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import com.inilabs.jaer.projects.polarspace.PolarDrawable;
 
-public class TrajectoryDrawable extends BasicDrawable implements Drawable {
+public class TrajectoryDrawable extends BasicDrawable implements PolarDrawable {
 
     private final String trackerName;
     private final List<TrajectoryPointDrawable> points;

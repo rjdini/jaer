@@ -1,4 +1,4 @@
-package com.inilabs.jaer.projects.space3d.api;
+package com.inilabs.jaer.projects.agent.api;
 
 import com.inilabs.jaer.projects.space3d.Space3D;
 

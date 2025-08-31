@@ -29,7 +29,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.function.BiConsumer;
 
-public class BasicDrawable implements Drawable {
+public class BasicDrawable implements PolarDrawable {
 
     protected static int idCounter = 0; // Auto-incrementing ID counter for instances
     private String key;
@@ -157,7 +157,7 @@ public class BasicDrawable implements Drawable {
      }
      
 
-    // Drawable interface method to draw the drawable on the Graphics context
+    // PolarDrawable interface method to draw the drawable on the Graphics context
     @Override
     public void draw(Graphics g) {
         Graphics2D g2d = (Graphics2D) g;

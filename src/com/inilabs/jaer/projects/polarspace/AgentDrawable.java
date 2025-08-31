@@ -26,7 +26,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 
 
-public class AgentDrawable extends BasicDrawable implements Drawable {
+public class AgentDrawable extends BasicDrawable implements PolarDrawable {
 
  
     public AgentDrawable() {

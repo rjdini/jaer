@@ -10,7 +10,7 @@ import net.sf.jaer.chip.AEChip;
  * This indirection lets the Executive assemble a DVX system without
  * hard-coding concrete classes or constructors.
  */
-public interface AgentFactory {
+public interface SystemFactory {
     /** Create a tracker manager bound to the given chip. */
     TrackerManagerV2 createTrackerManager(AEChip chip);
 

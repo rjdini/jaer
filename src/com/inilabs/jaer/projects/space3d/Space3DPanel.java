@@ -10,7 +10,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import com.inilabs.jaer.projects.util.AgentColors;
+import com.inilabs.jaer.projects.utils.AgentColors;
 
 /**
  * XZ viewer (North up) with optional OSM map background that stays coherent

@@ -1,57 +1,48 @@
 package com.inilabs.jaer.projects.exec;
 
-import com.inilabs.jaer.projects.space3d.*;
+import com.inilabs.jaer.projects.space3d.AbstractAgent3D;
+import com.inilabs.jaer.projects.space3d.Agent3D;
+import com.inilabs.jaer.projects.space3d.Agent3DInterface;
+import com.inilabs.jaer.projects.space3d.Space3D;
+import com.inilabs.jaer.projects.space3d.Space3DGUI;
+import com.inilabs.jaer.projects.space3d.Space3DRegistry;
+import com.inilabs.jaer.projects.space3d.TargetAgent;
+import com.inilabs.jaer.projects.space3d.TargetShape;
 import com.inilabs.jaer.projects.tracker.FieldOfView;
 import com.inilabs.jaer.projects.tracker.TrackerManagerV2;
-import com.inilabs.jaer.projects.polarspace.PolarDrawableAdapter;
-import com.inilabs.jaer.projects.polarspace.PolarSpaceGUI;
 import com.inilabs.jaer.projects.eventprocessing.filters.FlyingBlobGenerator;
 import net.sf.jaer.chip.AEChip;
 
+import javax.swing.SwingUtilities;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
-/**
- * Executive: orchestrates one DVX system without modifying existing working code.
- * Responsibilities:
- *  - Create TrackerManagerV2 via a factory (no behavior change)
- *  - Discover Space3D via Space3DRegistry (as current code does)
- *  - Manage FieldOfView for this tracker
- *  - Add TargetAgents to Space3D and mirror them into PolarSpaceDisplay via adapter
- *  - Provide a convenience to construct FBG (keeps old behavior intact)
- */
 public final class Executive {
-    private final AgentFactory factory;
+
     private final AEChip chip;
 
     private TrackerManagerV2 manager;
     private Space3D          world;
     private FieldOfView      fov;
-    private Agent3DInterface trackerAgent; // optional; used for tracker position in polar
+    private Agent3DInterface trackerAgent;
+    private boolean          showWorldGUI = false;
+    private Space3DGUI       worldGUI;
+    private final List<TargetAgent> startedTargets = new ArrayList<>();
 
-    public Executive(AEChip chip, AgentFactory factory){
+    public Executive(AEChip chip){
         this.chip = Objects.requireNonNull(chip, "chip");
-        this.factory = Objects.requireNonNull(factory, "factory");
     }
 
-    /** Bootstraps the system using only working code paths. */
     public Executive start(){
-        // 1) Manager (unchanged behavior)
-        this.manager = factory.createTrackerManager(chip);
-        // 🚀 ensure polar GUI is constructed
+        this.manager = new TrackerManagerV2(chip);
         this.manager.doPolarSpaceGUI();
-
-        // 2) World (unchanged discovery via registry)
-        this.world = Space3DRegistry.get();
-        if (this.world == null) {
-            throw new IllegalStateException("Space3D world not available via Space3DRegistry");
-        }
-
-        // 3) FOV singleton for this tracker (existing approach)
+        startSpace3DWorld();
         this.fov = FieldOfView.getInstance();
-
-        // 4) Optional: pick tracker agent from world for position (DVXPLORER)
-        if (this.world.getAgents() != null) {
-            for (Agent3DInterface a : this.world.getAgents().values()) {
+        Map<String, Agent3DInterface> agents = this.world.getAgents();
+        if (agents != null) {
+            for (Agent3DInterface a : agents.values()) {
                 if (a.getType() == Agent3D.ObjectType.DVXPLORER) {
                     this.trackerAgent = a;
                     break;
@@ -61,39 +52,91 @@ public final class Executive {
         return this;
     }
 
-    /** Adds a target to Space3D and bridges it into the polar view via adapter. */
-    public Executive addTarget(TargetSpec spec){
-        ensureStarted();
-        Agent3DInterface target = factory.createTargetAgent(spec);
-        world.addAgent(target);
-
-        // Bridge into polar display via adapter
-        PolarSpaceGUI pgui = manager.getPolarSpaceGUI();
-        if (pgui != null) {
-            var adapter = new PolarDrawableAdapter(
-                    target,
-                    () -> (trackerAgent != null ? trackerAgent.getPosition3D() : new Space3D.Vec3(0,0,0)),
-                    () -> new double[]{ fov.getAxialYaw(), fov.getAxialPitch(), fov.getAxialRoll() }
-            ).color(java.awt.Color.GREEN).sizeDeg(2.0f);
-            pgui.getPolarSpaceDisplay().addDrawable(adapter);
-            pgui.getPolarSpaceDisplay().repaint();
-        }
+    public Executive showWorldGUI(boolean show){
+        this.showWorldGUI = show;
         return this;
     }
 
-    /** Creates and returns an FBG filter; it auto-connects to Space3D via your registry pattern. */
-    public FlyingBlobGenerator createFBG(){
-        ensureStarted();
-        return factory.createFlyingBlobGenerator(chip);
+    private void startSpace3DWorld() {
+        this.world = new Space3D();
+        this.world.setHalfExtentM(300);
+        Space3DRegistry.set(this.world);
+
+        AbstractAgent3D cam = new AbstractAgent3D("dvx-0", Agent3D.ObjectType.DVXPLORER) {};
+        cam.setPosition3D(new Space3D.Vec3(0, 0, 0));
+        this.world.addAgent(cam);
+
+        TargetAgent t1 = new TargetAgent("tgt-circle",
+                new Space3D.Vec3(-15, 0, 120),
+                new Space3D.Vec3(+15, 0, 40),
+                10.0);
+        t1.setPhysicalDiameterM(1.0f);
+        t1.setShape(TargetShape.CIRCLE);
+        t1.setDensityScale(1.0f);
+        this.world.addAgent(t1);
+
+        TargetAgent t2 = new TargetAgent("tgt-square",
+                new Space3D.Vec3(+20, 0, 150),
+                new Space3D.Vec3(-20, 0, 60),
+                8.0);
+        t2.setPhysicalDiameterM(1.5f);
+        t2.setShape(TargetShape.SQUARE);
+        t2.setDensityScale(1.2f);
+        this.world.addAgent(t2);
+
+        TargetAgent t3 = new TargetAgent("tgt-triangle",
+                new Space3D.Vec3(-10, 5, 130),
+                new Space3D.Vec3(+10, -5, 50),
+                12.0);
+        t3.setPhysicalDiameterM(0.8f);
+        t3.setShape(TargetShape.TRIANGLE);
+        t3.setDensityScale(0.9f);
+        this.world.addAgent(t3);
+
+        TargetAgent t4 = new TargetAgent("tgt-cross",
+                new Space3D.Vec3(+5, 0, 110),
+                new Space3D.Vec3(-5, 0, 30),
+                9.0);
+        t4.setPhysicalDiameterM(1.2f);
+        t4.setShape(TargetShape.CROSS);
+        t4.setDensityScale(1.0f);
+        this.world.addAgent(t4);
+
+        for (TargetAgent t : new TargetAgent[]{t1, t2, t3, t4}) {
+            t.start();
+            startedTargets.add(t);
+        }
+
+        if (showWorldGUI) {
+            SwingUtilities.invokeLater(() -> {
+                worldGUI = new Space3DGUI(world);
+                worldGUI.setVisible(true);
+            });
+        }
     }
 
-    private void ensureStarted(){
-        if (world == null || manager == null) {
-            throw new IllegalStateException("Executive not started: call start() first.");
+    public void stopSpace3DWorld() {
+        for (TargetAgent t : startedTargets) {
+            try { t.stop(); } catch (Throwable ignore) {}
         }
+        startedTargets.clear();
+
+        if (worldGUI != null) {
+            try { worldGUI.dispose(); } catch (Throwable ignore) {}
+            worldGUI = null;
+        }
+        world = null;
+        Space3DRegistry.clear();
+    }
+
+    public FlyingBlobGenerator createFBG(){
+        FlyingBlobGenerator fbg = new FlyingBlobGenerator(chip);
+        try { fbg.autoConnectRegistry = true; } catch (Throwable ignore) {}
+        return fbg;
     }
 
     public Space3D getWorld()          { return world; }
     public TrackerManagerV2 getManager(){ return manager; }
     public FieldOfView getFov()        { return fov; }
+    public Agent3DInterface getTrackerAgent(){ return trackerAgent; }
 }

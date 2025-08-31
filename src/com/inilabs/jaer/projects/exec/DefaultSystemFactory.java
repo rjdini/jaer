@@ -10,7 +10,7 @@ import net.sf.jaer.chip.AEChip;
  * Default concrete factory that uses existing implementations exactly as-is.
  * No behavioral changes; keeps working paths intact.
  */
-public class DefaultAgentFactory implements AgentFactory {
+public class DefaultSystemFactory implements SystemFactory {
 
     @Override
     public TrackerManagerV2 createTrackerManager(AEChip chip) {
@@ -34,4 +34,9 @@ public class DefaultAgentFactory implements AgentFactory {
         // Keep original FBG behavior; it will find Space3D via your registry pattern.
         return new FlyingBlobGenerator(chip);
     }
+    
+    
+    
+    
+    
 }

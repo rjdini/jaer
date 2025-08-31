@@ -22,15 +22,15 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import com.inilabs.jaer.projects.polarspace.AgentDrawable;
-import com.inilabs.jaer.projects.polarspace.Drawable;
 import com.inilabs.jaer.projects.logging.AgentLogger;
 import com.inilabs.jaer.projects.logging.EventType;
 import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.inilabs.jaer.projects.polarspace.PolarDrawable;
 
-public class EventCluster extends AgentDrawable implements Expirable, Runnable, Drawable{
+public class EventCluster extends AgentDrawable implements Expirable, Runnable, PolarDrawable{
    private static final Logger log = LoggerFactory.getLogger(EventCluster.class);
    private static final AgentLogger agentLogger = AgentLogger.getInstance();
    public ClusterAdapter enclosedCluster;

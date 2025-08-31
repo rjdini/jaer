@@ -2,8 +2,8 @@ package com.inilabs.jaer.projects.polarspace;
 
 import com.inilabs.jaer.projects.space3d.Agent3DInterface;
 import com.inilabs.jaer.projects.space3d.Space3D;
-import com.inilabs.jaer.projects.space3d.api.AgentPolarDrawable;
-import com.inilabs.jaer.projects.util.AgentColors;
+import com.inilabs.jaer.projects.agent.api.AgentPolarDrawable;
+import com.inilabs.jaer.projects.utils.AgentColors;
 
 
 import java.awt.Color;
@@ -14,7 +14,7 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
-public final class PolarDrawableAdapter implements Drawable {
+public final class PolarDrawableAdapter implements PolarDrawable {
 
     private static final AtomicInteger SEQ = new AtomicInteger(1);
 

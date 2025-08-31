@@ -93,7 +93,7 @@ public class FlyingBlobGenerator extends EventFilter2DMouseAdaptor {
         if (getOutPacket() == null) setOutPacket(new EventPacket(PolarityEvent.class));
         getOutPacket().clear();
 
-        if (autoConnectRegistry && targetProvider == null) {
+        if (isAutoConnectRegistry() && targetProvider == null) {
             Space3D s = Space3DRegistry.get();
             if (s != null) {
                 this.targetProvider = new Space3DTargetProvider(s);
@@ -465,6 +465,20 @@ public class FlyingBlobGenerator extends EventFilter2DMouseAdaptor {
     public FlyingBlobGenerator(AEChip chip, FieldOfView fov){
         super(chip);
         FlyingBlobGenerator.fov = (fov!=null? fov : FieldOfView.getInstance());
+    }
+
+    /**
+     * @return the autoConnectRegistry
+     */
+    public boolean isAutoConnectRegistry() {
+        return autoConnectRegistry;
+    }
+
+    /**
+     * @param autoConnectRegistry the autoConnectRegistry to set
+     */
+    public void setAutoConnectRegistry(boolean autoConnectRegistry) {
+        this.autoConnectRegistry = autoConnectRegistry;
     }
 
 }

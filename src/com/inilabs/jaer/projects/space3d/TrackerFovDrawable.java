@@ -14,7 +14,7 @@ import java.awt.Polygon;
  */
 public class TrackerFovDrawable {
 
-    private final TrackerAgent tracker;
+    private final DVXAgent tracker;
 
     /** Horizontal FOV in degrees (placeholder until wired to FieldOfView). */
     private float fovXDeg = 30f;
@@ -30,7 +30,7 @@ public class TrackerFovDrawable {
     private Color edgeColor  = new Color(255, 0, 255, 200);
     private Color arrowColor = new Color(255, 0, 255);
 
-    public TrackerFovDrawable(TrackerAgent tracker){
+    public TrackerFovDrawable(DVXAgent tracker){
         if (tracker == null) throw new IllegalArgumentException("tracker must not be null");
         this.tracker = tracker;
     }

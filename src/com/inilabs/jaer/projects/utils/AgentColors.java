@@ -1,4 +1,4 @@
-package com.inilabs.jaer.projects.util;
+package com.inilabs.jaer.projects.utils;
 
 import java.awt.Color;
 

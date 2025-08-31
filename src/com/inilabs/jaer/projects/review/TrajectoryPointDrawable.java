@@ -19,10 +19,10 @@
 package com.inilabs.jaer.projects.review;
 
 import com.inilabs.jaer.projects.polarspace.BasicDrawable;
-import com.inilabs.jaer.projects.polarspace.Drawable;
 import java.awt.*;
+import com.inilabs.jaer.projects.polarspace.PolarDrawable;
 
-public class TrajectoryPointDrawable extends BasicDrawable implements Drawable {
+public class TrajectoryPointDrawable extends BasicDrawable implements PolarDrawable {
     private Color color;
  
   

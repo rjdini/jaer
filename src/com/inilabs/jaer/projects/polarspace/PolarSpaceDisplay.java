@@ -54,7 +54,7 @@ public class PolarSpaceDisplay extends JPanel {
     private Consumer<WaypointDrawable> waypointEditor;
     private Consumer<WaypointDrawable> waypointRemover;
 
-    private final Map<String, Drawable> drawables = Collections.synchronizedMap(new HashMap<>());
+    private final Map<String, PolarDrawable> drawables = Collections.synchronizedMap(new HashMap<>());
 
     private static final ch.qos.logback.classic.Logger log = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(PolarSpaceDisplay.class);
 
@@ -177,8 +177,8 @@ public class PolarSpaceDisplay extends JPanel {
      */
     public synchronized void clearOrphanedDrawables() {
         List<String> orphans = new ArrayList<>();
-        for (Map.Entry<String, Drawable> entry : drawables.entrySet()) {
-            if (entry.getValue().isOrphaned()) { // Assuming Drawable has an `isOrphaned` method
+        for (Map.Entry<String, PolarDrawable> entry : drawables.entrySet()) {
+            if (entry.getValue().isOrphaned()) { // Assuming PolarDrawable has an `isOrphaned` method
                 orphans.add(entry.getKey());
             }
         }
@@ -309,7 +309,7 @@ public class PolarSpaceDisplay extends JPanel {
      *
      * @param drawable The drawable to add.
      */
-    public synchronized void addDrawable(Drawable drawable) {
+    public synchronized void addDrawable(PolarDrawable drawable) {
         drawables.put(drawable.getKey(), drawable);
 
         // Set the callback to remove the drawable
@@ -354,7 +354,7 @@ public class PolarSpaceDisplay extends JPanel {
      * @return The drawable if found, or null if no drawable exists with the
      * given key.
      */
-    public synchronized Drawable getDrawableByKey(String key) {
+    public synchronized PolarDrawable getDrawableByKey(String key) {
         return drawables.get(key);
     }
 
@@ -363,7 +363,7 @@ public class PolarSpaceDisplay extends JPanel {
      */
     public void notifyTransformListeners() {
 
-        for (Drawable drawable : drawables.values()) {
+        for (PolarDrawable drawable : drawables.values()) {
             drawable.onTransformChanged(getAzimuthScale(), getElevationScale(), getAzimuthHeading(), getElevationHeading(), getCenterX(), getCenterY());
         }
     }
@@ -374,7 +374,7 @@ public class PolarSpaceDisplay extends JPanel {
      * @param drawable The drawable to check.
      * @return true if the drawable is present, false otherwise.
      */
-    public synchronized boolean containsDrawable(Drawable drawable) {
+    public synchronized boolean containsDrawable(PolarDrawable drawable) {
         return drawables.containsKey(drawable.getKey());
     }
 
@@ -384,7 +384,7 @@ public class PolarSpaceDisplay extends JPanel {
      * @param show true to show paths, false to hide
      */
     public void showPaths(boolean show) {
-        for (Drawable drawable : drawables.values()) {
+        for (PolarDrawable drawable : drawables.values()) {
             drawable.showPath(show);
         }
         repaint();
@@ -424,7 +424,7 @@ public class PolarSpaceDisplay extends JPanel {
         elevationScaleBar.draw(g2d, getCenterX(), getCenterY());
 
         // Draw all drawables
-        for (Drawable drawable : drawables.values()) {
+        for (PolarDrawable drawable : drawables.values()) {
             try {
                 drawable.draw(g2d);
             } catch (Exception e) {

@@ -27,7 +27,6 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 
-import com.inilabs.jaer.projects.polarspace.Drawable;
 import com.inilabs.jaer.projects.logging.AgentLogger;
 import com.inilabs.jaer.projects.logging.EventType;
 import com.inilabs.jaer.projects.motor.Pose;
@@ -38,6 +37,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import org.slf4j.LoggerFactory;
+import com.inilabs.jaer.projects.polarspace.PolarDrawable;
 
 /**
  * FieldOfView represents the DVX camera FOV (pose + chip/lens params) drawn in Polar space.
@@ -45,7 +45,7 @@ import org.slf4j.LoggerFactory;
  * This class keeps backward compatibility with the existing singleton via getInstance(),
  * while also allowing a scoped-per-tracker singleton via get(trackerId).
  */
-public class FieldOfView implements Drawable, PropertyChangeListener {
+public class FieldOfView implements PolarDrawable, PropertyChangeListener {
 
     private final PropertyChangeSupport pcs = new PropertyChangeSupport(this);
     private static final ch.qos.logback.classic.Logger log =
@@ -70,7 +70,7 @@ public class FieldOfView implements Drawable, PropertyChangeListener {
     // For logging / debugging
     private final List<EventCluster> clusters = new ArrayList<>();
 
-    // Drawable identity & style
+    // PolarDrawable identity & style
     private String key;
     private int id;
     private boolean showPath = false;
@@ -360,7 +360,7 @@ public class FieldOfView implements Drawable, PropertyChangeListener {
     public float getCenterChipY() { return centerChipY; }
     public void setCenterChipY(float centerChipY) { this.centerChipY = centerChipY; }
 
-    // ====== Drawable API ======
+    // ====== PolarDrawable API ======
     @Override
     public String getKey() { return this.key; }
 
@@ -397,7 +397,7 @@ public class FieldOfView implements Drawable, PropertyChangeListener {
     @Override
     public boolean isOrphaned() { return false; } // Dummy implementation
 
-    public long getLifetime() { return 10000L; } // dummy to conform to Drawable
+    public long getLifetime() { return 10000L; } // dummy to conform to PolarDrawable
 
     protected void addCurrentPositionToPath() {
         if (pathBuffer.size() >= maxPathLength) {

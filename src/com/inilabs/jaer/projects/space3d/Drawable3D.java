@@ -24,7 +24,7 @@ package com.inilabs.jaer.projects.space3d;
 
 import java.awt.Graphics;
 
-public interface Drawable extends DrawableListener {
+public interface Drawable3D extends DrawableListener {
     
     // Method to draw the object, converting degrees to pixels as needed
     void draw(Graphics g);

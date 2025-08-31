@@ -27,7 +27,7 @@ import java.awt.Color;
 import java.awt.Graphics;
 
 
-public class AgentDrawable implements Drawable {
+public class AgentDrawable implements Drawable3D {
    
     private String key;
     private double azimuthDegrees;  // Azimuth in degrees

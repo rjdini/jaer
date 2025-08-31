@@ -115,7 +115,7 @@ public class FBGIntegrationTest {
         // --- FBG wired to a chip ---
         AEChip chip = new HeadlessChip(); // Use real chip when running inside jAER
         FlyingBlobGenerator fbg = new FlyingBlobGenerator(chip);
-        fbg.autoConnectRegistry = false; // we'll wire the provider explicitly
+        fbg.setAutoConnectRegistry(false); // we'll wire the provider explicitly
         fbg.eventDensityPerPx2 = 0.30f;
         fbg.injectedPolarity = +1;
         fbg.setLocalTestEnabled(false);

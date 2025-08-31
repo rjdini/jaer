@@ -1,8 +1,8 @@
 package com.inilabs.jaer.projects.space3d;
 
-import com.inilabs.jaer.projects.space3d.api.Agent3DDrawable;
-import com.inilabs.jaer.projects.space3d.api.AgentPolarDrawable;
-import com.inilabs.jaer.projects.util.AgentColors;
+import com.inilabs.jaer.projects.agent.api.Agent3DDrawable;
+import com.inilabs.jaer.projects.agent.api.AgentPolarDrawable;
+import com.inilabs.jaer.projects.utils.AgentColors;
 
 
 import java.awt.*;
@@ -21,7 +21,7 @@ import java.util.function.Supplier;
  *  - Yaw is about +y (Up). For top-down drawing we use yaw only (pitch ignored for footprint).
  *  - Azimuth heading φ (deg) -> forward vector on x–z: [sin φ, cos φ].
  */
-public class TrackerAgent implements Agent3DInterface, Agent3DDrawable, AgentPolarDrawable {
+public class DVXAgent implements Agent3DInterface, Agent3DDrawable, AgentPolarDrawable {
 
     private final String key;
     private final Agent3D.ObjectType type = Agent3D.ObjectType.DVXPLORER;
@@ -45,7 +45,7 @@ public class TrackerAgent implements Agent3DInterface, Agent3DDrawable, AgentPol
     private volatile double latDeg = Double.NaN, lonDeg = Double.NaN, altM = Double.NaN;
     private volatile double[] yprDegOverride = null; // if set via setter, overrides supplier for getters
 
-    public TrackerAgent(String key,
+    public DVXAgent(String key,
                         Space3D.Vec3 positionENU,
                         java.util.function.Supplier<double[]> yprDegSupplier,
                         java.util.function.Supplier<double[]> fovDegSupplier){
@@ -98,8 +98,8 @@ public class TrackerAgent implements Agent3DInterface, Agent3DDrawable, AgentPol
     public void setPosition3D(Space3D.Vec3 p){ this.pos = p; }
     // Legacy alias if referenced elsewhere
     public void setPosition(Space3D.Vec3 p){ this.pos = p; }
-    public TrackerAgent setConeLengthM(double m){ this.coneLengthM = Math.max(1.0, m); return this; }
-    public TrackerAgent setDrawLabel(boolean on){ this.drawLabel = on; return this; }
+    public DVXAgent setConeLengthM(double m){ this.coneLengthM = Math.max(1.0, m); return this; }
+    public DVXAgent setDrawLabel(boolean on){ this.drawLabel = on; return this; }
 
  
     // ---------------- Agent3DDrawable (Space3D) ----------------

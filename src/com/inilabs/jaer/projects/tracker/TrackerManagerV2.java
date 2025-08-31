@@ -25,6 +25,7 @@ import net.sf.jaer.util.DrawGL;
 import net.sf.jaer.util.EngineeringFormat;
 import com.inilabs.jaer.projects.cog.SpatialAttention;
 import com.inilabs.jaer.projects.environ.WaypointManager;
+import com.inilabs.jaer.projects.exec.Space3DWorld;
 import java.awt.Point;
 import java.awt.event.MouseEvent;
 import java.beans.PropertyChangeSupport;
@@ -53,8 +54,6 @@ import com.inilabs.jaer.projects.space3d.Space3DGUI;
 import com.inilabs.jaer.projects.space3d.Space3DRegistry;
 import com.inilabs.jaer.projects.space3d.TargetAgent;
 import com.inilabs.jaer.projects.space3d.TargetShape;
-
-
 
 /**
  * Provides gimbal control and testing.
@@ -103,7 +102,8 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
     private final JoystickController joystickController;
     private final WaypointManager waypointManager;
     private static DirectGimbalController gimbal;
-      
+//    private final Space3DWorld world;
+    
      EngineeringFormat fmt = new EngineeringFormat();
      
     // [3D-WORLD] begin
@@ -172,7 +172,8 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
          startTasks();
          
           // [3D-WORLD] bring up the Space3D world inside this JVM
-        startSpace3DWorld();
+       //   world = new Space3DWorld();
+         // startSpace3DWorld();
     
         // hook polar adapters after world & polar GUI are up
         try { javax.swing.SwingUtilities.invokeLater(this::deferHookPolarTargets); } catch (Throwable ignore) {}
@@ -195,7 +196,7 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
   @Override
     public void cleanup() {
         // your existing cleanup...
-        stopSpace3DWorld();
+    //   world.stopSpace3DWorld();
     }
    
      
