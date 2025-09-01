@@ -11,6 +11,7 @@ import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/** Demo launcher: prefers AEViewer; falls back to JAERViewer (logger fix included). */
 public class DemoMain {
 
     private static Object viewer; // AEViewer or JAERViewer
@@ -19,7 +20,8 @@ public class DemoMain {
         AEChip chip = new AEChip();
 
         Executive exec = new Executive(chip)
-                .showWorldGUI(true)
+                .withWorld(WorldPresets.preset(WorldPresets.Preset.EXAMPLE))
+                .showWorldGUI(true) 
                 .start();
 
         SwingUtilities.invokeLater(() -> {

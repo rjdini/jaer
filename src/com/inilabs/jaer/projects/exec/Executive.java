@@ -1,24 +1,23 @@
 package com.inilabs.jaer.projects.exec;
 
-import com.inilabs.jaer.projects.space3d.AbstractAgent3D;
 import com.inilabs.jaer.projects.space3d.Agent3D;
 import com.inilabs.jaer.projects.space3d.Agent3DInterface;
 import com.inilabs.jaer.projects.space3d.Space3D;
 import com.inilabs.jaer.projects.space3d.Space3DGUI;
 import com.inilabs.jaer.projects.space3d.Space3DRegistry;
-import com.inilabs.jaer.projects.space3d.TargetAgent;
-import com.inilabs.jaer.projects.space3d.TargetShape;
 import com.inilabs.jaer.projects.tracker.FieldOfView;
 import com.inilabs.jaer.projects.tracker.TrackerManagerV2;
 import com.inilabs.jaer.projects.eventprocessing.filters.FlyingBlobGenerator;
 import net.sf.jaer.chip.AEChip;
 
 import javax.swing.SwingUtilities;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * Executive orchestrates the DVX tracker + world.
+ * Now supports pluggable world initialization via WorldInitializer.
+ */
 public final class Executive {
 
     private final AEChip chip;
@@ -29,17 +28,46 @@ public final class Executive {
     private Agent3DInterface trackerAgent;
     private boolean          showWorldGUI = false;
     private Space3DGUI       worldGUI;
-    private final List<TargetAgent> startedTargets = new ArrayList<>();
+
+    private WorldInitializer worldInitializer = WorldPresets.preset(WorldPresets.Preset.EXAMPLE);
 
     public Executive(AEChip chip){
         this.chip = Objects.requireNonNull(chip, "chip");
     }
 
+    /** Select a world initializer (optional; default is EXAMPLE). */
+    public Executive withWorld(WorldInitializer initializer){
+        this.worldInitializer = Objects.requireNonNull(initializer, "initializer");
+        return this;
+    }
+
+    /** Toggle the Space3D GUI window. */
+    public Executive showWorldGUI(boolean show){
+        this.showWorldGUI = show;
+        return this;
+    }
+
+    /** Bootstraps the system. */
     public Executive start(){
+        // 1) Manager
         this.manager = new TrackerManagerV2(chip);
-        this.manager.doPolarSpaceGUI();
-        startSpace3DWorld();
+//        this.manager.doPolarSpaceGUI();
+
+        // 2) Create & register world
+        this.world = new Space3D();
+        Space3DRegistry.set(this.world);
+
+        // 3) Initialize world via strategy (default EXAMPLE)
+        try {
+            this.worldInitializer.init(this.world);
+        } catch (Exception ex){
+            throw new IllegalStateException("World initialization failed", ex);
+        }
+
+        // 4) FOV singleton for this tracker
         this.fov = FieldOfView.getInstance();
+
+        // 5) Optionally pick tracker agent from world for position (DVXPLORER)
         Map<String, Agent3DInterface> agents = this.world.getAgents();
         if (agents != null) {
             for (Agent3DInterface a : agents.values()) {
@@ -49,86 +77,32 @@ public final class Executive {
                 }
             }
         }
-        return this;
-    }
 
-    public Executive showWorldGUI(boolean show){
-        this.showWorldGUI = show;
-        return this;
-    }
-
-    private void startSpace3DWorld() {
-        this.world = new Space3D();
-        this.world.setHalfExtentM(300);
-        Space3DRegistry.set(this.world);
-
-        AbstractAgent3D cam = new AbstractAgent3D("dvx-0", Agent3D.ObjectType.DVXPLORER) {};
-        cam.setPosition3D(new Space3D.Vec3(0, 0, 0));
-        this.world.addAgent(cam);
-
-        TargetAgent t1 = new TargetAgent("tgt-circle",
-                new Space3D.Vec3(-15, 0, 120),
-                new Space3D.Vec3(+15, 0, 40),
-                10.0);
-        t1.setPhysicalDiameterM(1.0f);
-        t1.setShape(TargetShape.CIRCLE);
-        t1.setDensityScale(1.0f);
-        this.world.addAgent(t1);
-
-        TargetAgent t2 = new TargetAgent("tgt-square",
-                new Space3D.Vec3(+20, 0, 150),
-                new Space3D.Vec3(-20, 0, 60),
-                8.0);
-        t2.setPhysicalDiameterM(1.5f);
-        t2.setShape(TargetShape.SQUARE);
-        t2.setDensityScale(1.2f);
-        this.world.addAgent(t2);
-
-        TargetAgent t3 = new TargetAgent("tgt-triangle",
-                new Space3D.Vec3(-10, 5, 130),
-                new Space3D.Vec3(+10, -5, 50),
-                12.0);
-        t3.setPhysicalDiameterM(0.8f);
-        t3.setShape(TargetShape.TRIANGLE);
-        t3.setDensityScale(0.9f);
-        this.world.addAgent(t3);
-
-        TargetAgent t4 = new TargetAgent("tgt-cross",
-                new Space3D.Vec3(+5, 0, 110),
-                new Space3D.Vec3(-5, 0, 30),
-                9.0);
-        t4.setPhysicalDiameterM(1.2f);
-        t4.setShape(TargetShape.CROSS);
-        t4.setDensityScale(1.0f);
-        this.world.addAgent(t4);
-
-        for (TargetAgent t : new TargetAgent[]{t1, t2, t3, t4}) {
-            t.start();
-            startedTargets.add(t);
-        }
-
+        // 6) Show world GUI if requested
         if (showWorldGUI) {
             SwingUtilities.invokeLater(() -> {
                 worldGUI = new Space3DGUI(world);
                 worldGUI.setVisible(true);
             });
         }
+
+        return this;
     }
 
+    /** Stop and clean up the Space3D world. */
     public void stopSpace3DWorld() {
-        for (TargetAgent t : startedTargets) {
-            try { t.stop(); } catch (Throwable ignore) {}
+        try {
+            if (worldGUI != null) {
+                try { worldGUI.dispose(); } catch (Throwable ignore) {}
+                worldGUI = null;
+            }
+        } finally {
+            world = null;
+            Space3DRegistry.clear();
         }
-        startedTargets.clear();
-
-        if (worldGUI != null) {
-            try { worldGUI.dispose(); } catch (Throwable ignore) {}
-            worldGUI = null;
-        }
-        world = null;
-        Space3DRegistry.clear();
     }
 
+    /** Convenience to construct FBG with registry auto-connect. */
     public FlyingBlobGenerator createFBG(){
         FlyingBlobGenerator fbg = new FlyingBlobGenerator(chip);
         try { fbg.autoConnectRegistry = true; } catch (Throwable ignore) {}
