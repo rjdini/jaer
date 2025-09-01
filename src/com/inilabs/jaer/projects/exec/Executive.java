@@ -2,9 +2,14 @@ package com.inilabs.jaer.projects.exec;
 
 import com.inilabs.jaer.projects.space3d.Agent3D;
 import com.inilabs.jaer.projects.space3d.Agent3DInterface;
+import com.inilabs.jaer.projects.space3d.GeoTransforms;
 import com.inilabs.jaer.projects.space3d.Space3D;
 import com.inilabs.jaer.projects.space3d.Space3DGUI;
 import com.inilabs.jaer.projects.space3d.Space3DRegistry;
+import com.inilabs.jaer.projects.space3d.WorldGeoConfig;
+import com.inilabs.jaer.projects.space3d.WorldGeoRegistry;
+import com.inilabs.jaer.projects.space3d.layers.ElevationGrid;
+import com.inilabs.jaer.projects.space3d.layers.OSMTopoLayer;
 import com.inilabs.jaer.projects.tracker.FieldOfView;
 import com.inilabs.jaer.projects.tracker.TrackerManagerV2;
 import com.inilabs.jaer.projects.eventprocessing.filters.FlyingBlobGenerator;
@@ -14,10 +19,6 @@ import javax.swing.SwingUtilities;
 import java.util.Map;
 import java.util.Objects;
 
-/**
- * Executive orchestrates the DVX tracker + world.
- * Now supports pluggable world initialization via WorldInitializer.
- */
 public final class Executive {
 
     private final AEChip chip;
@@ -35,74 +36,70 @@ public final class Executive {
         this.chip = Objects.requireNonNull(chip, "chip");
     }
 
-    /** Select a world initializer (optional; default is EXAMPLE). */
     public Executive withWorld(WorldInitializer initializer){
         this.worldInitializer = Objects.requireNonNull(initializer, "initializer");
         return this;
     }
 
-    /** Toggle the Space3D GUI window. */
     public Executive showWorldGUI(boolean show){
         this.showWorldGUI = show;
         return this;
     }
 
-    /** Bootstraps the system. */
     public Executive start(){
-        // 1) Manager
         this.manager = new TrackerManagerV2(chip);
-//        this.manager.doPolarSpaceGUI();
+        this.manager.doPolarSpaceGUI();
 
-        // 2) Create & register world
         this.world = new Space3D();
         Space3DRegistry.set(this.world);
 
-        // 3) Initialize world via strategy (default EXAMPLE)
-        try {
-            this.worldInitializer.init(this.world);
-        } catch (Exception ex){
-            throw new IllegalStateException("World initialization failed", ex);
-        }
+        double lat = 47.3769, lon = 8.5417, alt = 408.0;
+        int zoom = 18;
+        double mpp = GeoTransforms.metersPerPixelAt(lat, zoom);
+        WorldGeoConfig geo = new WorldGeoConfig(lat, lon, alt, this.world.getHalfExtentM(),
+                WorldGeoConfig.CRS.ENU_WGS84,
+                WorldGeoConfig.MapProvider.OSM_WEBMERCATOR,
+                WorldGeoConfig.ElevationProvider.SRTM30,
+                zoom, mpp);
+        WorldGeoRegistry.set(this.world, geo);
 
-        // 4) FOV singleton for this tracker
+        try { this.worldInitializer.init(this.world); }
+        catch (Exception ex){ throw new IllegalStateException("World initialization failed", ex); }
+
+        OSMTopoLayer.ensureCoverage(this.world);
+        ElevationGrid.ensureCoverage(this.world);
+        OSMTopoLayer.configureFromWorld(this.world);
+        ElevationGrid.configureFromWorld(this.world);
+
         this.fov = FieldOfView.getInstance();
 
-        // 5) Optionally pick tracker agent from world for position (DVXPLORER)
         Map<String, Agent3DInterface> agents = this.world.getAgents();
         if (agents != null) {
             for (Agent3DInterface a : agents.values()) {
-                if (a.getType() == Agent3D.ObjectType.DVXPLORER) {
-                    this.trackerAgent = a;
-                    break;
-                }
+                if (a.getType() == Agent3D.ObjectType.DVXPLORER) { this.trackerAgent = a; break; }
             }
         }
 
-        // 6) Show world GUI if requested
         if (showWorldGUI) {
             SwingUtilities.invokeLater(() -> {
                 worldGUI = new Space3DGUI(world);
                 worldGUI.setVisible(true);
             });
         }
-
         return this;
     }
 
-    /** Stop and clean up the Space3D world. */
     public void stopSpace3DWorld() {
-        try {
-            if (worldGUI != null) {
-                try { worldGUI.dispose(); } catch (Throwable ignore) {}
-                worldGUI = null;
+        try { if (worldGUI != null) { try { worldGUI.dispose(); } catch (Throwable ignore) {} worldGUI = null; } }
+        finally { 
+            if (world != null) {
+                try { WorldGeoRegistry.clear(world); } catch (Throwable ignore) {}
             }
-        } finally {
-            world = null;
-            Space3DRegistry.clear();
+            world = null; 
+            Space3DRegistry.clear(); 
         }
     }
 
-    /** Convenience to construct FBG with registry auto-connect. */
     public FlyingBlobGenerator createFBG(){
         FlyingBlobGenerator fbg = new FlyingBlobGenerator(chip);
         try { fbg.autoConnectRegistry = true; } catch (Throwable ignore) {}
