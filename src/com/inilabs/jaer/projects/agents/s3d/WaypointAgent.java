@@ -1,12 +1,28 @@
-package com.inilabs.jaer.projects.space3d;
+package com.inilabs.jaer.projects.agents.s3d;
+
+import com.inilabs.jaer.projects.agents.api.AgentRunnable;
+import com.inilabs.jaer.projects.agents.api.Agent3DTypes;
+import com.inilabs.jaer.projects.agents.api.DrawableInPolar;
+import com.inilabs.jaer.projects.agents.api.DrawableInSpace3D;
+import com.inilabs.jaer.projects.agents.core.AbstractAgent;
+import com.inilabs.jaer.projects.space3d.FBGTarget;
+import com.inilabs.jaer.projects.space3d.Space3D;
+import com.inilabs.jaer.projects.space3d.TargetShape;
+import com.inilabs.jaer.projects.space3d.WorldTransform;
+import com.inilabs.jaer.projects.utils.AgentColors;
+// imports needed:
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.Stroke;
+import java.awt.BasicStroke;
+import java.awt.Font;
+import java.awt.Polygon;
 
 /**
  * TargetAgent: reciprocal motion (as before) + FBGTarget properties (size & shape).
  */
-public class TargetAgent implements Agent3DInterface, Runnable, FBGTarget {
 
-    private final String key;
-    private final Agent3D.ObjectType type = Agent3D.ObjectType.TARGET;
+public class WaypointAgent extends AbstractAgent implements  DrawableInSpace3D,  DrawableInPolar,  AgentRunnable,  FBGTarget {
 
     private final Space3D.Vec3 p1;       // start waypoint
     private final Space3D.Vec3 p2;       // end waypoint
@@ -17,29 +33,27 @@ public class TargetAgent implements Agent3DInterface, Runnable, FBGTarget {
     private double s = 0.0;
     private int dir = +1;
 
-    // Threading
-    private volatile boolean running = false;
-    private Thread worker;
-
     // FBGTarget properties
     private float physicalDiameterM = 1.0f;
-    private TargetShape shape = TargetShape.CIRCLE;
-    private float densityScale = 1.0f;
+    private TargetShape shape = TargetShape.TRIANGLE;
+    private float densityScale = 1.0f;     
+        
+    // FBGTarget fields as you have them…
 
-    public TargetAgent(String key, Space3D.Vec3 p1, Space3D.Vec3 p2, double speedMps) {
+    public WaypointAgent(String key, Space3D.Vec3 p1, Space3D.Vec3 p2, double speedMps){
+        super(key, Agent3DTypes.ObjectType.WAYPOINT);
         if (speedMps <= 0) throw new IllegalArgumentException("speedMps must be > 0");
-        this.key = key;
-        this.p1 = p1;
-        this.p2 = p2;
+        this.p1 = p1; 
+        this.p2 = p2; 
         this.speedMps = speedMps;
+        this.posDVX = p1; // initial
     }
-
+    
+  
     /* ================= Agent3DInterface ================= */
 
     @Override public String getKey() { return key; }
-
-    @Override public Agent3D.ObjectType getType() { return type; }
-
+   
     @Override
     public Space3D.Vec3 getPosition3D() {
         Space3D.Vec3 d = p2.sub(p1);
@@ -54,6 +68,11 @@ public class TargetAgent implements Agent3DInterface, Runnable, FBGTarget {
         Space3D.Vec3 r = p.sub(p1);
         double t = (r.x*d.x + r.y*d.y + r.z*d.z) / len2;
         s = Math.max(0.0, Math.min(1.0, t));
+    }
+    
+    @Override
+    public void runStep(double dtSec, Space3D world) {
+        tick(dtSec); // reuse your existing integrator exactly
     }
 
     @Override public double[] getYawPitchRollDeg() { return new double[]{0,0,0}; }
@@ -72,26 +91,6 @@ public class TargetAgent implements Agent3DInterface, Runnable, FBGTarget {
     @Override public float getDensityScale() { return densityScale; }
     public void setDensityScale(float ds) { this.densityScale = ds; }
 
-    /* ================= Motion (threaded) ================= */
-
-    public synchronized void start() {
-        if (running) return;
-        running = true;
-        worker = new Thread(this, "TargetAgent-" + key);
-        worker.setDaemon(true);
-        worker.start();
-    }
-
-    public synchronized void stop() {
-        running = false;
-        Thread t = worker;
-        worker = null;
-        if (t != null && t.isAlive()) {
-            try { t.join(500); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
-        }
-    }
-
-    public boolean isRunning() { return running; }
 
     /** Advance motion by dt seconds; reflects at endpoints; safe for tests. */
     public void tick(double dt){
@@ -107,22 +106,45 @@ public class TargetAgent implements Agent3DInterface, Runnable, FBGTarget {
             else         { s = -s;      dir = -dir; }
         }
     }
+    
+@Override
+public void drawInSpace3D(Graphics2D g2, Space3D world, WorldTransform tx){
+    Space3D.Vec3 p = getPosition3D();
+    if (p == null) return;
 
-    @Override
-    public void run() {
-        final long nanosPerStep = 16_000_000L; // ~60 Hz
-        long last = System.nanoTime();
-        while (running) {
-            long now = System.nanoTime();
-            double dt = (now - last) * 1e-9;
-            last = now;
-            tick(dt);
-            long spent = System.nanoTime() - now;
-            long sleep = nanosPerStep - spent;
-            if (sleep > 0) {
-                try { Thread.sleep(sleep / 1_000_000, (int)(sleep % 1_000_000)); }
-                catch (InterruptedException e) { Thread.currentThread().interrupt(); break; }
-            }
-        }
-    }
+    int sx = tx.toScreenX(p.x);
+    int sy = tx.toScreenY(p.z);
+
+    Color old = g2.getColor();
+    Stroke oldS = g2.getStroke();
+    int r= 4;
+     g2.setColor(new Color(34, 139, 34));
+    Polygon tri = new Polygon();
+    tri.addPoint(sx, sy - r);
+    tri.addPoint(sx - r, sy + r);
+    tri.addPoint(sx + r, sy + r);
+    g2.fillPolygon(tri);
+    g2.setColor(Color.black);
+    g2.drawPolygon(tri);
+   
+    g2.setColor(Color.BLACK);
+    g2.drawString(getKey(), sx + r + 6, sy - r - 6);
+
+    g2.setStroke(oldS);
+    g2.setColor(old);
+}
+
+@Override
+public void drawInPolar(Graphics2D g2, float azDeg, float elDeg, int x, int y) {
+    Color old = g2.getColor();
+    g2.setColor(Color.RED);
+    g2.drawLine(x - 6, y, x + 6, y);
+    g2.drawLine(x, y - 6, x, y + 6);
+    g2.drawOval(x - 4, y - 4, 8, 8);
+    g2.setColor(Color.BLACK);
+    g2.drawString(key, x + 8, y - 8);
+    g2.setColor(old);
+}
+
+
 }

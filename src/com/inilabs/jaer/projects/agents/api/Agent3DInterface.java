@@ -1,4 +1,4 @@
-package com.inilabs.jaer.projects.space3d;
+package com.inilabs.jaer.projects.agents.api;
 
 import com.inilabs.jaer.projects.space3d.Space3D.Vec3;
 
@@ -7,7 +7,7 @@ import com.inilabs.jaer.projects.space3d.Space3D.Vec3;
  */
 public interface Agent3DInterface {
     String getKey();
-    Agent3D.ObjectType getType();
+    Agent3DTypes.ObjectType getType();
 
     // Pose in DVXSpace (ENU)
     Vec3 getPosition3D();
@@ -22,10 +22,11 @@ public interface Agent3DInterface {
     void setLLA(double latDeg, double lonDeg, double altM);
 
     // Query relative to a reference position in DVXSpace (ENU)
-    default Agent3D.AzElDist azElDistFromDVX(Vec3 refDVX) {
+default Agent3DTypes.AzElDist azElDistFromDVX(Vec3 refDVX) {
+  
         Vec3 d = getPosition3D().sub(refDVX);
         double az = Math.toDegrees(Math.atan2(d.x, d.z));
         double el = Math.toDegrees(Math.atan2(d.y, Math.hypot(d.x, d.z)));
-        return new Agent3D.AzElDist(az, el, d.norm());
+        return AgentMath.azElDistFromDVX(refDVX, getPosition3D());
     }
 }

@@ -18,6 +18,7 @@
  */
 package com.inilabs.jaer.projects.polarspace;
 
+import com.inilabs.jaer.projects.agents.polar.AgentDrawable;
 import javax.swing.*;
 import java.awt.*;
 import java.util.concurrent.TimeUnit;

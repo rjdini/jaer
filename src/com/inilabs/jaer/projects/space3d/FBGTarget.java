@@ -1,5 +1,7 @@
 package com.inilabs.jaer.projects.space3d;
 
+import com.inilabs.jaer.projects.agents.api.Agent3DInterface;
+
 /** Contract for Space3D agents that can be rendered by FlyingBlobGenerator. */
 public interface FBGTarget extends Agent3DInterface {
 

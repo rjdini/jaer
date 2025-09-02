@@ -1,5 +1,6 @@
 package com.inilabs.jaer.projects.space3d;
 
+import com.inilabs.jaer.projects.agents.api.Agent3DInterface;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;

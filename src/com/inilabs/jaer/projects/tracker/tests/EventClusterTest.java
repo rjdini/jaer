@@ -20,7 +20,7 @@
 package com.inilabs.jaer.projects.tracker.tests;
 
 import com.inilabs.jaer.projects.tracker.ClusterAdapter;
-import com.inilabs.jaer.projects.tracker.EventCluster;
+import com.inilabs.jaer.projects.agents.polar.EventCluster;
 import com.inilabs.jaer.projects.tracker.FieldOfView;
 import com.inilabs.jaer.projects.tracker.tests.TestClusterAdapter;
 

@@ -1,7 +1,7 @@
 package com.inilabs.jaer.projects.exec;
 
-import com.inilabs.jaer.projects.space3d.Agent3DInterface;
-import com.inilabs.jaer.projects.space3d.TargetAgent;
+import com.inilabs.jaer.projects.agents.api.Agent3DInterface;
+import com.inilabs.jaer.projects.agents.s3d.TargetAgent;
 import com.inilabs.jaer.projects.eventprocessing.filters.FlyingBlobGenerator;
 import com.inilabs.jaer.projects.tracker.TrackerManagerV2;
 import net.sf.jaer.chip.AEChip;

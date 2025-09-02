@@ -1,5 +1,7 @@
 package com.inilabs.jaer.projects.space3d;
 
+import com.inilabs.jaer.projects.agents.api.Agent3DInterface;
+import com.inilabs.jaer.projects.agents.api.Agent3DTypes;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -64,7 +66,7 @@ public final class Space3D {
     public Map<String,Agent3DInterface> viewAgents(){ return Map.copyOf(getAgents()); }
 
     /* ===== Utilities ===== */
-    public Agent3D.AzElDist azElDistBetween(String keyA, String keyB){
+    public Agent3DTypes.AzElDist azElDistBetween(String keyA, String keyB){
         Agent3DInterface A = getAgents().get(keyA), B = getAgents().get(keyB);
         if (A==null||B==null) throw new IllegalArgumentException("Missing agent(s)");
         return A.azElDistFromDVX(B.getPosition3D());

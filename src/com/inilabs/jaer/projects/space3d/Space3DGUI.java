@@ -1,5 +1,8 @@
 package com.inilabs.jaer.projects.space3d;
 
+import com.inilabs.jaer.projects.agents.api.Agent3DInterface;
+import com.inilabs.jaer.projects.agents.api.Agent3DTypes;
+import com.inilabs.jaer.projects.agents.core.AbstractAgent;
 import javax.swing.*;
 import javax.swing.event.ChangeListener;
 import java.awt.*;
@@ -23,74 +26,10 @@ public class Space3DGUI extends JFrame {
     private double currentOffsetXM = 0.0;
     private double currentOffsetZM = 0.0;
 
-    private final JComponent fovOverlay = new JComponent() {
-        private final Color CONE_FILL  = new Color(255, 0, 255, 80);
-        private final Color CONE_EDGE  = new Color(255, 0, 255, 160);
-        private final Color ARROW      = new Color(255, 0, 255);
-        private final float FOVX_DEG   = 30f;   // placeholder; will wire to FieldOfView later
-        private final float RANGE_M    = 200f;
-
-        @Override protected void paintComponent(Graphics g) {
-            super.paintComponent(g);
-            if (!isVisible()) return;
-            if (space == null || space.getAgents() == null) return;
-            Graphics2D g2 = (Graphics2D) g;
-
-            int centerX = panel.getWidth()/2 + (int)Math.round(currentOffsetXM * currentPpm);
-            int centerY = panel.getHeight()/2 - (int)Math.round(currentOffsetZM * currentPpm);
-
-            for (Agent3DInterface a : space.getAgents().values()) {
-                Agent3D.ObjectType t = a.getType();
-                if (t != Agent3D.ObjectType.DVXPLORER) continue;
-
-                Space3D.Vec3 p = a.getPosition3D();
-                double[] ypr = a.getYawPitchRollDeg();
-                double yawDeg = (ypr != null && ypr.length > 0) ? ypr[0] : 0.0;
-
-                // world → screen for apex
-                int sx = centerX + (int)Math.round(p.x * currentPpm);
-                int sy = centerY - (int)Math.round(p.z * currentPpm);
-
-                // forward direction in XZ
-                double yawRad = Math.toRadians(yawDeg);
-                double dx = Math.sin(yawRad);
-                double dz = Math.cos(yawRad);
-
-                // base center forward
-                double L = Math.max(0.1, RANGE_M);
-                double halfWidth = L * Math.tan(Math.toRadians(FOVX_DEG * 0.5));
-                double baseCx = p.x + dx * L;
-                double baseCz = p.z + dz * L;
-                double px = -dz, pz = dx; // left normal
-
-                double baseLx = baseCx + px * halfWidth;
-                double baseLz = baseCz + pz * halfWidth;
-                double baseRx = baseCx - px * halfWidth;
-                double baseRz = baseCz - pz * halfWidth;
-
-                int sxBL = centerX + (int)Math.round(baseLx * currentPpm);
-                int syBL = centerY - (int)Math.round(baseLz * currentPpm);
-                int sxBR = centerX + (int)Math.round(baseRx * currentPpm);
-                int syBR = centerY - (int)Math.round(baseRz * currentPpm);
-
-                int[] xs = { sx, sxBL, sxBR };
-                int[] ys = { sy, syBL, syBR };
-                g2.setColor(CONE_FILL);
-                g2.fillPolygon(xs, ys, 3);
-                g2.setColor(CONE_EDGE);
-                g2.drawPolygon(xs, ys, 3);
-
-                // boresight arrow
-                double arrowLen = Math.min(L, 20.0);
-                int sxArrow = centerX + (int)Math.round((p.x + dx * arrowLen) * currentPpm);
-                int syArrow = centerY - (int)Math.round((p.z + dz * arrowLen) * currentPpm);
-                g2.setColor(ARROW);
-                g2.drawLine(sx, sy, sxArrow, syArrow);
-            }
-        }
+ private final JComponent fovOverlay = new JComponent() {
+      
     };
     
-
     // in Space3DGUI.java
     public static Space3DGUI showIfPossible(Space3D space) {
         if (java.awt.GraphicsEnvironment.isHeadless()) {
@@ -107,8 +46,7 @@ public class Space3DGUI extends JFrame {
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLayout(new BorderLayout());
         add(panel, BorderLayout.CENTER);
-        setGlassPane(fovOverlay);
-        fovOverlay.setVisible(true);
+ 
         add(buildControls(), BorderLayout.EAST);
         add(status, BorderLayout.SOUTH);
         panel.setStatusLabel(status);
@@ -117,7 +55,7 @@ public class Space3DGUI extends JFrame {
         setLocationRelativeTo(null);
         setVisible(true);
 
-        new Timer(1000 / 30, e -> { panel.repaint(); fovOverlay.repaint(); }).start();
+        new Timer(1000 / 30, e -> { panel.repaint();  }).start();
     }
 
     private JPanel buildControls() {
@@ -216,7 +154,7 @@ public class Space3DGUI extends JFrame {
         Space3D space = new Space3D(); // default origin
         space.setHalfExtentM(1000);
 
-        AbstractAgent3D cam = new AbstractAgent3D("dvx-0", Agent3D.ObjectType.DVXPLORER) {
+        AbstractAgent cam = new AbstractAgent("dvx-0", Agent3DTypes.ObjectType.DVXPLORER) {
         };
         cam.setPosition3D(new Space3D.Vec3(0, 0, 0));
         space.addAgent(cam);

@@ -1,7 +1,7 @@
 package com.inilabs.jaer.projects.exec;
 
-import com.inilabs.jaer.projects.space3d.Agent3D;
-import com.inilabs.jaer.projects.space3d.Agent3DInterface;
+import com.inilabs.jaer.projects.agents.api.Agent3DTypes;
+import com.inilabs.jaer.projects.agents.api.Agent3DInterface;
 import com.inilabs.jaer.projects.space3d.GeoTransforms;
 import com.inilabs.jaer.projects.space3d.Space3D;
 import com.inilabs.jaer.projects.space3d.Space3DGUI;
@@ -48,7 +48,7 @@ public final class Executive {
 
     public Executive start(){
         this.manager = new TrackerManagerV2(chip);
-        this.manager.doPolarSpaceGUI();
+       // this.manager.doPolarSpaceGUI();
 
         this.world = new Space3D();
         Space3DRegistry.set(this.world);
@@ -76,7 +76,7 @@ public final class Executive {
         Map<String, Agent3DInterface> agents = this.world.getAgents();
         if (agents != null) {
             for (Agent3DInterface a : agents.values()) {
-                if (a.getType() == Agent3D.ObjectType.DVXPLORER) { this.trackerAgent = a; break; }
+                if (a.getType() == Agent3DTypes.ObjectType.DVXPLORER) { this.trackerAgent = a; break; }
             }
         }
 

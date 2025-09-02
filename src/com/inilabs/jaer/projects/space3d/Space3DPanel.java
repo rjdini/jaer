@@ -1,5 +1,7 @@
 package com.inilabs.jaer.projects.space3d;
 
+import com.inilabs.jaer.projects.agents.api.Agent3DInterface;
+import com.inilabs.jaer.projects.agents.api.DrawableInSpace3D;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
@@ -10,7 +12,6 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import com.inilabs.jaer.projects.utils.AgentColors;
 
 /**
  * XZ viewer (North up) with optional OSM map background that stays coherent
@@ -38,11 +39,20 @@ public class Space3DPanel extends JPanel {
     private int mapZoom = 16; // OSM 1..19 typical
     private final TileCache tileCache = new TileCache(128);
 
+    private volatile WorldTransform worldTx = new WorldTransform(0, 0, 1.0);
+
     public Space3DPanel(Space3D space) {
         this.space = space;
         setBackground(Color.white);
         setOpaque(true);
         setPreferredSize(new Dimension(900, 650));
+
+        addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override
+            public void componentResized(java.awt.event.ComponentEvent e) {
+                updateTx();
+            }
+        });
 
         // Mouse coordinate readout
         MouseMotionAdapter mma = new MouseMotionAdapter() {
@@ -53,29 +63,68 @@ public class Space3DPanel extends JPanel {
             }
         };
         addMouseMotionListener(mma);
+
+        final Point[] dragFrom = {null};
+
+        addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                dragFrom[0] = e.getPoint();
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                dragFrom[0] = null;
+            }
+        });
+
+        addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                if (dragFrom[0] == null) {
+                    return;
+                }
+                int dx = e.getX() - dragFrom[0].x;
+                int dy = e.getY() - dragFrom[0].y;
+                dragFrom[0] = e.getPoint();
+
+                double ppm = getPixelsPerMeter();
+                // +X east maps to +screenX; +Z north maps to -screenY
+                double dXM = dx / ppm;
+                double dZM = -dy / ppm;
+
+                setOffsetXM(getOffsetXM() + dXM);
+                setOffsetZM(getOffsetZM() + dZM);
+            }
+        });
+
     }
 
     public void setStatusLabel(JLabel label) {
         this.statusLabel = label;
     }
 
+// call updateTx() in these places:
     public void setPixelsPerMeter(double ppm) {
         this.pixelsPerMeter = Math.max(1e-6, ppm);
+        updateTx();
         repaint();
-    }
-
-    public double getPixelsPerMeter() {
-        return pixelsPerMeter;
     }
 
     public void setOffsetXM(double m) {
         this.offsetXM = m;
+        updateTx();
         repaint();
     }
 
     public void setOffsetZM(double m) {
         this.offsetZM = m;
+        updateTx();
         repaint();
+    }
+
+    public double getPixelsPerMeter() {
+        return pixelsPerMeter;
     }
 
     public double getOffsetXM() {
@@ -336,30 +385,32 @@ public class Space3DPanel extends JPanel {
         drawAxes(g2);
 
         // Build the exact transform you already use for the map:
-        double ppm = getPixelsPerMeter();        // your existing value
-        double offX = getOffsetXM();              // meters, +east
-        double offZ = getOffsetZM();              // meters, +north
-        int centerX = getWidth() / 2 + (int) Math.round(offX * ppm);
-        int centerY = getHeight() / 2 - (int) Math.round(offZ * ppm);
+//        double ppm = getPixelsPerMeter();        // your existing value
+//        double offX = getOffsetXM();              // meters, +east
+//        double offZ = getOffsetZM();              // meters, +north
+//        int centerX = getWidth() / 2 + (int) Math.round(offX * ppm);
+//        int centerY = getHeight() / 2 - (int) Math.round(offZ * ppm);
 
-        WorldTransform tx = new WorldTransform(centerX, centerY, ppm);
+        WorldTransform tx = getWorldTransform();
 
         // Draw agents
         for (Map.Entry<String, Agent3DInterface> e : space.viewAgents().entrySet()) {
             Agent3DInterface a = e.getValue();
             Space3D.Vec3 p = a.getPosition3D();
-            int sx = worldToScreenX(p.x);
-            int sy = worldToScreenY(p.z);
+            //  int sx = worldToScreenX(p.x);
+            //  int sy = worldToScreenY(p.z);
+            //   int sx = tx.toScreenX(p.x);
+            //  int sy = tx.toScreenY(p.z);
 
-            drawAgent(g2, a, sx, sy);
-            if (a instanceof WorldRenderable wr) {
-                wr.drawWorld(g2, tx);
-            } 
-            if (showLabels) {
-                g2.setColor(Color.black);
-                g2.setFont(getFont().deriveFont(Font.PLAIN, 12f));
-                g2.drawString(a.getKey(), sx + 8, sy - 8);
+            g2.setFont(getFont().deriveFont(Font.PLAIN, 12f));
+            if (a instanceof DrawableInSpace3D wr) {
+                wr.drawInSpace3D(g2, space, tx);
             }
+//            if (showLabels) {
+//                g2.setColor(Color.black);
+//                g2.setFont(getFont().deriveFont(Font.PLAIN, 12f));
+//                g2.drawString(a.getKey(), sx + 8, sy - 8);
+//            }
         }
 
         // Legend
@@ -430,34 +481,33 @@ public class Space3DPanel extends JPanel {
         g2.drawString("N (m)", x0 + 6, 16);
     }
 
-    private void drawAgent(Graphics2D g2, Agent3DInterface a, int sx, int sy) {
-        final int r = 5;
-        switch (a.getType()) {
-            case DVXPLORER:
-                g2.setColor(new Color(30, 144, 255));
-                g2.fillRect(sx - r, sy - r, 2 * r, 2 * r);
-                g2.setColor(Color.black);
-                g2.drawRect(sx - r, sy - r, 2 * r, 2 * r);
-                break;
-            case TARGET:
-                g2.setColor(AgentColors.colorForKey(a.getKey()));
-                g2.fillOval(sx - r, sy - r, 2 * r, 2 * r);
-                g2.setColor(Color.black);
-                g2.drawOval(sx - r, sy - r, 2 * r, 2 * r);
-                break;
-            case WAYPOINT:
-                g2.setColor(new Color(34, 139, 34));
-                Polygon tri = new Polygon();
-                tri.addPoint(sx, sy - r);
-                tri.addPoint(sx - r, sy + r);
-                tri.addPoint(sx + r, sy + r);
-                g2.fillPolygon(tri);
-                g2.setColor(Color.black);
-                g2.drawPolygon(tri);
-                break;
-        }
-    }
-
+//    private void drawAgent(Graphics2D g2, Agent3DInterface a, int sx, int sy) {
+//        final int r = 5;
+//        switch (a.getType()) {
+//            case DVXPLORER:
+//                g2.setColor(new Color(30, 144, 255));
+//                g2.fillRect(sx - r, sy - r, 2 * r, 2 * r);
+//                g2.setColor(Color.black);
+//                g2.drawRect(sx - r, sy - r, 2 * r, 2 * r);
+//                break;
+//            case TARGET:
+//                g2.setColor(AgentColors.colorForKey(a.getKey()));
+//                g2.fillOval(sx - r, sy - r, 2 * r, 2 * r);
+//                g2.setColor(Color.black);
+//                g2.drawOval(sx - r, sy - r, 2 * r, 2 * r);
+//                break;
+//            case WAYPOINT:
+//                g2.setColor(new Color(34, 139, 34));
+//                Polygon tri = new Polygon();
+//                tri.addPoint(sx, sy - r);
+//                tri.addPoint(sx - r, sy + r);
+//                tri.addPoint(sx + r, sy + r);
+//                g2.fillPolygon(tri);
+//                g2.setColor(Color.black);
+//                g2.drawPolygon(tri);
+//                break;
+//        }
+//    }
     private void drawLegend(Graphics2D g2) {
         int x = 10, y = 10;
         int box = 12, gap = 6, line = 16;
@@ -501,4 +551,17 @@ public class Space3DPanel extends JPanel {
         }
         return base * 10;
     }
+
+    private void updateTx() {
+        // center in screen pixels including pan (in meters)
+        double ppm = getPixelsPerMeter();
+        int cx = getWidth() / 2 - (int) Math.round(offsetXM * ppm);
+        int cy = getHeight() / 2 + (int) Math.round(offsetZM * ppm);
+        worldTx = new WorldTransform(cx, cy, ppm);
+    }
+
+    public WorldTransform getWorldTransform() {
+        return worldTx;
+    }
+
 }

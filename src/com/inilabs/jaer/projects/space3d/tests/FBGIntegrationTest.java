@@ -6,6 +6,10 @@
  */
 package com.inilabs.jaer.projects.space3d.tests;
 
+import com.inilabs.jaer.projects.agents.s3d.AgentScheduler;
+import com.inilabs.jaer.projects.agents.s3d.TargetAgent;
+import com.inilabs.jaer.projects.agents.api.Agent3DTypes;
+import com.inilabs.jaer.projects.agents.core.AbstractAgent;
 import javax.swing.SwingUtilities;
 import java.awt.GraphicsEnvironment;
 
@@ -20,6 +24,8 @@ import net.sf.jaer.event.PolarityEvent.Polarity;
 
 public class FBGIntegrationTest {
 
+    
+    
     /**
      * Minimal AEChip that avoids loading display/render classes.
      */
@@ -50,6 +56,7 @@ public class FBGIntegrationTest {
 
         // --- World (Space3D) ---
         Space3D space = new Space3D();
+        
         space.setHalfExtentM(300);
         Space3DRegistry.set(space);   // expose world to any auto-connecting filters
 
@@ -57,7 +64,7 @@ public class FBGIntegrationTest {
         Space3DGUI.showIfPossible(space);
 
         // Optional camera agent at origin
-        AbstractAgent3D cam = new AbstractAgent3D("dvx-0", Agent3D.ObjectType.DVXPLORER) {
+        AbstractAgent cam = new AbstractAgent("dvx-0", Agent3DTypes.ObjectType.DVXPLORER) {
         };
         cam.setPosition3D(new Space3D.Vec3(0, 0, 0));
         space.addAgent(cam);
@@ -99,11 +106,10 @@ public class FBGIntegrationTest {
         t4.setDensityScale(1.0f);
         space.addAgent(t4);
 
-        // Start motion
-        t1.start();
-        t2.start();
-        t3.start();
-        t4.start();
+        AgentScheduler sched = new AgentScheduler(space); 
+        sched.add(t1); sched.add(t2); sched.add(t3); sched.add(t4);
+        sched.start(1.0 / 60.0);
+ 
 
         // --- Show the space GUI (comment this out if you want fully headless) ---
 //        try {
@@ -133,10 +139,7 @@ public class FBGIntegrationTest {
 
         // Clean shutdown
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            t1.stop();
-            t2.stop();
-            t3.stop();
-            t4.stop();
+         sched.stop();
         }));
 
         try {
@@ -160,10 +163,7 @@ public class FBGIntegrationTest {
         } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
         } finally {
-            t1.stop();
-            t2.stop();
-            t3.stop();
-            t4.stop();
+         sched.stop();
         }
     }
 }

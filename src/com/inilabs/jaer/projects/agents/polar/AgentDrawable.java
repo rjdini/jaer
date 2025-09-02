@@ -17,10 +17,12 @@
  * MA 02110-1301  USA
  */
 
-package com.inilabs.jaer.projects.polarspace;
+package com.inilabs.jaer.projects.agents.polar;
 
 import com.inilabs.jaer.projects.logging.AgentLogger;
 import com.inilabs.jaer.projects.logging.EventType;
+import com.inilabs.jaer.projects.polarspace.BasicDrawable;
+import com.inilabs.jaer.projects.polarspace.PolarDrawable;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;

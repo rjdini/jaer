@@ -4,6 +4,9 @@
  */
 package com.inilabs.jaer.projects.tracker;
 
+import com.inilabs.jaer.projects.agents.polar.TrackerAgent;
+import com.inilabs.jaer.projects.agents.s3d.TargetAgent;
+import com.inilabs.jaer.projects.agents.api.Agent3DTypes;
 import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GLAutoDrawable;
 import java.awt.Graphics2D;
@@ -25,7 +28,6 @@ import net.sf.jaer.util.DrawGL;
 import net.sf.jaer.util.EngineeringFormat;
 import com.inilabs.jaer.projects.cog.SpatialAttention;
 import com.inilabs.jaer.projects.environ.WaypointManager;
-import com.inilabs.jaer.projects.exec.Space3DWorld;
 import java.awt.Point;
 import java.awt.event.MouseEvent;
 import java.beans.PropertyChangeSupport;
@@ -46,13 +48,10 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
-import com.inilabs.jaer.projects.space3d.AbstractAgent3D;
-import com.inilabs.jaer.projects.space3d.Agent3D;
-import com.inilabs.jaer.projects.space3d.Agent3DInterface;
+import com.inilabs.jaer.projects.agents.api.Agent3DInterface;
 import com.inilabs.jaer.projects.space3d.Space3D;
 import com.inilabs.jaer.projects.space3d.Space3DGUI;
 import com.inilabs.jaer.projects.space3d.Space3DRegistry;
-import com.inilabs.jaer.projects.space3d.TargetAgent;
 import com.inilabs.jaer.projects.space3d.TargetShape;
 
 /**
@@ -87,7 +86,7 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
     private boolean isEnableTestClusters = false;
     private static PolarSpaceGUI polarSpaceGUI = null;
     private static SpatialAttention spatialAttention;
-    private TrackerAgentDrawable trackerAgentDrawable = null;
+    private TrackerAgent trackerAgentDrawable = null;
     private final LoggingStatePropertyChangeFilter loggingStateFilter;
   
 //   private final SpatialAttention spatialAttention;
@@ -98,7 +97,7 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
     private  LinkedList<TestCluster> testClusterList = null;
     private TrackerManagerEngine engine; 
     private static FieldOfView fov;
-    private TrackerAgentDrawable primaryTrackerAgent;
+    private TrackerAgent primaryTrackerAgent;
     private final JoystickController joystickController;
     private final WaypointManager waypointManager;
     private static DirectGimbalController gimbal;
@@ -170,10 +169,6 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
          
          // (3) Start some stuff
          startTasks();
-         
-          // [3D-WORLD] bring up the Space3D world inside this JVM
-       //   world = new Space3DWorld();
-         // startSpace3DWorld();
     
         // hook polar adapters after world & polar GUI are up
         try { javax.swing.SwingUtilities.invokeLater(this::deferHookPolarTargets); } catch (Throwable ignore) {}
@@ -206,109 +201,6 @@ public class TrackerManagerV2 extends EventFilter2DMouseAdaptor implements Frame
        log.info("Shutting down TargetManager...");
 } 
    
-    // [3D-WORLD] Build & register the world, start target, optionally show GUI
-    private void startSpace3DWorld() {
-        try {
-            // Create the world with your default origin (Zurich defaults already in Space3D)
-            world3D = new Space3D();
-            world3D.setHalfExtentM(300);                 // slider range in GUI
-            Space3DRegistry.set(world3D);               // <-- make discoverable for FBG
-
-            // Marker for the DVX at the origin (blue square in GUI)
-            AbstractAgent3D cam = new AbstractAgent3D("dvx-0", Agent3D.ObjectType.DVXPLORER) {};
-            cam.setPosition3D(new Space3D.Vec3(0, 0, 0));
-            world3D.addAgent(cam);
-
-            // Reciprocal target: (-10,0,100) <-> (+10,0,20) at 10 m/s, key TARGET_KEY
-//            syntheticTarget = new TargetAgent(
-//                    TARGET_KEY,
-//                    new Space3D.Vec3(-10, 0, 100),
-//                    new Space3D.Vec3(+10, 0, 20),
-//                    10.0
-//            );
-//            world3D.addAgent(syntheticTarget);
-//            syntheticTarget.start();
-
-              // --- Multiple targets with shapes & sizes ---
-        TargetAgent t1 = new TargetAgent("tgt-circle",
-                new Space3D.Vec3(-15, 0, 120),
-                new Space3D.Vec3(+15, 0, 40),
-                10.0);
-        t1.setPhysicalDiameterM(1.0f);
-        t1.setShape(TargetShape.CIRCLE);
-        t1.setDensityScale(1.0f);
-        world3D.addAgent(t1);
-
-        TargetAgent t2 = new TargetAgent("tgt-square",
-                new Space3D.Vec3(+20, 0, 150),
-                new Space3D.Vec3(-20, 0, 60),
-                8.0);
-        t2.setPhysicalDiameterM(1.5f);
-        t2.setShape(TargetShape.SQUARE);
-        t2.setDensityScale(1.2f);
-        world3D.addAgent(t2);
-
-        TargetAgent t3 = new TargetAgent("tgt-triangle",
-                new Space3D.Vec3(-10, 5, 130),
-                new Space3D.Vec3(+10, -5, 50),
-                12.0);
-        t3.setPhysicalDiameterM(0.8f);
-        t3.setShape(TargetShape.TRIANGLE);
-        t3.setDensityScale(0.9f);
-        world3D.addAgent(t3);
-
-        TargetAgent t4 = new TargetAgent("tgt-cross",
-                new Space3D.Vec3(+5, 0, 110),
-                new Space3D.Vec3(-5, 0, 30),
-                9.0);
-        t4.setPhysicalDiameterM(1.2f);
-        t4.setShape(TargetShape.CROSS);
-        t4.setDensityScale(1.0f);
-        world3D.addAgent(t4);
-
-        // Start motion
-        t1.start();
-        t2.start();
-        t3.start();
-        t4.start();
-
-            
-            if (showWorldGUI) {
-                SwingUtilities.invokeLater(() -> {
-                    worldGUI = new Space3DGUI(world3D);
-                    worldGUI.setVisible(true);
-                });
-            }
-
-            log.info("TrackerManagerV2: Space3D started, target '{}' running. "
-                    + "FBG can auto-connect (autoConnectRegistry=true, targetAgentKey='{}').",
-                    TARGET_KEY, TARGET_KEY);
-
-        } catch (Exception ex) {
-            log.error("TrackerManagerV2: failed to start Space3D world", ex);
-        }
-    }
-
-    /** Stop and clean up the Space3D world. */
-private void stopSpace3DWorld() {
-    try {
-        if (syntheticTarget != null) {
-            syntheticTarget.stop();   // idempotent, halts thread
-            syntheticTarget = null;
-        }
-        if (worldGUI != null) {
-            worldGUI.dispose();       // close the window if showing
-            worldGUI = null;
-        }
-        world3D = null;
-        com.inilabs.jaer.projects.space3d.Space3DRegistry.clear();  // reset process-local handle
-        log.info("TrackerManagerV2: Space3D world stopped and registry cleared.");
-    } catch (Exception ex) {
-        log.warn("TrackerManagerV2: error stopping Space3D world", ex);
-    }
-}
-
- 
    
    private DirectGimbalController getGimbal() {
     return gimbal;
@@ -538,7 +430,7 @@ private GL2 drawGimbalPoseCrossHair(GL2 gl) {
 
 private GL2 drawTargetLocation(GL2 gl) {
       float sx = chip.getSizeX() / 32;
-      TrackerAgentDrawable agent =  spatialAttention.getBestTrackerAgent(); 
+      TrackerAgent agent =  spatialAttention.getBestTrackerAgent(); 
       if (agent != null) {
    //    agent.run(); // update data
   //  float[] target = getGimbalBase().getTarget()
@@ -614,13 +506,13 @@ private GL2 drawTargetLocation(GL2 gl) {
     // find tracker in world (DVXPLORER)
     Agent3DInterface trackerAgent = null;
     for (Agent3DInterface a : world3D.getAgents().values()){
-        if (a.getType() == Agent3D.ObjectType.DVXPLORER){ trackerAgent = a; break; }
+        if (a.getType() == Agent3DTypes.ObjectType.DVXPLORER){ trackerAgent = a; break; }
     }
     final Agent3DInterface trackerRef = trackerAgent;
 
     int added = 0;
     for (Agent3DInterface a : world3D.getAgents().values()){
-        if (a.getType() != Agent3D.ObjectType.TARGET) continue;
+        if (a.getType() != Agent3DTypes.ObjectType.TARGET) continue;
 
         PolarDrawableAdapter adapter = new PolarDrawableAdapter(
             a,

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 rjd.
+ * Copyright (C) 2025 rjd.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -16,13 +16,14 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
-package com.inilabs.jaer.projects.agent;
+package com.inilabs.jaer.projects.agents.api;
 
 /**
  *
  * @author rjd
  */
-
-public interface AgentEventListener {
-    void onEvent(String eventType, Object eventData);
+// com.inilabs.jaer.projects.agents.api.MobilePolar
+public interface MobilePolar {
+    /** Optional polar-space motion step (if you keep a polar world model). */
+    void runStepPolar(double dtSec /*, PolarWorld world */);
 }

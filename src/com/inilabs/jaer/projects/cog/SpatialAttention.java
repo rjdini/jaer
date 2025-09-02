@@ -21,7 +21,7 @@ package com.inilabs.jaer.projects.cog;
 import com.inilabs.jaer.projects.environ.WaypointDrawable;
 import com.inilabs.jaer.projects.environ.WaypointManager;
 import com.inilabs.jaer.projects.motor.DirectGimbalController;
-import com.inilabs.jaer.projects.tracker.TrackerAgentDrawable;
+import com.inilabs.jaer.projects.agents.polar.TrackerAgent;
 import com.inilabs.jaer.projects.tracker.TrackerManagerEngine;
 import java.awt.geom.Point2D;
 import java.util.concurrent.Executors;
@@ -54,7 +54,7 @@ public class SpatialAttention {
     int cnt;
     private String defaultWaypointName = "true_north";
 
-    private TrackerAgentDrawable bestTrackerAgent = null; // Reference to the best tracker agent
+    private TrackerAgent bestTrackerAgent = null; // Reference to the best tracker agent
 
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
@@ -213,7 +213,7 @@ public void startTasks() {
         }, 2000, TimeUnit.MILLISECONDS); // Delay after reaching waypoint
     }
 
-    public void setBestTrackerAgent(TrackerAgentDrawable agent) {
+    public void setBestTrackerAgent(TrackerAgent agent) {
         bestTrackerAgent = agent; // Update the best tracker agent
     }
 
@@ -284,7 +284,7 @@ public void startTasks() {
     /**
      * @return the bestTrackerAgent
      */
-    public TrackerAgentDrawable getBestTrackerAgent() {
+    public TrackerAgent getBestTrackerAgent() {
         return bestTrackerAgent;
     }
 

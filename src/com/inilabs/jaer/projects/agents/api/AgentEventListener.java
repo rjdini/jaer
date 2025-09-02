@@ -16,32 +16,13 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
-package com.inilabs.jaer.projects.agent;
+package com.inilabs.jaer.projects.agents.api;
 
 /**
  *
- * @author rjd chatgtp
+ * @author rjd
  */
 
-public interface RTAgentable extends AgentEventListener { 
-     int getID();
-    String getName();
-    // Check if the agent is active
-    boolean isActive();
-    // Starts the real-time agent
-    
-    void start();
-
-    // Stops the real-time agent
-    void stop();
-    
-    // runs the agent
-    void run(); 
-
-    // Add an event listener
-    void addEventListener(AgentEventListener listener);
-
-    // Remove an event listener
-    void removeEventListener(AgentEventListener listener);
-    
+public interface AgentEventListener {
+    void onEvent(String eventType, Object eventData);
 }

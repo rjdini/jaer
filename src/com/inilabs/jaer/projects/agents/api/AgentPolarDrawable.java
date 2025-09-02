@@ -1,4 +1,4 @@
-package com.inilabs.jaer.projects.agent.api;
+package com.inilabs.jaer.projects.agents.api;
 
 import java.awt.Graphics2D;
 

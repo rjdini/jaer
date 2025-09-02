@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 rjd.
+ * Copyright (C) 2025 rjd.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -16,11 +16,19 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
+package com.inilabs.jaer.projects.agents.api;
 
-package com.inilabs.jaer.projects.agent;
-
-public enum ActionType {
-    REMOVE,
-    REPAINT
-    // Add other actions as needed
+/**
+ *
+ * @author rjd
+ */
+// com.inilabs.jaer.projects.agents.api.HasPose3D
+import com.inilabs.jaer.projects.space3d.Space3D;
+public interface HasPose3D {
+    Space3D.Vec3 getPosition3D();
+    void setPosition3D(Space3D.Vec3 p);
+    double[] getYawPitchRollDeg();                    // {yaw,pitch,roll}
+    void setYawPitchRollDeg(double yaw, double pitch, double roll);
 }
+
+

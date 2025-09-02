@@ -7,6 +7,7 @@
  */
 package com.inilabs.jaer.projects.eventprocessing.filters;
 
+import com.inilabs.jaer.projects.agents.api.Agent3DInterface;
 import com.inilabs.jaer.projects.space3d.*;
 import com.inilabs.jaer.projects.tracker.FieldOfView;
 

@@ -18,7 +18,7 @@
  */
 package com.inilabs.jaer.projects.motor;
 
-import com.inilabs.jaer.projects.tracker.TrackerAgentDrawable;
+import com.inilabs.jaer.projects.agents.polar.TrackerAgent;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.util.HashSet;

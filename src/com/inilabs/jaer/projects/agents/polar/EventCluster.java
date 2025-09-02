@@ -16,12 +16,12 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
-package com.inilabs.jaer.projects.tracker;
+package com.inilabs.jaer.projects.agents.polar;
 
+import com.inilabs.jaer.projects.agents.polar.TrackerAgent;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import com.inilabs.jaer.projects.polarspace.AgentDrawable;
 import com.inilabs.jaer.projects.logging.AgentLogger;
 import com.inilabs.jaer.projects.logging.EventType;
 import java.util.ArrayList;
@@ -29,12 +29,14 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.inilabs.jaer.projects.polarspace.PolarDrawable;
+import com.inilabs.jaer.projects.tracker.ClusterAdapter;
+import com.inilabs.jaer.projects.tracker.Expirable;
 
 public class EventCluster extends AgentDrawable implements Expirable, Runnable, PolarDrawable{
    private static final Logger log = LoggerFactory.getLogger(EventCluster.class);
    private static final AgentLogger agentLogger = AgentLogger.getInstance();
    public ClusterAdapter enclosedCluster;
-    private TrackerAgentDrawable enclosingAgent; // Reference to the enclosing agent
+    private TrackerAgent enclosingAgent; // Reference to the enclosing agent
     private Color color = Color.BLACK; // Default color for visualization
     private float size = 10f; // Default size for drawing
     private static long defaultEventClusterLifeTimeMillis = 200; // 0.2 secs
@@ -93,7 +95,7 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter) {
     }
  
     // Constructors
-    public EventCluster(ClusterAdapter clusterAdapter, TrackerAgentDrawable agent) {
+    public EventCluster(ClusterAdapter clusterAdapter, TrackerAgent agent) {
         super();
         if (clusterAdapter == null) {
             throw new IllegalArgumentException("ClusterAdapter cannot be null");
@@ -103,7 +105,7 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter) {
         this.color = agent.getColor(); // Inherit color from the agent
     }
 
-//    public EventCluster(TrackerAgentDrawable agent) {
+//    public EventCluster(TrackerAgent agent) {
 //        this(null, agent); // For testing, allow null cluster
 //        this.color = Color.RED;
 //    }
@@ -186,12 +188,12 @@ public static EventCluster fromClusterAdapter(ClusterAdapter clusterAdapter) {
 
 
     // Accessors and Mutators
-    public void setEnclosingAgent(TrackerAgentDrawable agent) {
+    public void setEnclosingAgent(TrackerAgent agent) {
         this.enclosingAgent = agent;
         this.color = agent.getColor(); // Match the agent’s color
     }
 
-    public TrackerAgentDrawable getEnclosingAgent() {
+    public TrackerAgent getEnclosingAgent() {
         return enclosingAgent;
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 rjd.
+ * Copyright (C) 2025 rjd.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -16,9 +16,15 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
-package com.inilabs.jaer.projects.agent;
+package com.inilabs.jaer.projects.agents.api;
 
-// Define the callback interface
-public interface AgentCallback {
-    void onAgentAction(ActionType action, String key);
+/**
+ *
+ * @author rjd
+ */
+
+public interface Activatable {
+    boolean isActive();
+    void setActive(boolean on);
 }
+

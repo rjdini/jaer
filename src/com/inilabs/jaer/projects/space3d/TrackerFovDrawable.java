@@ -1,5 +1,6 @@
 package com.inilabs.jaer.projects.space3d;
 
+import com.inilabs.jaer.projects.agents.s3d.DVXAgent;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;

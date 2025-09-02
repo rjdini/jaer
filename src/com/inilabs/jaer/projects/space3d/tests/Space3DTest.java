@@ -23,6 +23,8 @@
 
 package com.inilabs.jaer.projects.space3d.tests;
 
+import com.inilabs.jaer.projects.agents.api.Agent3DTypes;
+import com.inilabs.jaer.projects.agents.core.AbstractAgent;
 import javax.swing.SwingUtilities;
 import com.inilabs.jaer.projects.space3d.*;
 import com.inilabs.jaer.projects.space3d.Space3DGUI;
@@ -41,12 +43,12 @@ public class Space3DTest {
         space.setHalfExtentM(1000);
 
         // Add one DVXplorer agent at the origin
-        AbstractAgent3D cam = new AbstractAgent3D("dvx-test", Agent3D.ObjectType.DVXPLORER) {};
+        AbstractAgent cam = new AbstractAgent("dvx-test", Agent3DTypes.ObjectType.DVXPLORER) {};
         cam.setPosition3D(new Space3D.Vec3(0, 0, 0));
         space.addAgent(cam);
 
         // Add a test target 300 m north, 50 m east, 20 m up
-        AbstractAgent3D tgt = new AbstractAgent3D("tgt-test", Agent3D.ObjectType.TARGET) {};
+        AbstractAgent tgt = new AbstractAgent("tgt-test", Agent3DTypes.ObjectType.TARGET) {};
         tgt.setPosition3D(new Space3D.Vec3(50, 20, 300));
         space.addAgent(tgt);
 

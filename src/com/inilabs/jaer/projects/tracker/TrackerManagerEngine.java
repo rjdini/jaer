@@ -1,5 +1,7 @@
 package com.inilabs.jaer.projects.tracker;
 
+import com.inilabs.jaer.projects.agents.polar.EventCluster;
+import com.inilabs.jaer.projects.agents.polar.TrackerAgent;
 import com.inilabs.jaer.projects.cog.SpatialAttention;
 import com.inilabs.jaer.projects.polarspace.PolarSpaceDisplay;
 import java.awt.Color;
@@ -24,15 +26,15 @@ public class TrackerManagerEngine {
     private final FieldOfView fov;
 
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-    private TrackerAgentDrawable currentBestAgent = null;
+    private TrackerAgent currentBestAgent = null;
    
-    private TrackerAgentDrawable lastBestAgent = null; // Reference to the previous best tracker
-    private List<TrackerAgentDrawable> bestTrackerAgentList = new ArrayList<>();
+    private TrackerAgent lastBestAgent = null; // Reference to the previous best tracker
+    private List<TrackerAgent> bestTrackerAgentList = new ArrayList<>();
 
-    private final List<TrackerAgentDrawable> trackerAgentDrawables = new ArrayList<>();
+    private final List<TrackerAgent> trackerAgentDrawables = new ArrayList<>();
     private final Map<String, Color> originalColors = new HashMap<>(); // Track original colors
 
-    private final ConcurrentHashMap<String, TrackerAgentDrawable> agents = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, TrackerAgent> agents = new ConcurrentHashMap<>();
     private final CopyOnWriteArrayList<EventCluster> eventClusters = new CopyOnWriteArrayList<>();
 
     private Color bestAgentColor = Color.RED; // Define the color for the best agents
@@ -225,7 +227,7 @@ private double magnitude(Point2D p) {
                     polarSpaceDisplay.addDrawable(newEventCluster);
                 }
 
-                TrackerAgentDrawable agent = findOrCreateAgent(newEventCluster);
+                TrackerAgent agent = findOrCreateAgent(newEventCluster);
                 agent.addCluster(newEventCluster);
                 log.debug("Created new EventCluster for cluster with key: {}", freshClusterKey);
             }
@@ -240,14 +242,14 @@ private double magnitude(Point2D p) {
     private void processTrackers() {
         // Step 1: Assign clusters to agents
         for (EventCluster eventCluster : eventClusters) {
-            TrackerAgentDrawable nearestAgent = findNearestAgent(eventCluster);
+            TrackerAgent nearestAgent = findNearestAgent(eventCluster);
 
             if (nearestAgent != null && calculateDistance(nearestAgent, eventCluster) <= 0.4 * fov.getFOVX()) {
                 nearestAgent.addCluster(eventCluster);
                 nearestAgent.extendLifetime(nearestAgent.getLifeTimeExtensionMillis()); // Reward active agents
             } else {
                 // Create a new agent for clusters with no nearby agent
-                TrackerAgentDrawable newAgent = createNewAgent(eventCluster);
+                TrackerAgent newAgent = createNewAgent(eventCluster);
                 newAgent.addCluster(eventCluster);
                 agents.put(newAgent.getKey(), newAgent);
             }
@@ -255,7 +257,7 @@ private double magnitude(Point2D p) {
 
         // Step 2: Process agents
         List<String> agentsToRemove = new ArrayList<>();
-        for (TrackerAgentDrawable agent : agents.values()) {
+        for (TrackerAgent agent : agents.values()) {
             agent.run(); // Update clusters and centroids
 
             // Check if agent is expired 
@@ -286,24 +288,24 @@ private double magnitude(Point2D p) {
         scheduler.shutdownNow(); // Stop periodic processing
     }
 
-    private TrackerAgentDrawable findOrCreateAgent(EventCluster cluster) {
-        TrackerAgentDrawable nearestAgent = findNearestAgent(cluster);
+    private TrackerAgent findOrCreateAgent(EventCluster cluster) {
+        TrackerAgent nearestAgent = findNearestAgent(cluster);
         if (nearestAgent == null) {
-            TrackerAgentDrawable newAgent = createNewAgent(cluster);
+            TrackerAgent newAgent = createNewAgent(cluster);
             agents.put(newAgent.getKey(), newAgent);
             return newAgent;
         }
         return nearestAgent;
     }
 
-    private TrackerAgentDrawable findNearestAgent(EventCluster cluster) {
+    private TrackerAgent findNearestAgent(EventCluster cluster) {
         return agents.values().stream()
                 .min(Comparator.comparingDouble(agent -> calculateDistance(agent, cluster)))
                 .orElse(null);
     }
 
-    private TrackerAgentDrawable createNewAgent(EventCluster cluster) {
-        TrackerAgentDrawable agent = new TrackerAgentDrawable(cluster.getAzimuth(), cluster.getElevation());
+    private TrackerAgent createNewAgent(EventCluster cluster) {
+        TrackerAgent agent = new TrackerAgent(cluster.getAzimuth(), cluster.getElevation());
         agent.setSize(4f);
         addAgent(agent);
 
@@ -315,13 +317,13 @@ private double magnitude(Point2D p) {
         return agent;
     }
 
-    private float calculateDistance(TrackerAgentDrawable agent, EventCluster cluster) {
+    private float calculateDistance(TrackerAgent agent, EventCluster cluster) {
         float deltaAzimuth = agent.getAzimuth() - cluster.getAzimuth();
         float deltaElevation = agent.getElevation() - cluster.getElevation();
         return (float) Math.sqrt(deltaAzimuth * deltaAzimuth + deltaElevation * deltaElevation);
     }
 
-    private void addAgent(TrackerAgentDrawable agent) {
+    private void addAgent(TrackerAgent agent) {
         if (agents.size() >= MAX_TRACKER_AGENTS) {
             removeLeastSignificantAgent();
         }
@@ -329,8 +331,8 @@ private double magnitude(Point2D p) {
     }
 
     private void removeLeastSignificantAgent() {
-        TrackerAgentDrawable leastSignificantAgent = agents.values().stream()
-                .min(Comparator.comparingDouble(TrackerAgentDrawable::getSupportQuality))
+        TrackerAgent leastSignificantAgent = agents.values().stream()
+                .min(Comparator.comparingDouble(TrackerAgent::getSupportQuality))
                 .orElse(null);
 
         if (leastSignificantAgent != null) {
@@ -342,7 +344,7 @@ private double magnitude(Point2D p) {
         }
     }
 
-    private void redistributeClusters(TrackerAgentDrawable agent) {
+    private void redistributeClusters(TrackerAgent agent) {
         List<EventCluster> excessClusters = agent.getClusters().stream()
                 .sorted(Comparator.comparingDouble(cluster -> calculateDistance(agent, cluster)))
                 .skip(MAX_CLUSTERS_PER_AGENT)
@@ -350,11 +352,11 @@ private double magnitude(Point2D p) {
 
         for (EventCluster cluster : excessClusters) {
             agent.removeCluster(cluster);
-            TrackerAgentDrawable nearestAgent = findNearestAgent(cluster);
+            TrackerAgent nearestAgent = findNearestAgent(cluster);
             if (nearestAgent != null) {
                 nearestAgent.addCluster(cluster);
             } else {
-                TrackerAgentDrawable newAgent = createNewAgent(cluster);
+                TrackerAgent newAgent = createNewAgent(cluster);
                 agents.put(newAgent.getKey(), newAgent);
             }
         }
@@ -374,8 +376,8 @@ private double magnitude(Point2D p) {
 
     public void updateBestTrackerAgentList() {
         // Determine the best agent based on support quality
-        List<TrackerAgentDrawable> bestAgents = agents.values().stream()
-                .sorted(Comparator.comparingDouble(TrackerAgentDrawable::getSupportQuality).reversed())
+        List<TrackerAgent> bestAgents = agents.values().stream()
+                .sorted(Comparator.comparingDouble(TrackerAgent::getSupportQuality).reversed())
                 .limit(MAX_TRACKER_AGENTS)
                 .collect(Collectors.toList());
 
@@ -386,7 +388,7 @@ private double magnitude(Point2D p) {
 
         // Highlight the new best agent
         if (!bestAgents.isEmpty()) {
-            TrackerAgentDrawable bestAgent = bestAgents.get(0); // Top agent
+            TrackerAgent bestAgent = bestAgents.get(0); // Top agent
             if (!originalColors.containsKey(bestAgent.getKey())) {
                 originalColors.put(bestAgent.getKey(), bestAgent.getColor()); // Backup original color
             }
@@ -423,12 +425,12 @@ private double magnitude(Point2D p) {
 
     private void enforceAgentLimit() {
         if (agents.size() > MAX_TRACKER_AGENTS) {
-            List<TrackerAgentDrawable> excessAgents = agents.values().stream()
-                    .sorted(Comparator.comparingDouble(TrackerAgentDrawable::getSupportQuality))
+            List<TrackerAgent> excessAgents = agents.values().stream()
+                    .sorted(Comparator.comparingDouble(TrackerAgent::getSupportQuality))
                     .limit(agents.size() - MAX_TRACKER_AGENTS)
                     .collect(Collectors.toList());
 
-            for (TrackerAgentDrawable agent : excessAgents) {
+            for (TrackerAgent agent : excessAgents) {
                 agents.remove(agent.getKey());
                 if (polarSpaceDisplay != null) {
                     polarSpaceDisplay.removeDrawable(agent.getKey());
@@ -440,26 +442,26 @@ private double magnitude(Point2D p) {
         }
     }
 
-    public List<TrackerAgentDrawable> getBestTrackerAgentList() {
+    public List<TrackerAgent> getBestTrackerAgentList() {
         return new ArrayList<>(bestTrackerAgentList); // Return a copy to avoid external modification
     }
 
-    public void removeAgent(TrackerAgentDrawable drawable) {
+    public void removeAgent(TrackerAgent drawable) {
         trackerAgentDrawables.remove(drawable);
         removeDrawableFromDisplay(drawable);
         drawable.close();
     }
 
     /**
-     * Returns the best TrackerAgentDrawable based on the highest support
-     * quality.
+     * Returns the best TrackerAgent based on the highest support
+ quality.
      *
-     * @return The TrackerAgentDrawable with the highest support quality, or
-     * null if no agents exist.
+     * @return The TrackerAgent with the highest support quality, or
+ null if no agents exist.
      */
-    public synchronized TrackerAgentDrawable getBestTrackerAgentDrawable() {
+    public synchronized TrackerAgent getBestTrackerAgentDrawable() {
         return agents.values().stream()
-                .max(Comparator.comparingDouble(TrackerAgentDrawable::getSupportQuality))
+                .max(Comparator.comparingDouble(TrackerAgent::getSupportQuality))
                 .orElse(null);
     }
 

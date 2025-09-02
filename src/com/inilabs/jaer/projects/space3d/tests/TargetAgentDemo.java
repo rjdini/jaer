@@ -24,6 +24,7 @@
 
 package com.inilabs.jaer.projects.space3d.tests;
 
+import com.inilabs.jaer.projects.agents.s3d.TargetAgent;
 import javax.swing.SwingUtilities;
 
 import com.inilabs.jaer.projects.space3d.*;
@@ -48,8 +49,7 @@ public class TargetAgentDemo {
                 10.0
         );
         space.addAgent(target);
-        target.start(); // start its own motion thread
-
+ 
         // (Optional) add a DVX agent at origin if you have one.
         // If AbstractAgent3D exists in your codebase, uncomment:
         // AbstractAgent3D cam = new AbstractAgent3D("dvx-0", Agent3D.ObjectType.DVXPLORER) {};
@@ -60,7 +60,7 @@ public class TargetAgentDemo {
         SwingUtilities.invokeLater(() -> new Space3DGUI(space));
 
         // Add a shutdown hook to stop the agent thread when the JVM exits
-        Runtime.getRuntime().addShutdownHook(new Thread(target::stop));
+      //  Runtime.getRuntime().addShutdownHook(new Thread(target::stop));
     }
 }
 

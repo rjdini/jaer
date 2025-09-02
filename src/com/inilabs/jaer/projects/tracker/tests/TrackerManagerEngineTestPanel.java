@@ -28,7 +28,7 @@ import com.inilabs.jaer.projects.polarspace.PolarSpaceDisplay;
 import com.inilabs.jaer.projects.logging.AgentLogger;
 import com.inilabs.jaer.projects.tracker.FieldOfView;
 import com.inilabs.jaer.projects.tracker.TrackerManagerEngine;
-import com.inilabs.jaer.projects.tracker.TrackerAgentDrawable;
+import com.inilabs.jaer.projects.agents.polar.TrackerAgent;
 import com.inilabs.jaer.projects.tracker.TestCluster;
 import javax.swing.*;
 import java.awt.*;
@@ -224,7 +224,7 @@ private void addTestClusters() {
      * Displays the best tracker agents.
      */
     private void showBestAgents() {
-        List<TrackerAgentDrawable> bestAgents = trackerManagerEngine.getBestTrackerAgentList();
+        List<TrackerAgent> bestAgents = trackerManagerEngine.getBestTrackerAgentList();
 
         if (bestAgents.isEmpty()) {
             System.out.println("No agents available.");

@@ -16,9 +16,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
-package com.inilabs.jaer.projects.tracker;
+package com.inilabs.jaer.projects.agents.polar;
 
-import com.inilabs.jaer.projects.polarspace.AgentDrawable;
 import com.inilabs.jaer.projects.polarspace.BasicDrawable;
 import com.inilabs.jaer.projects.logging.AgentLogger;
 import com.inilabs.jaer.projects.logging.EventType;
@@ -33,11 +32,12 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.inilabs.jaer.projects.polarspace.PolarDrawable;
+import com.inilabs.jaer.projects.tracker.Expirable;
 
-public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Runnable, PolarDrawable {
+public class TrackerAgent extends AgentDrawable implements Expirable, Runnable, PolarDrawable {
 
     // This logger logs class-specific performance issues, not the event logger
-    private static final Logger log = LoggerFactory.getLogger(TrackerAgentDrawable.class);
+    private static final Logger log = LoggerFactory.getLogger(TrackerAgent.class);
     private static final AgentLogger agentLogger = AgentLogger.getInstance();
     private static final float QUALITY_THRESHOLD = 0.5f; // Threshold for cluster support quality
     private float optimizationCost = 0f;
@@ -65,7 +65,7 @@ public class TrackerAgentDrawable extends AgentDrawable implements Expirable, Ru
     //  private float elevation; // Current elevation position
     public static final int MAX_CLUSTERS = 4;
 
-    public TrackerAgentDrawable(float azimuth, float elevation) {
+    public TrackerAgent(float azimuth, float elevation) {
         super();
         this.setAzimuth(azimuth);
         this.setElevation(elevation);

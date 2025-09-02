@@ -18,7 +18,7 @@
  */
 package com.inilabs.jaer.projects.polarspace.tests;
 
-import com.inilabs.jaer.projects.polarspace.AgentDrawable;
+import com.inilabs.jaer.projects.agents.polar.AgentDrawable;
 import com.inilabs.jaer.projects.polarspace.PolarSpaceControlPanel;
 import com.inilabs.jaer.projects.polarspace.PolarSpaceDisplay;
 import javax.swing.*;

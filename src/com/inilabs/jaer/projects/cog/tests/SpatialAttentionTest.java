@@ -21,7 +21,7 @@ import com.inilabs.jaer.projects.cog.SpatialAttention;
 import com.inilabs.jaer.projects.environ.WaypointManager;
 import com.inilabs.jaer.projects.motor.DirectGimbalController;
 import com.inilabs.jaer.projects.tracker.FieldOfView;
-import com.inilabs.jaer.projects.tracker.TrackerAgentDrawable;
+import com.inilabs.jaer.projects.agents.polar.TrackerAgent;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -38,8 +38,8 @@ public class SpatialAttentionTest {
         WaypointManager waypointManager = WaypointManager.getInstance();
         SpatialAttention spatialAttention = SpatialAttention.getInstance(gimbal, waypointManager);
 
-        // Create a mock TrackerAgentDrawable
-        TrackerAgentDrawable mockTrackerAgent = new TrackerAgentDrawable(0,10);
+        // Create a mock TrackerAgent
+        TrackerAgent mockTrackerAgent = new TrackerAgent(0,10);
         mockTrackerAgent.enableSupportQualltyTests(true);
         mockTrackerAgent.setMockSupportQuality(50); // Arbitrary high quality to surpass threshold
 
